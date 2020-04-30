@@ -86,7 +86,10 @@ class Mypath:
         return valid_dir
 
     def log_fpath(self):
-        return self.log_path + '/' + self.task + '/' + self.str_name + '.log'
+        task_log_dir = self.log_path + '/' + self.task
+        if not os.path.exists (task_log_dir):
+            os.makedirs (task_log_dir)
+        return task_log_dir + '/' + self.str_name + '.log'
 
 
 
