@@ -72,14 +72,18 @@ class Mypath:
 
     def train_dir(self):
         train_dir = self.data_path + '/' + self.task + '/train'
+        if not os.path.exists (train_dir):
+            os.makedirs (train_dir)
         return train_dir
 
     def valid_dir(self):
         if self.task=='no_label':
-            return self.train_dir()
+            valid_dir = self.train_dir()
         else:
             valid_dir = self.data_path + '/' + self.task + '/valid'
-            return valid_dir
+        if not os.path.exists(valid_dir):
+            os.makedirs(valid_dir)
+        return valid_dir
 
     def log_fpath(self):
         return self.log_path + '/' + self.task + '/' + self.str_name + '.log'
@@ -103,22 +107,29 @@ class Mypath:
 
     def data_path(self, phase='train'):
         if self.task=='lobe':
-            return self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
+            data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
         else:
-            return self.data_path + '/' + self.task + '/' + phase + '/ori_ct'
+            data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct'
+        if not os.path.exists(data_path):
+            os.makedirs(data_path)
+        return data_path
 
     def gdth_path(self, phase='train'):
         if self.task == 'lobe':
-            return self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
+            gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
         else:
-            return self.data_path + '/' + self.task + '/' + phase + '/gdth_ct'
+            gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct'
+        if not os.path.exists(gdth_path):
+            os.makedirs(gdth_path)
 
     def pred_path(self, phase='train'):
         if self.task == 'lobe':
-            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
+            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
                + '/' + self.current_time[:8]
         else:
-            return self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time[:8]
+            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time[:8]
+        if not os.path.exists(pred_path):
+            os.makedirs(pred_path)
 
     def dices_location(self, phase='train'):
         if self.task == 'lobe':

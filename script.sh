@@ -1,6 +1,6 @@
 #!/bin/bash 
 #SBATCH --job-name=vessel
-#SBATCH --output=output_vessel_only_medium.txt
+##SBATCH --output=output_vessel_only_medium.txt
 #SBATCH --ntasks=1 
 #SBATCH --cpus-per-task=4
 
