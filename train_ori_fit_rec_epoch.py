@@ -90,6 +90,17 @@ class Mypath:
         if not os.path.exists (task_log_dir):
             os.makedirs (task_log_dir)
         return task_log_dir + '/' + self.str_name + '.log'
+    def tr_va_log_fpath(self):
+        task_log_dir = self.log_path + '/' + self.task
+        if not os.path.exists(task_log_dir):
+            os.makedirs(task_log_dir)
+        return task_log_dir + '/' + self.str_name + 'tr_va.log'
+
+    def train_log_fpath(self):
+        task_log_dir = self.log_path + '/' + self.task
+        if not os.path.exists(task_log_dir):
+            os.makedirs(task_log_dir)
+        return task_log_dir + '/' + self.str_name + 'train.log'
 
 
 
@@ -338,7 +349,11 @@ def train():
     for enqueuer_valid in valid_data_gen_list:
         enqueuer_valid.close ()
 
-    best_loss_dic = {'lobe': 10000,
+    best_tr_loss_dic = {'lobe': 10000,
+                     'vessel': 10000,
+                     'airway': 10000,
+                     'no_label': 10000}
+    best_va_loss_dic = {'lobe': 10000,
                      'vessel': 10000,
                      'airway': 10000,
                      'no_label': 10000}
@@ -348,8 +363,7 @@ def train():
     for idx_ in range(training_step):
         print ('step number: ', idx_)
         for task, net, tr_data, va_data, label, mypath in zip(task_list, net_list, train_data_gen_list, va_data_list, label_list, path_list):
-            if idx_==0: # assign the initial loss
-                val_loss = best_loss_dic[task]
+
 
             x, y = next(tr_data) # tr_data is a generator or enquerer
             valid_data = va_data  # va_data is a fixed numpy data
@@ -357,14 +371,24 @@ def train():
             # callbacks
             train_csvlogger = callbacks.CSVLogger(mypath.train_log_fpath(), separator=',', append=True)
             tr_va_csvlogger = callbacks.CSVLogger(mypath.tr_va_log_fpath(), separator=',', append=True)
-            if idx_>0 or os.path.exists(mypath.log_fpath()):
-                    df = pd.read_csv(mypath.log_fpath())
+
+            if os.path.exists(mypath.train_log_fpath()):
+                    df = pd.read_csv(mypath.train_log_fpath())
                     EPOCH_INIT = df['epoch'].iloc[-1]
-                    BEST_LOSS = min(df['val_loss'])
-                    best_loss_dic[task] = BEST_LOSS
-                    print('Resume training {2} from EPOCH_INIT {0}, BEST_LOSS {1}'.format(EPOCH_INIT, BEST_LOSS, task))
+                    BEST_TR_LOSS = min(df['loss'])
+                    best_tr_loss_dic[task] = BEST_TR_LOSS
+                    print('Resume training {2} from EPOCH_INIT {0}, BEST_LOSS {1}'.format(EPOCH_INIT, BEST_TR_LOSS, task))
             else:
-                BEST_LOSS = best_loss_dic[task]
+                BEST_TR_LOSS = best_tr_loss_dic[task]
+
+            if os.path.exists(mypath.tr_va_log_fpath()):
+                    df = pd.read_csv(mypath.tr_va_log_fpath())
+                    EPOCH_INIT = df['epoch'].iloc[-1]
+                    BEST_VA_LOSS = min(df['val_loss'])
+                    best_va_loss_dic[task] = BEST_VA_LOSS
+                    print('Resume training {2} from EPOCH_INIT {0}, BEST_VAL_LOSS {1}'.format(EPOCH_INIT, BEST_VA_LOSS, task))
+            else:
+                BEST_VA_LOSS = best_va_loss_dic[task]
 
             class ModelCheckpointWrapper(callbacks.ModelCheckpoint):
                 def __init__(self, best_init=None, *arg, **kwagrs):
@@ -372,14 +396,14 @@ def train():
                     if best_init is not None:
                         self.best = best_init
 
-            saver_train = ModelCheckpointWrapper(best_init=BEST_LOSS,
+            saver_train = ModelCheckpointWrapper(best_init=BEST_TR_LOSS,
                                                   filepath=mypath.best_tr_loss_location(),
                                                   verbose=1,
                                                   save_best_only=True,
                                                   monitor='loss',
                                                   save_weights_only=True,
                                                   save_freq=1)
-            saver_valid = ModelCheckpointWrapper (best_init=BEST_LOSS,
+            saver_valid = ModelCheckpointWrapper (best_init=BEST_VA_LOSS,
                                                    filepath=mypath.best_va_loss_location(),
                                                    verbose=1,
                                                    save_best_only=True,
@@ -395,17 +419,21 @@ def train():
                                    callbacks=[saver_valid, tr_va_csvlogger])
 
                 current_val_loss = history.history['val_loss'][0]
-                old_val_loss = np.float(best_loss_dic[task])
+                old_val_loss = np.float(best_va_loss_dic[task])
                 if current_val_loss<old_val_loss:
-                    best_loss_dic[task] = history.history['val_loss']
+                    best_va_loss_dic[task] = history.history['val_loss']
 
             else:
                 history = net.fit (x, y,
                                    batch_size=args.batch_size,
                                    use_multiprocessing=True,
                                    callbacks=[saver_train, train_csvlogger])
+                current_tr_loss = history.history['loss'][0]
+                old_tr_loss = np.float(best_tr_loss_dic[task])
+                if current_tr_loss < old_tr_loss:
+                    best_tr_loss_dic[task] = history.history['loss']
 
-            print (history.history.keys ())
+            #print (history.history.keys ())
             for key, result in history.history.items ():
                 print(key, result)
 
