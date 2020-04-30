@@ -24,6 +24,7 @@ import os
              '1584924602.9965076_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64',
              '1584925363.1298258_0.00010a_o_0ds2dr1bn1fs16ptsz96ptzsz64'
              1587041504.5222292_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64MODEL
+             1587846165.2829812_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64
 '''
 task='vessel'
 str_names = ['1587041504.5222292_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64']
@@ -59,7 +60,7 @@ for str_name in str_names:
                                     model=model_name,
                                     ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
                                     trgt_sz=None, trgt_z_sz=None,
-                                    trgt_space_list=[0.5, 0.6, 0.6],  # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4]
+                                    trgt_space_list=[0.3, 0.5, 0.5],  # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
                                     task=task)
 
         write_preds_to_disk(segment=segment,

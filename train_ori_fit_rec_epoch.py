@@ -298,8 +298,9 @@ def train(args):
     # Define the Model
     model_names = ['net_only_vessel']
     if args.aux_output and 'net_only_vessel' in model_names:
-        raise Exception('net_only_vessel should not have aux output')
         print(model_names)
+        raise Exception('net_only_vessel should not have aux output')
+
 
     task_list = get_task_list(model_names)
     label_list = get_label_list(task_list)
@@ -316,11 +317,10 @@ def train(args):
                                                                 net_type='v')
 
 
-
     if args.load: # need to assign the old file name if args.load is True
         old_time = '1584923362.8464801_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
         str_name = old_time
-        for net, task in zip (net_list, task_list):
+        for net, task, mypath in zip (net_list, task_list, path_list):
             old_model_fpath = mypath.model_path + '/' + task + '/' + str_name + 'MODEL.hdf5'
             net.load_weights (old_model_fpath)
             print ('loaded weights successfully: ', old_model_fpath)
