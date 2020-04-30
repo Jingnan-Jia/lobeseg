@@ -561,13 +561,14 @@ def train(args):
 
                 if task != 'no_label': # save predicted results and compute the dices
                     for phase in ['valid']:
-                        if segment==None:
-                            segment = v_seg.v_segmentor(batch_size=args.batch_size,
-                                                        model=mypath.weights_location(),
-                                                        ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
-                                                        trgt_sz = args.trgt_sz, trgt_z_sz = args.trgt_z_sz,
-                                                        trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
-                                                        task=task)
+
+                        segment = v_seg.v_segmentor(batch_size=args.batch_size,
+                                                    model=mypath.weights_location(),
+                                                    ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
+                                                    trgt_sz = args.trgt_sz, trgt_z_sz = args.trgt_z_sz,
+                                                    trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
+                                                    task=task)
+
 
 
 
@@ -576,10 +577,14 @@ def train(args):
                                             preds_dir= mypath.pred_path( phase),
                                             number=1, stride = 0.5)
 
+
+
                         write_dices_to_csv (labels=label,
                                             gdth_path=mypath.gdth_path(phase),
                                             pred_path=mypath.pred_path(phase),
                                             csv_file= mypath.dices_location(phase))
+
+                        del segment # delete this class
 
 
             else:
