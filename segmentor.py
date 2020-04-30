@@ -10,7 +10,7 @@ from  scipy import ndimage
 from futils.vpatch import deconstruct_patch,reconstruct_patch
 from tensorflow.keras.models import model_from_json
 import tensorflow.keras.backend as K
-
+import time
 
 
 def one_hot_decoding(img,labels,thresh=[]):
@@ -81,12 +81,14 @@ class v_segmentor(object):
         x = self._normalize(x)
 
         print('self.trgt_space_list', self.trgt_space_list)
+        x1 = time.time()
         if self.trgt_space_list is not None and self.trgt_space_list[0] is not None:  #rescale scan to trgt spaces: 2.5, 1.4, 1.4
                 print ('rescaled to new spacing  ')
                 zoom_seq = np.array (self.ori_space_list, dtype='float') / np.array (self.trgt_space_list, dtype='float')
                 print('zoom_seq', zoom_seq)
                 x = ndimage.interpolation.zoom (x, zoom_seq, order=1, prefilter=1) # 143, 271, 271
                 print('size after rescale to trgt spacing:', x.shape)
+
                 # x = x[..., np.newaxis]
         elif self.trgt_sz:  #rescale scan to trgt sizes: 256,256,128
                 print('rescaled to target size')
@@ -96,13 +98,17 @@ class v_segmentor(object):
         else:
             print('please assign how to rescale')
 
-        
+        x2 = time.time()
+        print('time for rescale:', x2 - x1)
+        x3 = time.time()
         
         #let's patch this scan (despatchito)
         if(self.patching):
             print ('start patching')
             x_patch = deconstruct_patch(x,patch_shape=(self.z_sz,self.ptch_sz,self.ptch_sz), stride = stride)
             print('x_patch.shape', x_patch.shape) #(125, 64, 128, 128,1)
+            x4 = time.time()
+            print('time for deconstruct patch:', x4-x3)
         else:
             x_patch = x
             # x_patch = rescale_x
@@ -124,7 +130,11 @@ class v_segmentor(object):
         
       
         #run predict
+        x5 = time.time()
         pred_array = self.v.predict(x_patch,self.batch_size,verbose=0)
+        x6 = time.time()
+        print('time for prediction:', x6-x5)
+
 
         # chooses our output :P (0:main pred, 1:aux output, 2-3: deep superv)
         if len(pred_array)>1:
@@ -139,7 +149,10 @@ class v_segmentor(object):
         
         
         if(self.patching):
+            x7 = time.time()
             pred = reconstruct_patch(pred, original_shape=x.shape,stride = stride)
+            x8 = time.time()
+            print('time for reconstruct patch:', x8-x7)
 
         
 
