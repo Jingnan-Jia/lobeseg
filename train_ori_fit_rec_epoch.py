@@ -102,11 +102,11 @@ class Mypath:
     def json_fpath(self):
         return self.model_path + '/' + self.task + '/' + self.str_name + 'MODEL.json'
 
-    def best_weights_location(self):
-        return self.model_path + '/' + self.task + '/' + self.str_name + '_best.hdf5'
-
-    def weights_location(self):
+    def best_tr_loss_location(self):
         return self.model_path + '/' + self.task + '/' + self.str_name + 'MODEL.hdf5'
+
+    def best_va_loss_location(self):
+        return self.model_path + '/' + self.task + '/' + self.str_name + '_best.hdf5'
 
     def data_path(self, phase='train'):
         if self.task=='lobe':
@@ -373,14 +373,14 @@ def train():
                         self.best = best_init
 
             saver_train = ModelCheckpointWrapper(best_init=BEST_LOSS,
-                                                  filepath=mypath.best_weights_location(),
+                                                  filepath=mypath.best_tr_loss_location(),
                                                   verbose=1,
                                                   save_best_only=True,
                                                   monitor='loss',
                                                   save_weights_only=True,
                                                   save_freq=1)
             saver_valid = ModelCheckpointWrapper (best_init=BEST_LOSS,
-                                                   filepath=mypath.weights_location(),
+                                                   filepath=mypath.best_va_loss_location(),
                                                    verbose=1,
                                                    save_best_only=True,
                                                    monitor='val_loss',
