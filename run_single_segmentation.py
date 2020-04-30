@@ -2,14 +2,14 @@ import time
 import futils.util as futil
 import segmentor as v_seg
 import keras.backend as K
-
+import os
 K.set_learning_phase(1)
 
 isotropic=False
 
 #LOAD THE CT_SCAN
 scan_file = '1.3.6.1.4.1.14519.5.2.1.6279.6001.413896555982844732694353377538.mhd'
-ct_scan, origin, spacing, orientation = futil.load_itk(filename = '/exports/lkeb-hpc/jjia/project/mt/data/lobe/valid/ori_ct/luna16/'+scan_file, get_orientation=True)
+ct_scan, origin, spacing, orientation = futil.load_itk(filename = os.path.dirname (os.path.realpath (__file__)) + '/data/lobe/valid/ori_ct/luna16/'+scan_file, get_orientation=True)
 if (orientation[-1] == -1):
     ct_scan = ct_scan[::-1]
 print ('Origem: ')

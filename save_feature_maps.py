@@ -116,10 +116,10 @@ def getLayerIndexByName(model, layername):
 
 
 if task=='vessel':
-    file_name = '/data/jjia/mt/data/' + task + '/valid/ori_ct/'  + scan_file
-    file_name_gdth = '/data/jjia/mt/data/' + task + '/valid/gdth_ct/'  + scan_file
+    file_name = os.path.dirname (os.path.realpath (__file__)) + '/data/'+ task + '/valid/ori_ct/'  + scan_file
+    file_name_gdth = os.path.dirname (os.path.realpath (__file__)) + '/data/' + task + '/valid/gdth_ct/'  + scan_file
 elif task=='lobe':
-    file_name = '/data/jjia/mt/data/' + task + '/valid/ori_ct/' + sub_dir + '/' + scan_file
+    file_name = os.path.dirname (os.path.realpath (__file__)) + '/data/' + task + '/valid/ori_ct/' + sub_dir + '/' + scan_file
 print(file_name)
 ct_scan, origin, spacing, orientation = futil.load_itk(filename = file_name, get_orientation=True)
 scan_gdth, _, _ = futil.load_itk(filename = file_name_gdth, get_orientation=False)

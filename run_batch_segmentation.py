@@ -25,7 +25,7 @@ else:
 
 #LOAD THE CT_SCAN
 
-valid_dir = '/exports/lkeb-hpc/jjia/project/mt/data/'+task+'/valid/ori_ct/'
+valid_dir = os.path.dirname (os.path.realpath (__file__)) + '/data/'+task+'/valid/ori_ct/'
 if task=='lobe':
     valid_dir = valid_dir + 'GLUCOLD_isotropic1dot5' # GLUCOLD or GLUCOLD_isotropic0dot7, GLUCOLD_isotropic1dot5,
 
