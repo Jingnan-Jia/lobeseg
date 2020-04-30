@@ -341,6 +341,7 @@ def connect(a, b):
 
 def load_cp_models(model_names,
                    nch=1,
+                   lr=0.0001,
                    nf=16,
                    bn=1,
                    dr=1,
@@ -575,7 +576,7 @@ def load_cp_models(model_names,
             loss = dice_coef_loss_weight_p #right?? todo: check it
             loss_weights = 1
 
-    optim = Adam (lr=0.00001)
+    optim = Adam (lr=lr)
 
     out_vessel_mt = out_vessel+ [out_recon]
     out_airway_mt = out_airway+ [out_recon]

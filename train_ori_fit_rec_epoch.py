@@ -7,13 +7,10 @@ from dataloader_ori_wo_reshape import TwoScanIterator
 import time
 import argparse
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
 import segmentor as v_seg
-
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.utils import GeneratorEnqueuer
-
 from tensorflow.keras import backend as K
 from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.keras import callbacks
@@ -24,6 +21,7 @@ from write_dice import write_dices_to_csv
 import glob
 from write_batch_preds import write_preds_to_disk
 
+os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
 tf.keras.mixed_precision.experimental.set_policy('infer') # mix precision training
 
 config = tf.ConfigProto()
@@ -31,9 +29,6 @@ config.gpu_options.allow_growth = True  # dynamically grow the memory used on th
 sess = tf.Session(config=config)
 K.set_session(sess)  # set this TensorFlow session as the default session for Keras
 
-### set important paths
-
-# path_data = os.path.join(dir_path, 'data')
 K.set_learning_phase(1)  # try with 1
 
 parser = argparse.ArgumentParser(description='End2End Semi-Supervised Lobe Segmentation')
@@ -174,6 +169,8 @@ class Mypath:
         self.dir_path = os.path.dirname (os.path.realpath (__file__)) # abosolute path of the current script
         self.model_path = os.path.join (self.dir_path, 'models')
         self.log_path = os.path.join (self.dir_path, 'logs')
+        self.data_path = os.path.join (self.dir_path, 'data')
+        self.results_path = os.path.join (self.dir_path, 'results')
 
 
         self.current_time = str (time.time ())
@@ -203,14 +200,14 @@ class Mypath:
         return sub_dir
 
     def train_dir(self):
-        train_dir = '/data/jjia/mt/data/' + self.task + '/train'
+        train_dir = self.data_path + '/' + self.task + '/train'
         return train_dir
 
     def valid_dir(self):
         if self.task=='no_label':
             return self.train_dir()
         else:
-            valid_dir = '/data/jjia/mt/data/' + self.task + '/valid'
+            valid_dir = self.data_path + '/' + self.task + '/valid'
             return valid_dir
 
     def log_fpath(self):
@@ -235,29 +232,29 @@ class Mypath:
 
     def data_path(self, phase='train'):
         if self.task=='lobe':
-            return '/data/jjia/mt/data/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
+            return self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
         else:
-            return '/data/jjia/mt/data/' + self.task + '/' + phase + '/ori_ct'
+            return self.data_path + '/' + self.task + '/' + phase + '/ori_ct'
 
     def gdth_path(self, phase='train'):
         if self.task == 'lobe':
-            return '/data/jjia/mt/data/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
+            return self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
         else:
-            return '/data/jjia/mt/data/' + self.task + '/' + phase + '/gdth_ct'
+            return self.data_path + '/' + self.task + '/' + phase + '/gdth_ct'
 
     def pred_path(self, phase='train'):
         if self.task == 'lobe':
-            return '/data/jjia/e2e_new/results/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
+            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
                + '/' + self.current_time[:8]
         else:
-            return '/data/jjia/e2e_new/results/' + self.task + '/' + phase + '/pred/'+ self.current_time[:8]
+            return self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time[:8]
 
     def dices_location(self, phase='train'):
         if self.task == 'lobe':
-            return '/data/jjia/e2e_new/results/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
+            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
                + '/' + self.current_time[:8] + '/dices.csv'
         else:
-            return '/data/jjia/e2e_new/results/' + self.task + '/' + phase + '/pred/' + self.current_time[:8]+ '/dices.csv'
+            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.current_time[:8]+ '/dices.csv'
 
 
 
@@ -310,6 +307,7 @@ def train(args):
 
     net_list = compiled_models_complete_tf_keras.load_cp_models (model_names,
                                                                 nch=1,
+                                                                lr=args.lr,
                                                                 nf=args.feature_size,
                                                                 bn=args.batch_norm,
                                                                 dr=args.dropout,
