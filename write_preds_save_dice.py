@@ -25,9 +25,18 @@ import os
              '1584925363.1298258_0.00010a_o_0ds2dr1bn1fs16ptsz96ptzsz64'
              1587041504.5222292_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64MODEL
              1587846165.2829812_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64
+             1587858645.924413_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96
+             1587858294.826981_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96
+             1587857822.602289_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96
+             1587852304.1056986_0.00010a_o_0ds2dr1bn1fs4ptsz144ptzsz96
+             1587852304.1056986_0.00010a_o_0ds2dr1bn1fs4ptsz144ptzsz96
+             1587848974.2342067_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96
+             1587848927.819794_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz96
+             1587846165.2829812_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64
 '''
 task='vessel'
-str_names = ['1587041504.5222292_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64']
+str_names = ['1587846165.2829812_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64']
+print(str_names)
 for str_name in str_names:
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
     model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'

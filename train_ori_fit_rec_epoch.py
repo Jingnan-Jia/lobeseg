@@ -5,9 +5,8 @@ import numpy as np
 import sys
 from dataloader_ori_wo_reshape import TwoScanIterator
 import time
-import argparse
 import os
-import segmentor as v_seg
+
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.utils import GeneratorEnqueuer
@@ -17,9 +16,8 @@ from tensorflow.keras import callbacks
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.callbacks import TensorBoard
 import compiled_models_complete_tf_keras
-from write_dice import write_dices_to_csv
-import glob
-from write_batch_preds import write_preds_to_disk
+
+from set_args import args
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
 tf.keras.mixed_precision.experimental.set_policy('infer') # mix precision training
@@ -30,133 +28,6 @@ sess = tf.Session(config=config)
 K.set_session(sess)  # set this TensorFlow session as the default session for Keras
 
 K.set_learning_phase(1)  # try with 1
-
-parser = argparse.ArgumentParser(description='End2End Semi-Supervised Lobe Segmentation')
-
-parser.add_argument(
-    '-lr',
-    '--lr',
-    help='learning rate',
-    type=float,
-    default=0.0001)
-
-parser.add_argument(
-    '-load',
-    '--load',
-    help='load last model',
-    type=int,
-    default=0)
-
-parser.add_argument(
-    '-aux',
-    '--aux_output',
-    help='Value of Auxiliary Output',
-    type=float,
-    default=0)
-
-parser.add_argument(
-    '-ds',
-    '--deep_supervision',
-    help='Number of Deep Supervisers',
-    type=int,
-    default=2)
-
-parser.add_argument(
-    '-fs',
-    '--feature_size',
-    help='Number of initial of conv channels',
-    type=int,
-    default=8)
-
-parser.add_argument(
-    '-bn',
-    '--batch_norm',
-    help='Set Batch Normalization',
-    type=int,
-    default=1)
-
-parser.add_argument(
-    '-dr',
-    '--dropout',
-    help='Set Dropout',
-    type=int,
-    default=1)
-
-parser.add_argument(
-    '-trgt_sz',
-    '--trgt_sz',
-    help='target size',
-    type=int,
-    default=None)
-
-parser.add_argument(
-    '-trgt_z_sz',
-    '--trgt_z_sz',
-    help='target z size',
-    type=int,
-    default=None)
-
-parser.add_argument(
-    '-trgt_space',
-    '--trgt_space',
-    help='spacing along x, y ',
-    type=int,
-    default=0.5)
-
-parser.add_argument(
-    '-trgt_z_space',
-    '--trgt_z_space',
-    help='spacing along z',
-    type=int,
-    default=0.3)
-
-parser.add_argument(
-    '-ptch_sz',
-    '--ptch_sz',
-    help='patch size',
-    type=int,
-    default=144)
-
-parser.add_argument(
-    '-ptch_z_sz',
-    '--ptch_z_sz',
-    help='patch z size',
-    type=int,
-    default=96)
-
-parser.add_argument(
-    '-batch_size',
-    '--batch_size',
-    help='batch_size',
-    type=int,
-    default=1)
-
-parser.add_argument(
-    '-patches_per_scan',
-    '--patches_per_scan',
-    help='patches_per_scan',
-    type=int,
-    default=500)
-
-parser.add_argument(
-    '-iso',
-    '--iso',
-    help='do isotropic',
-    type=int,
-    default=0)
-
-args = parser.parse_args()
-
-# class Setting:
-#
-#     def __init__(self, task):
-#         self.task = task
-#     def patches_per_scan(self):
-#         if self.task=='vessel':
-#             return 500
-#         elif
-
-
 
 class Mypath:
     '''
@@ -215,11 +86,11 @@ class Mypath:
 
 
 
-    def model_png_path(self):
-        model_png_path = self.dir_path + '/png'
-        if not os.path.exists (model_png_path):
-            os.makedirs (model_png_path)
-        return model_png_path
+    def figure_path(self):
+        figure_path = self.dir_path + '/figures'
+        if not os.path.exists (figure_path):
+            os.makedirs (figure_path)
+        return figure_path
 
     def json_fpath(self):
         return self.model_path + '/' + self.task + '/' + self.str_name + 'MODEL.json'
@@ -293,7 +164,7 @@ def get_label_list(task_list):
     return list (map (task_label_dict.get, task_list))
 
 
-def train(args):
+def train():
 
     # Define the Model
     model_names = ['net_only_vessel']
@@ -330,7 +201,7 @@ def train(args):
     va_data_list = []
     for mypath, task, labels, net, model_name in zip (path_list, task_list, label_list, net_list, model_names):
 
-        plot_model(net, show_shapes=True, to_file=mypath.model_png_path() + '/' + model_name + '.png')
+        plot_model(net, show_shapes=True, to_file=mypath.figure_path() + '/' + model_name + '.png')
 
         if args.load: # load saved model
             old_time = '1584923362.8464801_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
@@ -359,25 +230,6 @@ def train(args):
             b_extension = '.nrrd'
             c_dir_name = 'aux_gdth'
 
-            # train_it = ScanIterator_rec(train_dir, batch_size=args.batch_size,  sub_dir = sub_dir,
-            #                             trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
-            #                             trgt_space=args.trgt_space, trgt_z_space=args.trgt_z_space,
-            #                             ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-            #                             new_spacing=new_spacing,
-            #                             data_argum=True,
-            #                             patches_per_scan = 1,
-            #                             ds=0,
-            #                             shuffle=True)
-            #
-            # val_it = ScanIterator_rec(train_dir, batch_size=args.batch_size,  sub_dir = sub_dir,
-            #                             trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
-            #                             trgt_space=args.trgt_space, trgt_z_space=args.trgt_z_space,
-            #                             ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-            #                             new_spacing=new_spacing,
-            #                             data_argum=False,
-            #                             patches_per_scan = 1,
-            #                             ds=0,
-            #                             shuffle=False)
         train_it = TwoScanIterator(mypath.train_dir(), task=task,
                                    batch_size=args.batch_size,
                                    c_dir_name=c_dir_name,
@@ -392,8 +244,7 @@ def train(args):
                                    data_argum=False,
                                    ds=args.deep_supervision,
                                    labels=labels,
-                                   nb=10)
-        print('nb=10')
+                                   nb=args.tr_nb)
 
         valid_it = TwoScanIterator(mypath.valid_dir(), task=task,
                                  batch_size=args.batch_size,
@@ -409,32 +260,6 @@ def train(args):
                                  data_argum=False,
                                  ds=args.deep_supervision,
                                  labels=labels)
-
-
-            #
-            # train_it = TwoScanIterator (train_dir, batch_size=args.batch_size, c_dir_name=c_dir_name, sub_dir=sub_dir,
-            #                             trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
-            #                             trgt_space=args.trgt_space, trgt_z_space=args.trgt_z_space,
-            #                             ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-            #                             b_extension=b_extension,
-            #                             shuffle=False,
-            #
-            #                             patches_per_scan=1,
-            #                             data_argum=True,
-            #                             ds=args.deep_supervision,
-            #                             labels=labels)
-            #
-            # val_it = TwoScanIterator (val_dir, batch_size=args.batch_size, c_dir_name=c_dir_name, sub_dir=sub_dir,
-            #                           trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
-            #                           trgt_space=args.trgt_space, trgt_z_space=args.trgt_z_space,
-            #                           ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-            #                           b_extension=b_extension,
-            #                           shuffle=False,
-            #
-            #                           patches_per_scan=1,  # target size
-            #                           data_argum=False,
-            #                           ds=args.deep_supervision,
-            #                           labels=labels)
 
 
         enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=True)
@@ -547,7 +372,7 @@ def train(args):
                                                    save_weights_only=True,
                                                    save_freq=1)
 
-            if idx_ % (args.patches_per_scan * 50 * 1) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
+            if idx_ % (10000) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
                 history = net.fit (x, y,
                                    batch_size=args.batch_size,
                                    validation_data=valid_data,
@@ -558,34 +383,6 @@ def train(args):
                 old_val_loss = np.float(best_loss_dic[task])
                 if current_val_loss<old_val_loss:
                     best_loss_dic[task] = history.history['val_loss']
-
-                if task != 'no_label': # save predicted results and compute the dices
-                    for phase in ['valid']:
-
-                        segment = v_seg.v_segmentor(batch_size=args.batch_size,
-                                                    model=mypath.weights_location(),
-                                                    ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
-                                                    trgt_sz = args.trgt_sz, trgt_z_sz = args.trgt_z_sz,
-                                                    trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
-                                                    task=task)
-
-
-
-
-                        write_preds_to_disk(segment=segment,
-                                            data_dir = mypath.data_path( phase),
-                                            preds_dir= mypath.pred_path( phase),
-                                            number=1, stride = 0.5)
-
-
-
-                        write_dices_to_csv (labels=label,
-                                            gdth_path=mypath.gdth_path(phase),
-                                            pred_path=mypath.pred_path(phase),
-                                            csv_file= mypath.dices_location(phase))
-
-                        del segment # delete this class
-
 
             else:
                 history = net.fit (x, y,
@@ -604,7 +401,7 @@ def train(args):
 
 
 if __name__ == '__main__':
-    train(parser.parse_args())
+    train()
 
 
 
