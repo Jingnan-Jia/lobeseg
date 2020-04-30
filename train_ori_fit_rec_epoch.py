@@ -355,7 +355,8 @@ def train():
             valid_data = va_data  # va_data is a fixed numpy data
 
             # callbacks
-            csvlogger = callbacks.CSVLogger(mypath.log_fpath(), separator=',', append=True)
+            train_csvlogger = callbacks.CSVLogger(mypath.train_log_fpath(), separator=',', append=True)
+            tr_va_csvlogger = callbacks.CSVLogger(mypath.tr_va_log_fpath(), separator=',', append=True)
             if idx_>0 or os.path.exists(mypath.log_fpath()):
                     df = pd.read_csv(mypath.log_fpath())
                     EPOCH_INIT = df['epoch'].iloc[-1]
@@ -371,27 +372,27 @@ def train():
                     if best_init is not None:
                         self.best = best_init
 
-            checkpointer = ModelCheckpointWrapper(best_init=BEST_LOSS,
+            saver_train = ModelCheckpointWrapper(best_init=BEST_LOSS,
                                                   filepath=mypath.best_weights_location(),
                                                   verbose=1,
                                                   save_best_only=True,
                                                   monitor='loss',
-                                                  save_weights_only=False,
+                                                  save_weights_only=True,
                                                   save_freq=1)
-            saver = ModelCheckpointWrapper (best_init=BEST_LOSS,
+            saver_valid = ModelCheckpointWrapper (best_init=BEST_LOSS,
                                                    filepath=mypath.weights_location(),
                                                    verbose=1,
                                                    save_best_only=True,
-                                                   monitor='loss',
+                                                   monitor='val_loss',
                                                    save_weights_only=True,
                                                    save_freq=1)
 
-            if idx_ % (10000) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
+            if idx_ % (5000) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
                 history = net.fit (x, y,
                                    batch_size=args.batch_size,
                                    validation_data=valid_data,
                                    use_multiprocessing=True,
-                                   callbacks=[checkpointer, saver, csvlogger])
+                                   callbacks=[saver_valid, tr_va_csvlogger])
 
                 current_val_loss = history.history['val_loss'][0]
                 old_val_loss = np.float(best_loss_dic[task])
@@ -402,7 +403,7 @@ def train():
                 history = net.fit (x, y,
                                    batch_size=args.batch_size,
                                    use_multiprocessing=True,
-                                   callbacks=[csvlogger])
+                                   callbacks=[saver_train, train_csvlogger])
 
             print (history.history.keys ())
             for key, result in history.history.items ():
