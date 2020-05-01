@@ -414,7 +414,7 @@ def train():
                                                    save_weights_only=True,
                                                    save_freq=1)
 
-            if idx_ % (5000) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
+            if (idx_!=0) and (idx_ % (5000) == 0): # one epoch for lobe segmentation, 20 epochs for vessel segmentation
                 history = net.fit (x, y,
                                    batch_size=args.batch_size,
                                    validation_data=valid_data,
@@ -427,7 +427,7 @@ def train():
                     best_va_loss_dic[task] = history.history['val_loss']
 
                 if task != 'no_label': # save predicted results and compute the dices
-                    for phase in ['valid']:
+                    for phase in ['train', 'valid']:
                         if segment==None:
                             segment = v_seg.v_segmentor(batch_size=args.batch_size,
                                                         model=net,
