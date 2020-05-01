@@ -36,7 +36,7 @@ parser.add_argument(
     '--feature_size',
     help='Number of initial of conv channels',
     type=int,
-    default=8)
+    default=16)
 
 parser.add_argument(
     '-bn',

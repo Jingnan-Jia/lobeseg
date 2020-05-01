@@ -8,7 +8,7 @@
 
 #SBATCH --partition=gpu-long
 
-#SBATCH --nodelist=node858
+#SBATCH --nodelist=node852
 
 #SBATCH --gres=gpu:1
 #SBATCH --time=160:00:00 
