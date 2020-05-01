@@ -70,15 +70,15 @@ parser.add_argument(
     '-trgt_space',
     '--trgt_space',
     help='spacing along x, y ',
-    type=int,
+    type=float,
     default=0.6)
 
 parser.add_argument(
     '-trgt_z_space',
     '--trgt_z_space',
     help='spacing along z',
-    type=int,
-    default=0.3)
+    type=float,
+    default=1.0)
 
 parser.add_argument(
     '-ptch_sz',
