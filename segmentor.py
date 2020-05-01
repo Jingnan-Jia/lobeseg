@@ -53,15 +53,18 @@ class v_segmentor(object):
             self.patching = True
         else:
             self.patching = False
-        model_path = model.split(".hdf5")
-        model_path = model.split(".hdf5")[0]+'.json'
-        with open(model_path, "r") as json_file:
-            json_model = json_file.read()
 
-            self.v = model_from_json(json_model)
-       
-        self.v.load_weights((self.model))
-        
+        if type(self.model) is str: # if model is loaded from a file
+            model_path = model.split(".hdf5")
+            model_path = model.split(".hdf5")[0]+'.json'
+            with open(model_path, "r") as json_file:
+                json_model = json_file.read()
+                self.v = model_from_json(json_model)
+
+            self.v.load_weights((self.model))
+        else: # model is a tf.keras model directly in RAM
+            self.v = self.model
+
     def _normalize(self,scan):
         """returns normalized (0 mean 1 variance) scan"""
         

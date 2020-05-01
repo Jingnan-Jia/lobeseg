@@ -18,6 +18,9 @@ from tensorflow.keras.callbacks import TensorBoard
 import compiled_models_complete_tf_keras
 
 from set_args import args
+from write_dice import write_dices_to_csv
+from write_batch_preds import write_preds_to_disk
+import segmentor as v_seg
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
 tf.keras.mixed_precision.experimental.set_policy('infer') # mix precision training
@@ -422,6 +425,29 @@ def train():
                 old_val_loss = np.float(best_va_loss_dic[task])
                 if current_val_loss<old_val_loss:
                     best_va_loss_dic[task] = history.history['val_loss']
+
+                if task != 'no_label': # save predicted results and compute the dices
+                    for phase in ['valid']:
+                        if segment==None:
+                            segment = v_seg.v_segmentor(batch_size=args.batch_size,
+                                                        model=net,
+                                                        ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
+                                                        trgt_sz = args.trgt_sz, trgt_z_sz = args.trgt_z_sz,
+                                                        trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
+                                                        task=task)
+
+
+
+                        write_preds_to_disk(segment=segment,
+                                            data_dir = mypath.data_path( phase),
+                                            preds_dir= mypath.pred_path( phase),
+                                            number=1, stride = 0.5)
+
+                        write_dices_to_csv (labels=label,
+                                            gdth_path=mypath.gdth_path(phase),
+                                            pred_path=mypath.pred_path(phase),
+                                            csv_file= mypath.dices_location(phase))
+
 
             else:
                 history = net.fit (x, y,
