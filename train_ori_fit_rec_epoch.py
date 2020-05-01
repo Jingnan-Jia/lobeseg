@@ -50,7 +50,9 @@ class Mypath:
         self.current_time = str (time.time ())
         self.setting = '_' + str (args.lr) + str (args.load) + 'a_o_' + str (
             args.aux_output) + 'ds' + str (args.deep_supervision) + 'dr' + str (args.dropout) + 'bn' + str (
-            args.batch_norm) + 'fs' + str (args.feature_size) + 'ptsz' + str (args.ptch_sz) + 'ptzsz' + str (args.ptch_z_sz)
+            args.batch_norm) + 'fs' + str (args.feature_size) + 'tr_sz' + str(args.trgt_sz) + 'tr_zsz' + str(args.trgt_z_sz)\
+                       + 'tr_sp'+ str(args.trgt_space) + 'tr_zsp'+ str(args.trgt_z_space) + 'ptch_per_scan' + str(args.patches_per_scan)+ \
+                       'tr_nb' + str(args.tr_nb) + 'ptsz' + str (args.ptch_sz) + 'ptzsz' + str (args.ptch_z_sz)
         self.str_name = self.current_time + self.setting
 
         # self.model_png_location = '/exports/lkeb-hpc/jjia/project/e2e_new/newmodel_'+task+'.png'
@@ -122,7 +124,7 @@ class Mypath:
     def best_va_loss_location(self):
         return self.model_path + '/' + self.task + '/' + self.str_name + '_best.hdf5'
 
-    def data_path(self, phase='train'):
+    def ori_ct_path(self, phase='train'):
         if self.task=='lobe':
             data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
         else:
@@ -138,6 +140,7 @@ class Mypath:
             gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct'
         if not os.path.exists(gdth_path):
             os.makedirs(gdth_path)
+        return gdth_path
 
     def pred_path(self, phase='train'):
         if self.task == 'lobe':
@@ -147,6 +150,7 @@ class Mypath:
             pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time[:8]
         if not os.path.exists(pred_path):
             os.makedirs(pred_path)
+        return pred_path
 
     def dices_location(self, phase='train'):
         if self.task == 'lobe':
@@ -414,7 +418,7 @@ def train():
                                                    save_weights_only=True,
                                                    save_freq=1)
 
-            if (idx_!=0) and (idx_ % (5000) == 0): # one epoch for lobe segmentation, 20 epochs for vessel segmentation
+            if idx_ % (5000) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
                 history = net.fit (x, y,
                                    batch_size=args.batch_size,
                                    validation_data=valid_data,
@@ -428,18 +432,18 @@ def train():
 
                 if task != 'no_label': # save predicted results and compute the dices
                     for phase in ['train', 'valid']:
-                        if segment==None:
-                            segment = v_seg.v_segmentor(batch_size=args.batch_size,
-                                                        model=net,
-                                                        ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
-                                                        trgt_sz = args.trgt_sz, trgt_z_sz = args.trgt_z_sz,
-                                                        trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
-                                                        task=task)
+
+                        segment = v_seg.v_segmentor(batch_size=args.batch_size,
+                                                    model=net,
+                                                    ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
+                                                    trgt_sz = args.trgt_sz, trgt_z_sz = args.trgt_z_sz,
+                                                    trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
+                                                    task=task)
 
 
 
                         write_preds_to_disk(segment=segment,
-                                            data_dir = mypath.data_path( phase),
+                                            data_dir = mypath.ori_ct_path( phase),
                                             preds_dir= mypath.pred_path( phase),
                                             number=1, stride = 0.5)
 
