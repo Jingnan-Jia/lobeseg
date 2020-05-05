@@ -3,6 +3,182 @@ import os
 import csv
 from scipy.ndimage.filters import uniform_filter1d
 # import pixiedust
+class Logger:
+    def __init__(self, tr_log, va_log, task_name, skip_nb, average_N=100):
+
+        self.tr_log = tr_log
+        self.va_log = va_log
+        self.task_name = task_name
+        self.skip_nb = skip_nb
+        self.average_N = average_N
+
+        if task_name == 'vessel':
+            self.out_chn = 2
+        elif task_name == 'airway':
+            self.out_chn = 2
+        elif task_name == 'lobe':
+            self.out_chn = 6
+        elif task_name == 'no_label':
+            self.out_chn = 1
+        else:
+            raise Exception('please select correct task name')
+
+        self.val_out_mean = 'val_' + self.task_name + '_out_segmentation_dice_coef_mean'
+        self.train_out_mean = self.task_name + '_out_segmentation_dice_coef_mean'
+
+        self.train_color = 'blue'
+        self.valid_color = 'red'
+
+    def _get_tr_data(self, y_name):
+        with open(self.tr_log, encoding='utf-8') as f:
+            reader = csv.DictReader((l.replace('\0', '') for l in f))  # avoid error: 'line contains null'
+            index = 0
+            x_value = []
+            y_value = []
+            for row in reader:
+                x_value.append(index)
+                y_value.append(float(row[y_name]))
+                index += 1
+
+            return (x_value, y_value)
+
+    def _get_va_data(self, y_name):
+        with open(self.va_log, encoding='utf-8') as f:
+            reader = csv.DictReader((l.replace('\0', '') for l in f))  # avoid error: 'line contains null'
+            index = 0
+            x_value = []
+            y_value = []
+            for row in reader:
+                x_value.append(index)
+                y_value.append(float(row[y_name]))
+                index += 5000
+
+            return (x_value, y_value)
+
+    def _plot(self, x_train, x_valid, y_valid=None, y_train=None, title='dice'):
+
+        fig = plt.figure(facecolor='w', figsize=(6, 6), dpi=300)
+        # fig.suptitle(self.super_title, fontsize=16)
+        ax = fig.add_subplot(111)
+        if y_valid is not None:
+            ax.scatter(x_valid, y_valid, s=5, c=self.valid_color, marker='o',
+                       label='valid')
+            y_valid = uniform_filter1d(y_valid, size=self.average_N)
+            ax.plot(x_valid, y_valid, c=self.valid_color, label='valid_average')
+
+        if y_train is not None:
+            # #             ax2 = fig.add_axes([0,0,1,1])
+            ax.scatter(x_train, y_train, s=5, c=self.train_color, marker='o',
+                       label='train')
+            y_train = uniform_filter1d(y_train, size=self.average_N)
+            ax.plot(x_train, y_train, c=self.train_color, label='train_average')
+        #             ax2.legend()
+        ax.legend()
+        ax.set_ylim((0, 1))
+
+        ax.set_xlim(left=0)
+        ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1])
+        ax.set_ylabel('dice')
+        ax.set_xlabel('steps')
+        # plt.xlim(left=0)
+        # plt.gca().yaxis.set_major_locator(plt.MultipleLocator(0.1))
+        ax.plot([0, x_train[-1]], [0.95, 0.95], 'k-', lw=1, dashes=[2, 2])
+        #         ax.plot([0,90000], [0.97, 0.97], 'k-', lw=1, dashes=[2,2])
+
+        plt.rc('font', size=18)
+
+        # plt.show()
+        frame = plt.gca()
+        frame.axes.get_yaxis().set_visible(True)
+        frame.axes.get_xaxis().set_visible(True)
+        fig_path = tr_log.split ('/')[-1][:8] + title+'.png'
+        plt.savefig(fig_path)
+        print('save fig at', fig_path)
+        plt.close()
+
+    def plot_train_dice_mean(self):
+        # #         self.super_title = self.super_title + 'valid_dice_mean'
+        x, y = self._get_va_data(self.val_out_mean)
+        self._plot(x_train=x, y_train=y, title='train_dice_mean')
+
+
+    def plot_val_dice_mean(self):
+        #         self.super_title = self.task_name + 'train_dice_mean'
+        x, y = self._get_tr_data(self.train_out_mean)
+        self._plot(x_valid=x, y_valid=y, title='valid_dice_mean')
+
+    def plot_train_val_dice(self):
+        x_valid, y_valid = self._get_va_data(self.val_out_mean)
+        x_train, y_train = self._get_tr_data(self.train_out_mean)
+
+        self._plot(x_train=x_train, x_valid=x_valid, y_valid=y_valid, y_train=y_train, title='tr_va_dice_mean')
+
+
+
+    def plot_all_val_dice(self):
+        fig = plt.figure(facecolor='w', figsize=(6, 6), dpi=300)
+        ax = fig.add_subplot(111)
+
+        for i in range(1, self.out_chn):
+            y_name = 'val_' + self.task_name + '_out_segmentation_dice_' + str(i)
+
+            x, y = self._get_va_data(y_name)
+            y = uniform_filter1d(y, size=self.average_N)
+            ax.plot(x, y, label='val_dice_' + str(i))
+        ax.legend()
+        ax.set_ylim((0, 1))
+
+        ax.set_xlim(left=0)
+        ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1])
+        ax.set_ylabel('dice')
+        ax.set_xlabel('steps')
+        # plt.xlim(left=0)
+        # plt.gca().yaxis.set_major_locator(plt.MultipleLocator(0.1))
+        ax.plot([0, x[-1]], [0.95, 0.95], 'k-', lw=1, dashes=[2, 2])
+        #         ax.plot([0,90000], [0.97, 0.97], 'k-', lw=1, dashes=[2,2])
+
+        plt.rc('font', size=18)
+        frame = plt.gca()
+        frame.axes.get_yaxis().set_visible(True)
+        frame.axes.get_xaxis().set_visible(True)
+        # plt.show()
+        plt.savefig(tr_log.split ('/')[-1][:8] + 'all_valid_dice.png')
+        plt.close()
+
+
+    def plot_all_train_dice(self):
+        fig = plt.figure(facecolor='w', figsize=(6, 6), dpi=300)
+        ax = fig.add_subplot(111)
+        for i in range(1, self.out_chn):
+            y_name = self.task_name + '_out_segmentation_dice_' + str(i)
+
+            x, y = self._get_tr_data(y_name)
+            x, y = x[::self.skip_nb], y[::self.skip_nb]
+            y = uniform_filter1d(y, size=self.average_N)
+            ax.plot(x, y, label='train_dice_' + str(i))
+        ax.legend()
+        ax.set_ylim((0, 1))
+
+        ax.set_xlim(left=0)
+        ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1])
+        ax.set_ylabel('dice')
+        ax.set_xlabel('steps')
+        # plt.xlim(left=0)
+        # plt.gca().yaxis.set_major_locator(plt.MultipleLocator(0.1))
+        ax.plot([0, x[-1]], [0.95, 0.95], 'k-', lw=1, dashes=[2, 2])
+        #         ax.plot([0,90000], [0.97, 0.97], 'k-', lw=1, dashes=[2,2])
+
+        plt.rc('font', size=18)
+        # plt.show()
+        frame = plt.gca()
+        frame.axes.get_yaxis().set_visible(True)
+        frame.axes.get_xaxis().set_visible(True)
+        plt.savefig(tr_log.split ('/')[-1][:8] + 'all_train_dice.png')
+        plt.close()
+
+
+
+
 
 class Hist:
     def __init__(self, file_name, log_dir, task_name, skip_number, new_arch=True, net_name=None, average_N=100):
@@ -347,22 +523,17 @@ class Hist_:
         plt.close()
 
 
-
-
 task_name = 'vessel'
-number = '15850005'
-file_name = '1588276777.08482_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96.log'
-log_dir = 'logs/'
-skip_number = 1 # patches per epoch
-
-hist = Hist(file_name, log_dir, task_name, skip_number, new_arch=True, average_N=10)
-
+str_name = '1588361067.0445018_0.00010a_o_0ds2dr1bn1fs16tr_szNonetr_zszNonetr_sp0.6tr_zsp0.3ptch_per_scan500tr_nb50ptsz144ptzsz96'
+tr_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'train.log'
+va_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'tr_va.log'
+hist = Logger(tr_log, va_log, task_name, skip_nb=10, average_N=1)
 
 hist.plot_all_val_dice()
 
-hist.plot_all_train_dice()
+#hist.plot_all_train_dice()
 
-hist.plot_train_val_dice()
+#hist.plot_train_val_dice()
 
 # 'net_only_lobe'
 # task_name = 'lobe'

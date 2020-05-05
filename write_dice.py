@@ -32,7 +32,7 @@ def calculate_dices(labels, a, b):
     aa, bb = copy.deepcopy(a), copy.deepcopy(b)
     
     dices = []
-    for l in labels:
+    for l in labels[1:]:
         a_ = np.where(aa != l, 0, 1)
         b_ = np.where(bb != l, 0, 1)
 
@@ -86,6 +86,7 @@ def write_dices_to_csv(labels, gdth_path, pred_path, csv_file, gdth_extension='.
         pred_file = load_scan(pred_name)
         
         dices_values = calculate_dices(labels, gdth_file, pred_file)
+
         dices_values_matrix.append(dices_values)
         
         dices_names = [gdth_name]
