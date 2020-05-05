@@ -47,7 +47,7 @@ class Mypath:
         self.results_path = os.path.join (self.dir_path, 'results')
 
 
-        self.current_time = str (time.time ())
+        self.current_time = str (int(time.time ()))
         self.setting = '_' + str (args.lr) + str (args.load) + 'a_o_' + str (
             args.aux_output) + 'ds' + str (args.deep_supervision) + 'dr' + str (args.dropout) + 'bn' + str (
             args.batch_norm) + 'fs' + str (args.feature_size) + 'tr_sz' + str(args.trgt_sz) + 'tr_zsz' + str(args.trgt_z_sz)\
