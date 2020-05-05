@@ -8,6 +8,7 @@ from write_batch_preds import write_preds_to_disk
 from write_dice import write_dices_to_csv
 import segmentor as v_seg
 import os
+import re
 # from train_ori_fit_rec_epoch import Mypath
 #1583105196.4919333_0.00010a_o_0.5ds2dr1bn1fs16ptsz144ptzsz80
 #1583105073.503702_0.00010a_o_0.5ds2dr1bn1fs16ptsz144ptzsz80
@@ -33,19 +34,39 @@ import os
              1587848974.2342067_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96
              1587848927.819794_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz96
              1587846165.2829812_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64
+             
+             '1588287353.8400497_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96'
+             '1588287759.0237665_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96'
+             '1588287839.3979223_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96'
+             '1588288125.8417192_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz144'
+             '1588288409.620666_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz64'
+             '1588288526.236716_0.00010a_o_0ds2dr1bn1fs4ptsz144ptzsz64'
+             '1588288618.4858303_0.00010a_o_0ds2dr1bn1fs2ptsz144ptzsz64'
+             '1588289073.84265_0.00010a_o_0ds2dr1bn1fs4ptsz144ptzsz96'
+             '1588289144.719585_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz96'
+             '1588287353.8400497_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96',
+             '1588287759.0237665_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96',
+             '1588287839.3979223_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96',
 '''
 task='vessel'
-str_names = ['1587846165.2829812_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64']
+str_names = [
+             '1588288125.8417192_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz144',
+             '1588288409.620666_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz64',
+             '1588288526.236716_0.00010a_o_0ds2dr1bn1fs4ptsz144ptzsz64',
+             '1588288618.4858303_0.00010a_o_0ds2dr1bn1fs2ptsz144ptzsz64',
+             '1588289073.84265_0.00010a_o_0ds2dr1bn1fs4ptsz144ptzsz96',
+             '1588289144.719585_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz96']
 print(str_names)
 for str_name in str_names:
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
     model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'
-    ptch_z_sz = int(str_name[-2:])
-    try:
-        ptch_sz = int(str_name[-10:-7])
-    except:
-        ptch_sz = int(str_name[-9:-7])
-    print(ptch_sz, ptch_z_sz)
+    # ptch_z_sz = int(str_name.split('ptzsz')[-1])
+    # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
+
+    ptch_z_sz = int(re.findall(r'\d+', str_name.split('ptzsz')[-1]))
+    ptch_sz = int(re.findall(r'\d+', str_name.split('ptsz')[-1]))
+
+    print('patch_sz', ptch_sz1, 'patch_z_size', ptch_z_sz1)
 
 
     for phase in ['valid']:
@@ -75,7 +96,7 @@ for str_name in str_names:
         write_preds_to_disk(segment=segment,
                             data_dir=data_dir,
                             preds_dir=preds_dir,
-                            number=5, stride=0.5)
+                            number=3, stride=0.5)
 
 
         write_dices_to_csv (labels=labels,
