@@ -90,7 +90,7 @@ def write_dices_to_csv(labels, gdth_path, pred_path, csv_file, gdth_extension='.
         dices_values_matrix.append(dices_values)
         
         dices_names = [gdth_name]
-        for l in labels:
+        for l in labels[1:]:
             dices_names.append('dice_'+str(l)) # dice_names is a list corresponding to the specific dices_values
         total_dices_names.extend(dices_names) # extend a list by another small list
         
