@@ -12,6 +12,7 @@ import futils.util as futil
 from  scipy import ndimage
 import time
 import glob
+import sys
 
 """3D Extension of the work in https://github.com/costapt/vess2ret/blob/master/util/data.py"""
 
@@ -225,7 +226,7 @@ class TwoScanIterator(Iterator):
         time1 = time.time()
         # print('time before downscale:', time1)
         print('shape before downscale', scan.shape)
-        if self.trgt_space is not None:  # put trgt space more priority
+        if self.trgt_space and self.trgt_z_space:  # put trgt space more priority
             trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space]
 
             zoom_seq = np.array(self.spacing, dtype='float') / np.array(trgt_sp_list, dtype='float')  # order is correct
@@ -251,7 +252,8 @@ class TwoScanIterator(Iterator):
         time2 = time.time()
         # print('time after downscle:', time2)
         print('shape after downscale', s.shape)
-        print('time during downscle:', time2 - time1)
+        print('time during downscle:', time2 - time1, file=sys.stdout)
+        print('time during downscle:', time2 - time1, file=sys.stderr)
 
 
         return s
@@ -447,7 +449,7 @@ class TwoScanIterator(Iterator):
 
             # adapt to input tensor
             # print('..........after next.........................')
-            print(x.shape, y.shape)
+
             # print('.............after rollaxis 1, 4......................')
             x_b = np.rollaxis(x, 1, 4)
             y_b = np.rollaxis(y, 1, 4)
@@ -455,6 +457,7 @@ class TwoScanIterator(Iterator):
             # print ('...................................')
 
             # y_b = np.reshape(y_b, (y_b.shape[0], y_b.shape[1], y_b.shape[2], y_b.shape[-1]))
+            print('prepare feed the data to model', x_b.shape, y_b.shape)
 
             for x, y in zip(x_b, y_b):
                 if self.task=='no_label':
