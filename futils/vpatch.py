@@ -57,10 +57,12 @@ def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25):
     
     if stride == -1:
         stride = p_sh
-    elif isinstance(stride, float):
+    elif isinstance(stride, float) or stride==1:
         stride  = p_sh * stride
-    else:
+    elif isinstance(stride, list):
         stride  = np.ones(3)*stride
+    else:
+        raise Exception('the stride is wrong', stride)
     
     stride = stride.astype(int)
     
@@ -99,10 +101,13 @@ def reconstruct_patch(scan,original_shape=(128,256,256),stride = 0.25):
     
     if stride == -1:
         stride = p_sh
-    elif isinstance(stride, float):
+    elif isinstance(stride, float) or stride==1:
         stride  = p_sh * stride
-    else:
+
+    elif isinstance(stride, list):
         stride  = np.ones(3)*stride
+    else:
+        raise Exception('the stride is wrong', stride)
     
     stride = stride.astype(int)
 
