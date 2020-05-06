@@ -48,14 +48,13 @@ class Mypath:
 
 
         self.current_time = str (int(time.time ()))
-        self.setting = '_' + str (args.lr) + str (args.load) + 'a_o_' + str (
+        self.setting = '_lr' + str (args.lr) +'ld'+str (args.load) + 'ao' + str (
             args.aux_output) + 'ds' + str (args.deep_supervision) + 'dr' + str (args.dropout) + 'bn' + str (
-            args.batch_norm) + 'fs' + str (args.feature_size) + 'tr_sz' + str(args.trgt_sz) + 'tr_zsz' + str(args.trgt_z_sz)\
-                       + 'tr_sp'+ str(args.trgt_space) + 'tr_zsp'+ str(args.trgt_z_space) + 'ptch_per_scan' + str(args.patches_per_scan)+ \
+            args.batch_norm) + 'fn' + str (args.feature_number) + 'trsz' + str(args.trgt_sz) + 'trzsz' + str(args.trgt_z_sz)\
+                       + 'trsp'+ str(args.trgt_space) + 'trzsp'+ str(args.trgt_z_space) + 'ptch_per_scan' + str(args.patches_per_scan)+ \
                        'tr_nb' + str(args.tr_nb) + 'ptsz' + str (args.ptch_sz) + 'ptzsz' + str (args.ptch_z_sz)
         self.str_name = self.current_time + self.setting
 
-        # self.model_png_location = '/exports/lkeb-hpc/jjia/project/e2e_new/newmodel_'+task+'.png'
 
     def sub_dir(self):
 
@@ -118,11 +117,11 @@ class Mypath:
     def json_fpath(self):
         return self.model_path + '/' + self.task + '/' + self.str_name + 'MODEL.json'
 
-    def best_tr_loss_location(self):
+    def best_va_loss_location(self):
         return self.model_path + '/' + self.task + '/' + self.str_name + 'MODEL.hdf5'
 
-    def best_va_loss_location(self):
-        return self.model_path + '/' + self.task + '/' + self.str_name + '_best.hdf5'
+    def best_tr_loss_location(self):
+        return self.model_path + '/' + self.task + '/' + self.str_name + '_tr_best.hdf5'
 
     def ori_ct_path(self, phase='train'):
         if self.task=='lobe':
@@ -212,7 +211,7 @@ def train():
     net_list = compiled_models_complete_tf_keras.load_cp_models (model_names,
                                                                 nch=1,
                                                                 lr=args.lr,
-                                                                nf=args.feature_size,
+                                                                nf=args.feature_number,
                                                                 bn=args.batch_norm,
                                                                 dr=args.dropout,
                                                                 ds=args.deep_supervision,
@@ -273,7 +272,7 @@ def train():
                                    b_extension=b_extension,
                                    shuffle=True,
                                    patches_per_scan=args.patches_per_scan,
-                                   data_argum=False,
+                                   data_argum=True,
                                    ds=args.deep_supervision,
                                    labels=labels,
                                    nb=args.tr_nb)
@@ -379,22 +378,22 @@ def train():
             train_csvlogger = callbacks.CSVLogger(mypath.train_log_fpath(), separator=',', append=True)
             tr_va_csvlogger = callbacks.CSVLogger(mypath.tr_va_log_fpath(), separator=',', append=True)
 
-            if os.path.exists(mypath.train_log_fpath()):
-                    df = pd.read_csv(mypath.train_log_fpath())
-                    EPOCH_INIT = df['epoch'].iloc[-1]
-                    BEST_TR_LOSS = min(df['loss'])
-                    best_tr_loss_dic[task] = BEST_TR_LOSS
-                    print('Resume training {2} from EPOCH_INIT {0}, BEST_LOSS {1}'.format(EPOCH_INIT, BEST_TR_LOSS, task))
-            else:
+            if not os.path.exists(mypath.train_log_fpath()):
+            #         df = pd.read_csv(mypath.train_log_fpath())
+            #         EPOCH_INIT = df['epoch'].iloc[-1]
+            #         BEST_TR_LOSS = min(df['loss'])
+            #         best_tr_loss_dic[task] = BEST_TR_LOSS
+            #         print('Resume training {2} from EPOCH_INIT {0}, BEST_LOSS {1}'.format(EPOCH_INIT, BEST_TR_LOSS, task))
+            # else:
                 BEST_TR_LOSS = best_tr_loss_dic[task]
 
-            if os.path.exists(mypath.tr_va_log_fpath()):
-                    df = pd.read_csv(mypath.tr_va_log_fpath())
-                    EPOCH_INIT = df['epoch'].iloc[-1]
-                    BEST_VA_LOSS = min(df['val_loss'])
-                    best_va_loss_dic[task] = BEST_VA_LOSS
-                    print('Resume training {2} from EPOCH_INIT {0}, BEST_VAL_LOSS {1}'.format(EPOCH_INIT, BEST_VA_LOSS, task))
-            else:
+            if not os.path.exists(mypath.tr_va_log_fpath()):
+            #         df = pd.read_csv(mypath.tr_va_log_fpath())
+            #         EPOCH_INIT = df['epoch'].iloc[-1]
+            #         BEST_VA_LOSS = min(df['val_loss'])
+            #         best_va_loss_dic[task] = BEST_VA_LOSS
+            #         print('Resume training {2} from EPOCH_INIT {0}, BEST_VAL_LOSS {1}'.format(EPOCH_INIT, BEST_VA_LOSS, task))
+            # else:
                 BEST_VA_LOSS = best_va_loss_dic[task]
 
             class ModelCheckpointWrapper(callbacks.ModelCheckpoint):
@@ -426,9 +425,10 @@ def train():
                                    callbacks=[saver_valid, tr_va_csvlogger])
 
                 current_val_loss = history.history['val_loss'][0]
+                tmp =best_va_loss_dic[task]
                 old_val_loss = np.float(best_va_loss_dic[task])
                 if current_val_loss<old_val_loss:
-                    best_va_loss_dic[task] = history.history['val_loss']
+                    best_va_loss_dic[task] = history.history['val_loss'][0]
 
                 if task != 'no_label': # save predicted results and compute the dices
                     for phase in ['train', 'valid']:
@@ -440,12 +440,10 @@ def train():
                                                     trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
                                                     task=task)
 
-
-
                         write_preds_to_disk(segment=segment,
                                             data_dir = mypath.ori_ct_path( phase),
                                             preds_dir= mypath.pred_path( phase),
-                                            number=1, stride = 0.5)
+                                            number=1, stride = 1)
 
                         write_dices_to_csv (labels=label,
                                             gdth_path=mypath.gdth_path(phase),
@@ -461,7 +459,7 @@ def train():
                 current_tr_loss = history.history['loss'][0]
                 old_tr_loss = np.float(best_tr_loss_dic[task])
                 if current_tr_loss < old_tr_loss:
-                    best_tr_loss_dic[task] = history.history['loss']
+                    best_tr_loss_dic[task] = history.history['loss'][0]
 
             #print (history.history.keys ())
             for key, result in history.history.items ():
