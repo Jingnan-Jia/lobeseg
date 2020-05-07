@@ -2,12 +2,16 @@ import matplotlib.pyplot as plt
 import os
 import csv
 from scipy.ndimage.filters import uniform_filter1d
+import re
 # import pixiedust
 class Logger:
     def __init__(self, tr_log, va_log, task_name, skip_nb, average_N=100):
 
         self.tr_log = tr_log
         self.va_log = va_log
+        # self.dir_path = os.path.dirname(os.path.realpath(__file__))  # abosolute path of the current script
+        # self.log_path = os.path.join(self.dir_path, 'logs', task_name)
+
         self.task_name = task_name
         self.skip_nb = skip_nb
         self.average_N = average_N
@@ -91,7 +95,7 @@ class Logger:
         frame = plt.gca()
         frame.axes.get_yaxis().set_visible(True)
         frame.axes.get_xaxis().set_visible(True)
-        fig_path = tr_log.split ('/')[-1][:8] + title+'.png'
+        fig_path = self.tr_log.split('.log')[0][:-5] + title+'.png'
         plt.savefig(fig_path)
         print('save fig at', fig_path)
         plt.close()
@@ -142,7 +146,9 @@ class Logger:
         frame.axes.get_yaxis().set_visible(True)
         frame.axes.get_xaxis().set_visible(True)
         # plt.show()
-        plt.savefig(tr_log.split ('/')[-1][:8] + 'all_valid_dice.png')
+        plt.savefig(self.va_log.split('.log')[0] + 'all_valid_dice.png')
+
+
         plt.close()
 
 
@@ -173,7 +179,7 @@ class Logger:
         frame = plt.gca()
         frame.axes.get_yaxis().set_visible(True)
         frame.axes.get_xaxis().set_visible(True)
-        plt.savefig(tr_log.split ('/')[-1][:8] + 'all_train_dice.png')
+        plt.savefig(self.tr_log.split('.log')[0] + 'all_train_dice.png')
         plt.close()
 
 
@@ -524,12 +530,31 @@ class Hist_:
 
 
 task_name = 'vessel'
-str_name = '1588361067.0445018_0.00010a_o_0ds2dr1bn1fs16tr_szNonetr_zszNonetr_sp0.6tr_zsp0.3ptch_per_scan500tr_nb50ptsz144ptzsz96'
-tr_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'train.log'
-va_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'tr_va.log'
-hist = Logger(tr_log, va_log, task_name, skip_nb=10, average_N=1)
+str_names = ['1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz96ptzsz96',
+             '1588718049_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz64ptzsz64',
+             '1588717836_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz96ptzsz64',
+             '1588717764_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz96ptzsz144',
+             '1588717689_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz144ptzsz96',
+             '1588717666_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb20ptsz144ptzsz96',
+             '1588717641_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb10ptsz144ptzsz96',
+             '1588717429_lr0.0001ld0ao0ds2dr1bn1fn2trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588717407_lr0.0001ld0ao0ds2dr1bn1fn12trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588717381_lr0.0001ld0ao0ds2dr1bn1fn8trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588717334_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz32',
+             '1588717312_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz64',
+             '1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz96ptzsz96',
+             '1588717176_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz128ptzsz96',
+             '1588716830_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588710600_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96'
 
-hist.plot_all_val_dice()
+             ]
+
+for str_name in str_names:
+    tr_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'train.log'
+    va_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'tr_va.log'
+    hist = Logger(tr_log, va_log, task_name, skip_nb=10, average_N=1)
+
+    hist.plot_all_val_dice()
 
 #hist.plot_all_train_dice()
 
