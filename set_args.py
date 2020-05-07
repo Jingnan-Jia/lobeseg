@@ -32,8 +32,8 @@ parser.add_argument(
     default=2)
 
 parser.add_argument(
-    '-fs',
-    '--feature_size',
+    '-fn',
+    '--feature_number',
     help='Number of initial of conv channels',
     type=int,
     default=16)
@@ -78,21 +78,21 @@ parser.add_argument(
     '--trgt_z_space',
     help='spacing along z',
     type=float,
-    default=1.0)
+    default=0.3)
 
 parser.add_argument(
     '-ptch_sz',
     '--ptch_sz',
     help='patch size',
     type=int,
-    default=144)
+    default=96)
 
 parser.add_argument(
     '-ptch_z_sz',
     '--ptch_z_sz',
     help='patch z size',
     type=int,
-    default=96)
+    default=144)
 
 parser.add_argument(
     '-batch_size',
@@ -118,7 +118,7 @@ parser.add_argument(
 parser.add_argument(
     '-tr_nb',
     '--tr_nb',
-    help='do isotropic',
+    help='nunber of training samples',
     type=int,
     default=50)
 
