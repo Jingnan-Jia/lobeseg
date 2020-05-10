@@ -8,7 +8,7 @@ Created on Fri May 26 14:57:47 2017
 
 import numpy as np
 
-def random_patch(scan,gt_scan = None,patch_shape=(64,128,128),p_middle=0.5):
+def random_patch(scan,gt_scan = None,patch_shape=(64,128,128),p_middle=None):
     sh = np.array(scan.shape)
     p_sh = np.array(patch_shape)
     
