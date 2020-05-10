@@ -71,6 +71,8 @@ class Mypath:
                 raise Exception('Please enter the correct args.iso for isotropic parameter')
         elif self.task=='vessel':
             sub_dir = None
+        else:
+            sub_dir = None
 
         return sub_dir
 
@@ -115,7 +117,10 @@ class Mypath:
         return figure_path
 
     def json_fpath(self):
-        return self.model_path + '/' + self.task + '/' + self.str_name + 'MODEL.json'
+        lobe_model_path = self.model_path + '/' + self.task
+        if not os.path.exists (lobe_model_path):
+            os.makedirs (lobe_model_path)
+        return lobe_model_path + '/' + self.str_name + 'MODEL.json'
 
     def best_va_loss_location(self):
         return self.model_path + '/' + self.task + '/' + self.str_name + 'MODEL.hdf5'
@@ -144,7 +149,7 @@ class Mypath:
     def pred_path(self, phase='train'):
         if self.task == 'lobe':
             pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
-               + '/' + self.current_time[:8]
+               + '/' + self.current_time[:10]
         else:
             pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time[:8]
         if not os.path.exists(pred_path):
@@ -156,7 +161,7 @@ class Mypath:
             return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
                + '/' + self.current_time[:8] + '/dices.csv'
         else:
-            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.current_time[:8]+ '/dices.csv'
+            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.current_time[:10]+ '/dices.csv'
 
 
 
@@ -198,7 +203,7 @@ def get_label_list(task_list):
 def train():
 
     # Define the Model
-    model_names = ['net_only_vessel']
+    model_names = ['net_only_lobe']
     if args.aux_output and 'net_only_vessel' in model_names:
         print(model_names)
         raise Exception('net_only_vessel should not have aux output')
@@ -378,23 +383,23 @@ def train():
             train_csvlogger = callbacks.CSVLogger(mypath.train_log_fpath(), separator=',', append=True)
             tr_va_csvlogger = callbacks.CSVLogger(mypath.tr_va_log_fpath(), separator=',', append=True)
 
-            if not os.path.exists(mypath.train_log_fpath()):
+            # if not os.path.exists(mypath.train_log_fpath()):
             #         df = pd.read_csv(mypath.train_log_fpath())
             #         EPOCH_INIT = df['epoch'].iloc[-1]
             #         BEST_TR_LOSS = min(df['loss'])
             #         best_tr_loss_dic[task] = BEST_TR_LOSS
             #         print('Resume training {2} from EPOCH_INIT {0}, BEST_LOSS {1}'.format(EPOCH_INIT, BEST_TR_LOSS, task))
             # else:
-                BEST_TR_LOSS = best_tr_loss_dic[task]
+            BEST_TR_LOSS = best_tr_loss_dic[task]
 
-            if not os.path.exists(mypath.tr_va_log_fpath()):
+            # if not os.path.exists(mypath.tr_va_log_fpath()):
             #         df = pd.read_csv(mypath.tr_va_log_fpath())
             #         EPOCH_INIT = df['epoch'].iloc[-1]
             #         BEST_VA_LOSS = min(df['val_loss'])
             #         best_va_loss_dic[task] = BEST_VA_LOSS
             #         print('Resume training {2} from EPOCH_INIT {0}, BEST_VAL_LOSS {1}'.format(EPOCH_INIT, BEST_VA_LOSS, task))
             # else:
-                BEST_VA_LOSS = best_va_loss_dic[task]
+            BEST_VA_LOSS = best_va_loss_dic[task]
 
             class ModelCheckpointWrapper(callbacks.ModelCheckpoint):
                 def __init__(self, best_init=None, *arg, **kwagrs):
@@ -417,7 +422,7 @@ def train():
                                                    save_weights_only=True,
                                                    save_freq=1)
 
-            if idx_ % (5000) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
+            if idx_ % (500) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
                 history = net.fit (x, y,
                                    batch_size=args.batch_size,
                                    validation_data=valid_data,
@@ -425,10 +430,14 @@ def train():
                                    callbacks=[saver_valid, tr_va_csvlogger])
 
                 current_val_loss = history.history['val_loss'][0]
-                tmp =best_va_loss_dic[task]
                 old_val_loss = np.float(best_va_loss_dic[task])
                 if current_val_loss<old_val_loss:
-                    best_va_loss_dic[task] = history.history['val_loss'][0]
+                    best_va_loss_dic[task] = current_val_loss
+
+                current_tr_loss = history.history['loss'][0]
+                old_tr_loss = np.float(best_tr_loss_dic[task])
+                if current_tr_loss < old_tr_loss:
+                    best_tr_loss_dic[task] = current_tr_loss
 
                 if task != 'no_label': # save predicted results and compute the dices
                     for phase in ['train', 'valid']:
@@ -443,7 +452,7 @@ def train():
                         write_preds_to_disk(segment=segment,
                                             data_dir = mypath.ori_ct_path( phase),
                                             preds_dir= mypath.pred_path( phase),
-                                            number=1, stride = 1)
+                                            number=1, stride = 0.5)
 
                         write_dices_to_csv (labels=label,
                                             gdth_path=mypath.gdth_path(phase),
@@ -456,10 +465,13 @@ def train():
                                    batch_size=args.batch_size,
                                    use_multiprocessing=True,
                                    callbacks=[saver_train, train_csvlogger])
+
+
+
                 current_tr_loss = history.history['loss'][0]
                 old_tr_loss = np.float(best_tr_loss_dic[task])
                 if current_tr_loss < old_tr_loss:
-                    best_tr_loss_dic[task] = history.history['loss'][0]
+                    best_tr_loss_dic[task] = current_tr_loss
 
             #print (history.history.keys ())
             for key, result in history.history.items ():

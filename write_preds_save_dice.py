@@ -51,20 +51,32 @@ from train_ori_fit_rec_epoch import Mypath
              '1588287839.3979223_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96',
 '''
 task='vessel'
-str_names = [
-             '1588288125.8417192_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz144',
-             '1588288409.620666_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz64',
-             '1588288526.236716_0.00010a_o_0ds2dr1bn1fs4ptsz144ptzsz64',
-             '1588288618.4858303_0.00010a_o_0ds2dr1bn1fs2ptsz144ptzsz64',
-             '1588289073.84265_0.00010a_o_0ds2dr1bn1fs4ptsz144ptzsz96',
-             '1588289144.719585_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz96']
+str_names = ['1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz96ptzsz96',
+             '1588718049_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz64ptzsz64',
+             '1588717836_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz96ptzsz64',
+             '1588717764_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz96ptzsz144',
+             '1588717689_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz144ptzsz96',
+             '1588717666_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb20ptsz144ptzsz96',
+             '1588717641_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb10ptsz144ptzsz96',
+             '1588717429_lr0.0001ld0ao0ds2dr1bn1fn2trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588717407_lr0.0001ld0ao0ds2dr1bn1fn12trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588717381_lr0.0001ld0ao0ds2dr1bn1fn8trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588717334_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz32',
+             '1588717312_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz64',
+             '1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz96ptzsz96',
+             '1588717176_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz128ptzsz96',
+             '1588716830_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588710600_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96'
+
+             ]
+
 print(str_names)
 
 mypath = Mypath(task)
 
 for str_name in str_names:
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
-    model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'
+    model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + '_tr_best.hdf5'
     # ptch_z_sz = int(str_name.split('ptzsz')[-1])
     # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
 
