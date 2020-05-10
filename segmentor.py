@@ -56,7 +56,7 @@ class v_segmentor(object):
 
         if type(self.model) is str: # if model is loaded from a file
             model_path = model.split(".hdf5")
-            model_path = model.split(".hdf5")[0]+'.json'
+            model_path = model.split(".hdf5")[0][:-8]+'MODEL.json'
             with open(model_path, "r") as json_file:
                 json_model = json_file.read()
                 self.v = model_from_json(json_model)
