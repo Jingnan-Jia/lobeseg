@@ -71,28 +71,28 @@ parser.add_argument(
     '--trgt_space',
     help='spacing along x, y ',
     type=float,
-    default=0.6)
+    default=1.4)
 
 parser.add_argument(
     '-trgt_z_space',
     '--trgt_z_space',
     help='spacing along z',
     type=float,
-    default=0.3)
+    default=2.5)
 
 parser.add_argument(
     '-ptch_sz',
     '--ptch_sz',
     help='patch size',
     type=int,
-    default=96)
+    default=144)
 
 parser.add_argument(
     '-ptch_z_sz',
     '--ptch_z_sz',
     help='patch z size',
     type=int,
-    default=144)
+    default=96)
 
 parser.add_argument(
     '-batch_size',
@@ -106,7 +106,7 @@ parser.add_argument(
     '--patches_per_scan',
     help='patches_per_scan',
     type=int,
-    default=500)
+    default=10)
 
 parser.add_argument(
     '-iso',
@@ -120,6 +120,6 @@ parser.add_argument(
     '--tr_nb',
     help='nunber of training samples',
     type=int,
-    default=50)
+    default=5)
 
 args = parser.parse_args()

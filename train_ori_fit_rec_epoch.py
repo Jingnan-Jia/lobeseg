@@ -56,6 +56,7 @@ class Mypath:
         self.str_name = self.current_time + self.setting
 
 
+
     def sub_dir(self):
 
         if self.task=='lobe':
@@ -108,25 +109,29 @@ class Mypath:
             os.makedirs(task_log_dir)
         return task_log_dir + '/' + self.str_name + 'train.log'
 
-
-
-    def figure_path(self):
-        figure_path = self.dir_path + '/figures'
-        if not os.path.exists (figure_path):
-            os.makedirs (figure_path)
-        return figure_path
+    def model_figure_path(self):
+        model_figure_path = self.dir_path + '/figures'
+        if not os.path.exists (model_figure_path):
+            os.makedirs (model_figure_path)
+        return model_figure_path
 
     def json_fpath(self):
-        lobe_model_path = self.model_path + '/' + self.task
-        if not os.path.exists (lobe_model_path):
-            os.makedirs (lobe_model_path)
-        return lobe_model_path + '/' + self.str_name + 'MODEL.json'
+        task_model_path = self.model_path + '/' + self.task
+        if not os.path.exists (task_model_path):
+            os.makedirs (task_model_path)
+        return task_model_path + '/' + self.str_name + 'MODEL.json'
 
     def best_va_loss_location(self):
-        return self.model_path + '/' + self.task + '/' + self.str_name + 'MODEL.hdf5'
+        task_model_path = self.model_path + '/' + self.task
+        if not os.path.exists(task_model_path):
+            os.makedirs(task_model_path)
+        return task_model_path + '/' + self.str_name + 'MODEL.hdf5'
 
     def best_tr_loss_location(self):
-        return self.model_path + '/' + self.task + '/' + self.str_name + '_tr_best.hdf5'
+        task_model_path = self.model_path + '/' + self.task
+        if not os.path.exists(task_model_path):
+            os.makedirs(task_model_path)
+        return task_model_path + '/' + self.str_name + '_tr_best.hdf5'
 
     def ori_ct_path(self, phase='train'):
         if self.task=='lobe':
@@ -149,21 +154,19 @@ class Mypath:
     def pred_path(self, phase='train'):
         if self.task == 'lobe':
             pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
-               + '/' + self.current_time[:10]
+               + '/' + self.current_time
         else:
-            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time[:8]
+            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time
         if not os.path.exists(pred_path):
             os.makedirs(pred_path)
         return pred_path
 
-    def dices_location(self, phase='train'):
+    def dices_fpath(self, phase='train'):
         if self.task == 'lobe':
             return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
-               + '/' + self.current_time[:8] + '/dices.csv'
+               + '/' + self.current_time + '/dices.csv'
         else:
-            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.current_time[:10]+ '/dices.csv'
-
-
+            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.current_time + '/dices.csv'
 
 def get_task_list(model_names):
 
@@ -203,8 +206,8 @@ def get_label_list(task_list):
 def train():
 
     # Define the Model
-    model_names = ['net_only_lobe']
-    if args.aux_output and 'net_only_vessel' in model_names:
+    model_names = ['net_only_lobe', 'net_no_label']
+    if args.aux_output and ('net_only_vessel' in model_names):
         print(model_names)
         raise Exception('net_only_vessel should not have aux output')
 
@@ -225,8 +228,7 @@ def train():
 
 
     if args.load: # need to assign the old file name if args.load is True
-        old_time = '1584923362.8464801_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
-        str_name = old_time
+        str_name = '1584923362.8464801_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
         for net, task, mypath in zip (net_list, task_list, path_list):
             old_model_fpath = mypath.model_path + '/' + task + '/' + str_name + 'MODEL.hdf5'
             net.load_weights (old_model_fpath)
@@ -234,10 +236,10 @@ def train():
 
     train_data_gen_list = []
     valid_data_gen_list = []
-    va_data_list = []
+    valid_data_npy_list = []
     for mypath, task, labels, net, model_name in zip (path_list, task_list, label_list, net_list, model_names):
 
-        plot_model(net, show_shapes=True, to_file=mypath.figure_path() + '/' + model_name + '.png')
+        plot_model(net, show_shapes=True, to_file=mypath.model_figure_path() + '/' + model_name + '.png')
 
         if args.load: # load saved model
             old_time = '1584923362.8464801_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
@@ -261,10 +263,13 @@ def train():
 
         if task == 'vessel':
             b_extension = '.mhd'
-            c_dir_name = None
         else:
             b_extension = '.nrrd'
+
+        if args.aux_output:
             c_dir_name = 'aux_gdth'
+        else:
+            c_dir_name = None
 
         train_it = TwoScanIterator(mypath.train_dir(), task=task,
                                    batch_size=args.batch_size,
@@ -343,19 +348,15 @@ def train():
                 one_valid_data = next(valid_datas) # cost 7 seconds per image patch using val_it.generator()
                 # x, y = next(train_it)
                 one_valid_data_x = one_valid_data[0] # output shape:(1,144,144,80,1)
-                one_valid_data_y = one_valid_data[1] # output 4 lists, each list has shape:(1,144,144,80,1)
-                # from (1, 80, 144, 144, 1) to (144, 144, 80, 1)
-                # one_valid_data_x = np.rollaxis(one_valid_data_x, 1, 4)
-                # one_valid_data_y = np.rollaxis(one_valid_data_y, 1, 4)
+                one_valid_data_y = one_valid_data[1] # output 1/2/3/4 lists, each list has shape:(1,144,144,80,6)
 
                 valid_data_x_numpy.append(one_valid_data_x[0])
-                # valid_data_y_numpy.append (one_valid_data_y)
                 for j in range(out_nb):
                     valid_data_y_numpy[j].append(one_valid_data_y[j][0])
             for _ in range(out_nb):
                 valid_data_y_numpy[_] = np.asarray(valid_data_y_numpy[_])
             valid_data_numpy = (np.array(valid_data_x_numpy), valid_data_y_numpy)
-        va_data_list.append(valid_data_numpy)
+        valid_data_npy_list.append(valid_data_numpy)
 
     for enqueuer_valid in valid_data_gen_list:
         enqueuer_valid.close ()
@@ -373,7 +374,7 @@ def train():
     training_step = 2500000
     for idx_ in range(training_step):
         print ('step number: ', idx_)
-        for task, net, tr_data, va_data, label, mypath in zip(task_list, net_list, train_data_gen_list, va_data_list, label_list, path_list):
+        for task, net, tr_data, va_data, label, mypath in zip(task_list, net_list, train_data_gen_list, valid_data_npy_list, label_list, path_list):
 
 
             x, y = next(tr_data) # tr_data is a generator or enquerer
@@ -457,7 +458,7 @@ def train():
                         write_dices_to_csv (labels=label,
                                             gdth_path=mypath.gdth_path(phase),
                                             pred_path=mypath.pred_path(phase),
-                                            csv_file= mypath.dices_location(phase))
+                                            csv_file= mypath.dices_fpath(phase))
 
 
             else:
