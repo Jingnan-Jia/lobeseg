@@ -7,6 +7,7 @@ Created on Fri May 26 14:57:47 2017
 
 
 import numpy as np
+import random
 
 def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None):
     sh = np.array(scan.shape)
@@ -19,19 +20,19 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
    
     if p_middle:
         tmp_nb = int(1/p_middle)
-        if np.random.randint(tmp_nb)==0: #patch from middle part
+        if random.randint(tmp_nb)==0: #patch from middle part
             range_vals_low = list(map(int, (sh[0:3]/3 - p_sh//2) ))
             range_vals_high = list(map(int,(sh[0:3] * 2 /3 - p_sh//2) ))
             # assert range_vals_low > 0 and range_vals_high > 0
 
             origin = []
             for low, high in zip(range_vals_low, range_vals_high):
-                origin.append(np.random.random_integers(low, high))
+                origin.append(random.randint(low, high))
         else:  #patch from other parts
-            origin = [np.random.random_integers(x+1) for x in range_vals]
+            origin = [random.randint(0, x) for x in range_vals]
 
     else:
-        origin = [np.random.random_integers(x+1) for x in range_vals] # here, x+1 can avoid lob>high
+        origin = [random.randint(0, x) for x in range_vals] # here, x+1 can avoid lob>high
     finish  = origin + p_sh
     
     
