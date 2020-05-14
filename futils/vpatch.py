@@ -8,7 +8,7 @@ Created on Fri May 26 14:57:47 2017
 
 import numpy as np
 
-def random_patch(scan,gt_scan = None,patch_shape=(64,128,128),p_middle=None):
+def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None):
     sh = np.array(scan.shape)
     p_sh = np.array(patch_shape)
     
@@ -45,8 +45,11 @@ def random_patch(scan,gt_scan = None,patch_shape=(64,128,128),p_middle=None):
     
     if(gt_scan is not None):
         gt_patch = gt_scan[np.ix_(idx[0],idx[1],idx[2])]
-        
-        return patch,gt_patch
+        if (aux_scan is not None):
+            aux_patch = aux_scan[np.ix_(idx[0], idx[1], idx[2])]
+            return patch, gt_patch, aux_patch
+        else:
+            return patch,gt_patch
     else:
         return patch
         

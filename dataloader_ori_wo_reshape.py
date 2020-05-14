@@ -545,6 +545,7 @@ class TwoScanIterator(Iterator):
             a_files = set(x.split(a_extension)[0].split(self.a_dir + '/')[-1] for x in
                           sorted(glob.glob(self.a_dir + '/*' + self.a_extension)))
             self.filenames = list(a_files)
+            self.aux=False
         else:
             self.sub_dir = sub_dir
             if sub_dir is None:
@@ -612,7 +613,7 @@ class TwoScanIterator(Iterator):
             self.zoom_range = 0.05
             if np.isscalar(self.zoom_range):
                 self.zoom_range = [1 - self.zoom_range, 1 + self.zoom_range]
-            elif len(zoom_range) == 2:
+            elif len(self.zoom_range) == 2:
                 self.zoom_range = [self.zoom_range[0], self.zoom_range[1]]
 
         self.patches_per_scan = patches_per_scan
@@ -642,12 +643,13 @@ class TwoScanIterator(Iterator):
     def load_scan(self, file_name):
         """Load mhd or nrrd 3d scan"""
 
-        if file_name.split('.')[-1] == '.mhd':
+        if file_name.split('.')[-1] == 'mhd':
             scan, origin, self.spacing = futil.load_itk(file_name)
 
-        elif file_name.split('.')[-1] == '.nrrd':
+        elif file_name.split('.')[-1] == 'nrrd':
             scan, origin, self.spacing = futil.load_nrrd(file_name)
         # todo: if extensiion == 'mha' or others
+        print((''))
 
         # if self.task=='no_label' and self.new_spacing is not None:
         #     # rescale no_label data to the same new_spacing as segmentation tasks
@@ -714,7 +716,7 @@ class TwoScanIterator(Iterator):
 
         else:
             s = scan
-            print('do not rescale, please assign the correct rescale method')
+            print('do not assign correct trgt space or size, please assign the correct rescale method')
 
         # zoom_seq = np.array([z_length, sz, sz, 1], dtype='float') / np.array([100, 100, 100, 1], dtype='float')
 
@@ -722,11 +724,11 @@ class TwoScanIterator(Iterator):
         # print('time after downscle:', time2)
         print('shape after downscale', s.shape)
         print('time during downscle:', time2 - time1, file=sys.stdout)
-        print('time during downscle:', time2 - time1, file=sys.stderr)
+        # print('time during downscle:', time2 - time1, file=sys.stderr)
 
         return s
 
-    def _random_transform(self, a, b, is_batch=True):
+    def _random_transform(self, a, b, c=None, is_batch=True):
         """
         Random dataset augmentation.
 
@@ -789,22 +791,45 @@ class TwoScanIterator(Iterator):
         h, w = a.shape[img_row_index], a.shape[img_col_index]
         transform_matrix = transform_matrix_offset_center(transform_matrix, h, w)
 
-        A = []
-        B = []
+        if (c is not None):
+            A = []
+            B = []
+            C = []
 
-        for a_, b_ in zip(a, b):
-            a_ = apply_transform(a_, transform_matrix, img_channel_index - 1,
-                                 fill_mode=self.fill_mode, cval=np.min(a_))
-            b_ = apply_transform(b_, transform_matrix, img_channel_index - 1,
-                                 fill_mode=self.fill_mode, cval=0)
+            for a_, b_, c_ in zip(a, b, c):
+                a_ = apply_transform(a_, transform_matrix, img_channel_index - 1,
+                                     fill_mode=self.fill_mode, cval=np.min(a_))
+                b_ = apply_transform(b_, transform_matrix, img_channel_index - 1,
+                                     fill_mode=self.fill_mode, cval=0)
+                c_ = apply_transform(c_, transform_matrix, img_channel_index - 1,
+                                     fill_mode=self.fill_mode, cval=0)
 
-            A.append(a_)
-            B.append(b_)
+                A.append(a_)
+                B.append(b_)
+                C.append(c_)
 
-        a = np.array(A)
-        b = np.array(B)
+            a = np.array(A)
+            b = np.array(B)
+            c = np.array(C)
+            return a, b, c
 
-        return a, b
+        else:
+            A = []
+            B = []
+
+            for a_, b_ in zip(a, b):
+                a_ = apply_transform(a_, transform_matrix, img_channel_index - 1,
+                                     fill_mode=self.fill_mode, cval=np.min(a_))
+                b_ = apply_transform(b_, transform_matrix, img_channel_index - 1,
+                                     fill_mode=self.fill_mode, cval=0)
+
+                A.append(a_)
+                B.append(b_)
+
+            a = np.array(A)
+            b = np.array(B)
+
+            return a, b
 
     def one_hot_encode_3D(self, patch, labels):
 
@@ -839,115 +864,87 @@ class TwoScanIterator(Iterator):
         for i, j in enumerate(index_array):
             if self.task != 'no_label' and self.aux:
                 a, b, c = self._load_img_pair(j)
-                # for i in b:
-                #     for j in i:
-                #         print(j)
+                b = self.one_hot_encode_3D(b, self.labels)
+                c = self.one_hot_encode_3D(c, [0,1])
+                if self.data_argum:
+                    a, b, c = self._random_transform(a, b, c)
+                print('before patching, the shape is ', a.shape)
 
-                # give weights for the aux map
-                if (np.min(c) == 1):
-                    c -= 1
-                c *= self.weight_map
-                c += 1
-                # we include our aux ground truth in the first channel. This is not cool, but it's easier to make the transformations :(
-                np.copyto(b[..., 0], c[..., 0])
+                A = []
+                B = []
+                C = []
+                for _ in range(self.patches_per_scan):
+
+                    if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
+                        a_img, b_img, c_img = random_patch(a, b, c, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
+                    else:
+                        a_img, b_img, c_img = a, b, c
+
+                    batch_a = a_img.copy()
+                    batch_b = b_img.copy()
+                    batch_c = c_img.copy()
+
+                    A.append(batch_a)
+                    B.append(batch_b)
+                    C.append(batch_c)
+
+                return [np.array(A), np.array(B), np.array(C)]
+
+
             else:
                 a, b = self._load_img_pair(j)
-            # print(b)
+                if self.task != 'no_label' and self.is_b_categorical:
+                    b = self.one_hot_encode_3D(b, self.labels)
+                # apply random affine transformation
+                if self.data_argum:
+                    a, b = self._random_transform(a, b)
 
-            if self.task != 'no_label' and self.is_b_categorical:
-                b = self.one_hot_encode_3D(b, self.labels)
-                # for i in b:
-                #     print(i[:,:,0])
-                # print(np.sum(b))
-                # for i in b:
-                #
-                #     import csv
-                #     with open('tst.csv', 'w') as f:
-                #         writer = csv.writer(f)
-                #         writer.writerow(i[:,:,0])
+                print('before patching, the shape is ', a.shape)
 
-            # apply random affine transformation
-            if self.data_argum:
-                a, b = self._random_transform(a, b)
-            print('before patching, the shape is ', a.shape)
+                A = []
+                B = []
+                for _ in range(self.patches_per_scan):
 
-            A = []
-            B = []
-            for _ in range(self.patches_per_scan):
+                    if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
+                        a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
+                    else:
+                        a_img, b_img = a, b
 
-                if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
-                    a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
-                else:
-                    a_img, b_img = a, b
 
-                if self.task != 'no_label' and self.aux:  # why???
-                    b_0 = b_img[..., 0]
-                    b_0[b_0 < 1] = 1
+                    batch_a = a_img.copy()
+                    batch_b = b_img.copy()
 
-                batch_a = a_img.copy()
-                batch_b = b_img.copy()
+                    A.append(batch_a)
+                    B.append(batch_b)
 
-                A.append(batch_a)
-                B.append(batch_b)
-
-        return [np.array(A), np.array(B)]
-
-    def split_output(self, scan):
-        """here we separate again the aux output that was in channel 0"""
-        # print('scan.shape', scan.shape)
-        # output 1- original gt
-        o1 = scan[np.newaxis, ...]
-        # print('o1.shape', o1.shape)
-
-        w = scan[..., 0].copy()
-        # print('w.shape', w.shape)
-
-        # output 2- weight
-        o2 = 1 - (w - 1) / self.weight_map  # background channel
-        # print('o2.shape', o2.shape)
-
-        o2 = o2[..., np.newaxis]
-        # print('o2.shape', o2.shape)
-
-        o2 = np.append(o2, 1 - o2, axis=-1)
-        # print('o2.shape', o2.shape)
-
-        output = [o1, o2[np.newaxis, ...]]
-        # print('output.len', len(output))
-
-        for _ in range(self.ds):
-            output.append(o1)
-        print('split_out.shape:', len(output), output[0].shape, output[1].shape, output[2].shape,
-              output[2].shape
-              )
-
-        return output
+                return [np.array(A), np.array(B)]
 
     def generator(self):
 
         while 1:
-            x, y = self.next()
+            if self.aux:
+                x,y,y_aux = self.next()
+                x_b = np.rollaxis(x, 1, 4)
+                y_b = np.rollaxis(y, 1, 4)
+                y_aux_b = np.rollaxis(y_aux, 1, 4)
+                print('prepare feed the data to model, x, y, y_aux', x_b.shape, y_b.shape, y_aux_b.shape)
+                for x, y, y_aux in zip(x_b, y_b, y_aux_b):
+                    if self.ds == 2:
+                        yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
 
-            # adapt to input tensor
-            # print('..........after next.........................')
-
-            # print('.............after rollaxis 1, 4......................')
-            x_b = np.rollaxis(x, 1, 4)
-            y_b = np.rollaxis(y, 1, 4)
-            # print (x_b.shape, y_b.shape)
-            # print ('...................................')
-
-            # y_b = np.reshape(y_b, (y_b.shape[0], y_b.shape[1], y_b.shape[2], y_b.shape[-1]))
-            print('prepare feed the data to model', x_b.shape, y_b.shape)
-
-            for x, y in zip(x_b, y_b):
-                if self.task == 'no_label':
-                    yield x[np.newaxis, ...], y[np.newaxis, ...]
-                else:
-                    if self.ds == 2 and self.aux:
-                        yield x[np.newaxis, :, :, :, :], self.split_output(y)
-                    elif self.ds == 2 and not self.aux:
-                        yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :],
-                                                          y[np.newaxis, :, :, :, :]]
                     else:
-                        yield x[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]
+                        yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :]]
+            else:
+                x, y = self.next()
+                x_b = np.rollaxis(x, 1, 4)
+                y_b = np.rollaxis(y, 1, 4)
+                print('prepare feed the data to model, x, y', x_b.shape, y_b.shape)
+
+                for x, y in zip(x_b, y_b):
+                    if self.task == 'no_label':
+                        yield x[np.newaxis, ...], y[np.newaxis, ...]
+                    else:
+                        if self.ds == 2:
+                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
+                        else:
+                            yield x[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]
