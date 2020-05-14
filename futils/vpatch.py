@@ -28,10 +28,10 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
             for low, high in zip(range_vals_low, range_vals_high):
                 origin.append(np.random.random_integers(low, high))
         else:  #patch from other parts
-            origin = [np.random.random_integers(x) for x in range_vals]
+            origin = [np.random.random_integers(x+1) for x in range_vals]
 
     else:
-        origin = [np.random.random_integers(x) for x in range_vals]
+        origin = [np.random.random_integers(x+1) for x in range_vals] # here, x+1 can avoid lob>high
     finish  = origin + p_sh
     
     
