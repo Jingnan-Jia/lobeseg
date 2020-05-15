@@ -22,7 +22,7 @@ parser.add_argument(
     '--aux_output',
     help='Value of Auxiliary Output',
     type=float,
-    default=0)
+    default=1)
 
 parser.add_argument(
     '-ds',
