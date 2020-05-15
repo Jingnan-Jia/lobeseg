@@ -667,12 +667,13 @@ class TwoScanIterator(Iterator):
         """Get a pair of images with index idx."""
 
         a_fname = self.filenames[idx] + self.a_extension
+
         a = self.load_scan(file_name=os.path.join(self.a_dir, a_fname))  # (200, 512, 512, 1)
 
         # a = np.array(a)
         a = futil.normalize(a)  # threshold to [-1000,400], then rescale to [0,1]
         a = self._normal_normalize(a)
-        print('downsampling ori ct ...')
+        print('downsampling ori ct ...', a_fname)
         a = self.downscale_scan(a, order=1)
         if self.task == 'no_label':
             return a, a
@@ -681,7 +682,7 @@ class TwoScanIterator(Iterator):
             b_fname = self.filenames[idx] + self.b_extension
             b = self.load_scan(file_name=os.path.join(self.b_dir, b_fname))  # (200, 512, 512, 1)
             # b = np.array(b)
-            print('downsampling masks ...')
+            print('downsampling masks ...', b_fname)
             b = self.downscale_scan(b, order=0)  # for masks, order=0, means nearest neighbor downsampling
             if not self.aux:
                 return a, b
@@ -689,7 +690,7 @@ class TwoScanIterator(Iterator):
                 c_fname = self.filenames[idx] + self.c_extension
                 c = self.load_scan(file_name=os.path.join(self.c_dir, c_fname))  # (200, 512, 512, 1)
                 # c = np.array(c, dtype='float')
-                print('downsampling aux mask ...')
+                print('downsampling aux mask ...', c_fname)
                 c = self.downscale_scan(c, order=0)
                 return a, b, c
 
@@ -862,62 +863,67 @@ class TwoScanIterator(Iterator):
             print('index_array: ', index_array)
 
         for i, j in enumerate(index_array):
-            if self.task != 'no_label' and self.aux:
-                a, b, c = self._load_img_pair(j)
-                b = self.one_hot_encode_3D(b, self.labels)
-                c = self.one_hot_encode_3D(c, [0,1])
-                if self.data_argum:
-                    a, b, c = self._random_transform(a, b, c)
-                print('before patching, the shape is ', a.shape)
-
-                A = []
-                B = []
-                C = []
-                for _ in range(self.patches_per_scan):
-
-                    if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
-                        a_img, b_img, c_img = random_patch(a, b, c, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
-                    else:
-                        a_img, b_img, c_img = a, b, c
-
-                    batch_a = a_img.copy()
-                    batch_b = b_img.copy()
-                    batch_c = c_img.copy()
-
-                    A.append(batch_a)
-                    B.append(batch_b)
-                    C.append(batch_c)
-
-                return [np.array(A), np.array(B), np.array(C)]
-
-
-            else:
-                a, b = self._load_img_pair(j)
-                if self.task != 'no_label' and self.is_b_categorical:
+            try:
+                if  self.aux:
+                    a, b, c = self._load_img_pair(j)
                     b = self.one_hot_encode_3D(b, self.labels)
-                # apply random affine transformation
-                if self.data_argum:
-                    a, b = self._random_transform(a, b)
+                    c = self.one_hot_encode_3D(c, [0,1])
+                    if self.data_argum:
+                        a, b, c = self._random_transform(a, b, c)
+                    print('before patching, the shape is ', a.shape)
 
-                print('before patching, the shape is ', a.shape)
+                    A = []
+                    B = []
+                    C = []
+                    for _ in range(self.patches_per_scan):
 
-                A = []
-                B = []
-                for _ in range(self.patches_per_scan):
+                        if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
+                            a_img, b_img, c_img = random_patch(a, b, c, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
+                        else:
+                            a_img, b_img, c_img = a, b, c
 
-                    if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
-                        a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
-                    else:
-                        a_img, b_img = a, b
+                        batch_a = a_img.copy()
+                        batch_b = b_img.copy()
+                        batch_c = c_img.copy()
+
+                        A.append(batch_a)
+                        B.append(batch_b)
+                        C.append(batch_c)
+
+                    return [np.array(A), np.array(B), np.array(C)]
 
 
-                    batch_a = a_img.copy()
-                    batch_b = b_img.copy()
+                else:
+                    a, b = self._load_img_pair(j)
+                    if self.task != 'no_label' and self.is_b_categorical:
+                        b = self.one_hot_encode_3D(b, self.labels)
+                    # apply random affine transformation
+                    if self.data_argum:
+                        a, b = self._random_transform(a, b)
 
-                    A.append(batch_a)
-                    B.append(batch_b)
+                    print('before patching, the shape is ', a.shape)
 
-                return [np.array(A), np.array(B)]
+                    A = []
+                    B = []
+                    for _ in range(self.patches_per_scan):
+
+                        if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
+                            a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
+                        else:
+                            a_img, b_img = a, b
+
+
+                        batch_a = a_img.copy()
+                        batch_b = b_img.copy()
+
+                        A.append(batch_a)
+                        B.append(batch_b)
+                    return [np.array(A), np.array(B)]
+            except:
+                print('this data cannot be patched, maybe because its patchsize bigger than it downscaled size')
+                pass
+
+
 
     def generator(self):
 
