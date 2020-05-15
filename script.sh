@@ -24,6 +24,7 @@ echo
 eval $(conda shell.bash hook)
 
 conda activate py37
+##stdbuf -oL python -u write_preds_save_dice.py
 stdbuf -oL python -u train_ori_fit_rec_epoch.py
 ##stdbuf -oL python write_preds_save_dice.py
 ##python plot_curve.py
