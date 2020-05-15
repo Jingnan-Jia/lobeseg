@@ -303,8 +303,8 @@ def train():
                                  labels=labels)
 
 
-        enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=True)
-        enqueuer_valid = GeneratorEnqueuer(valid_it.generator(), use_multiprocessing=True)
+        enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=False)
+        enqueuer_valid = GeneratorEnqueuer(valid_it.generator(), use_multiprocessing=False)
 
         train_datas = enqueuer_train.get ()
         valid_datas = enqueuer_valid.get ()
@@ -466,8 +466,6 @@ def train():
                                    batch_size=args.batch_size,
                                    use_multiprocessing=True,
                                    callbacks=[saver_train, train_csvlogger])
-
-
 
                 current_tr_loss = history.history['loss'][0]
                 old_tr_loss = np.float(best_tr_loss_dic[task])
