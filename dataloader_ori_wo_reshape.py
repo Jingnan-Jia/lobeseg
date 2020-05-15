@@ -933,7 +933,7 @@ class TwoScanIterator(Iterator):
                         x, y, y_aux = self.next()
                         break
                     except:
-                        print('fail to generate this ct, pass it', file=sys.stderr)
+                        print('fail to generate this ct for ' + self.task + ', pass it', file=sys.stderr)
                         pass
                 if x is None:
                     raise Exception('failed 10 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
@@ -954,7 +954,7 @@ class TwoScanIterator(Iterator):
                         x, y = self.next()
                         break
                     except:
-                        print('fail to generate this ct, pass it', file=sys.stderr)
+                        print('fail to generate this ct for ' + self.task + ', pass it', file=sys.stderr)
                         pass
                 if x is None:
                     raise Exception('failed 10 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
