@@ -863,73 +863,81 @@ class TwoScanIterator(Iterator):
             print('index_array: ', index_array)
 
         for i, j in enumerate(index_array):
-            try:
-                if  self.aux:
-                    a, b, c = self._load_img_pair(j)
+
+            if  self.aux:
+                a, b, c = self._load_img_pair(j)
+                b = self.one_hot_encode_3D(b, self.labels)
+                c = self.one_hot_encode_3D(c, [0,1])
+                if self.data_argum:
+                    a, b, c = self._random_transform(a, b, c)
+                print('before patching, the shape is ', a.shape)
+
+                A = []
+                B = []
+                C = []
+                for _ in range(self.patches_per_scan):
+
+                    if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
+                        a_img, b_img, c_img = random_patch(a, b, c, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
+                    else:
+                        a_img, b_img, c_img = a, b, c
+
+                    batch_a = a_img.copy()
+                    batch_b = b_img.copy()
+                    batch_c = c_img.copy()
+
+                    A.append(batch_a)
+                    B.append(batch_b)
+                    C.append(batch_c)
+
+                return [np.array(A), np.array(B), np.array(C)]
+
+
+            else:
+                a, b = self._load_img_pair(j)
+                if self.task != 'no_label' and self.is_b_categorical:
                     b = self.one_hot_encode_3D(b, self.labels)
-                    c = self.one_hot_encode_3D(c, [0,1])
-                    if self.data_argum:
-                        a, b, c = self._random_transform(a, b, c)
-                    print('before patching, the shape is ', a.shape)
+                # apply random affine transformation
+                if self.data_argum:
+                    a, b = self._random_transform(a, b)
 
-                    A = []
-                    B = []
-                    C = []
-                    for _ in range(self.patches_per_scan):
+                print('before patching, the shape is ', a.shape)
 
-                        if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
-                            a_img, b_img, c_img = random_patch(a, b, c, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
-                        else:
-                            a_img, b_img, c_img = a, b, c
+                A = []
+                B = []
+                for _ in range(self.patches_per_scan):
 
-                        batch_a = a_img.copy()
-                        batch_b = b_img.copy()
-                        batch_c = c_img.copy()
-
-                        A.append(batch_a)
-                        B.append(batch_b)
-                        C.append(batch_c)
-
-                    return [np.array(A), np.array(B), np.array(C)]
+                    if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
+                        a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
+                    else:
+                        a_img, b_img = a, b
 
 
-                else:
-                    a, b = self._load_img_pair(j)
-                    if self.task != 'no_label' and self.is_b_categorical:
-                        b = self.one_hot_encode_3D(b, self.labels)
-                    # apply random affine transformation
-                    if self.data_argum:
-                        a, b = self._random_transform(a, b)
+                    batch_a = a_img.copy()
+                    batch_b = b_img.copy()
 
-                    print('before patching, the shape is ', a.shape)
+                    A.append(batch_a)
+                    B.append(batch_b)
 
-                    A = []
-                    B = []
-                    for _ in range(self.patches_per_scan):
+                return [np.array(A), np.array(B)]
 
-                        if self.ptch_sz is not None and self.ptch_sz != self.trgt_sz:
-                            a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz))
-                        else:
-                            a_img, b_img = a, b
-
-
-                        batch_a = a_img.copy()
-                        batch_b = b_img.copy()
-
-                        A.append(batch_a)
-                        B.append(batch_b)
-                    return [np.array(A), np.array(B)]
-            except:
-                print('this data cannot be patched, maybe because its patchsize bigger than it downscaled size')
-                pass
 
 
 
     def generator(self):
-
+        x = None
         while 1:
             if self.aux:
-                x,y,y_aux = self.next()
+                for i in range(10):
+                    try:
+                        x, y, y_aux = self.next()
+                        break
+                    except:
+                        print('fail to generate this ct, pass it', file=sys.stderr)
+                        pass
+                if x is None:
+                    raise Exception('failed 10 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
+
                 x_b = np.rollaxis(x, 1, 4)
                 y_b = np.rollaxis(y, 1, 4)
                 y_aux_b = np.rollaxis(y_aux, 1, 4)
@@ -941,7 +949,15 @@ class TwoScanIterator(Iterator):
                     else:
                         yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :]]
             else:
-                x, y = self.next()
+                for i in range(10):
+                    try:
+                        x, y = self.next()
+                        break
+                    except:
+                        print('fail to generate this ct, pass it', file=sys.stderr)
+                        pass
+                if x is None:
+                    raise Exception('failed 10 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
                 x_b = np.rollaxis(x, 1, 4)
                 y_b = np.rollaxis(y, 1, 4)
                 print('prepare feed the data to model, x, y', x_b.shape, y_b.shape)
