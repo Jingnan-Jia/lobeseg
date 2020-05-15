@@ -15,7 +15,10 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     
     
     
-    range_vals = sh[0:3] - p_sh 
+    range_vals = sh[0:3] - p_sh
+    print('scan shape', sh)
+    print('patch shape', p_sh)
+    print('range values', range_vals)
     
    
     if p_middle:
