@@ -55,7 +55,7 @@ class Logger:
             for row in reader:
                 x_value.append(index)
                 y_value.append(float(row[y_name]))
-                index += 5000
+                index += 500
 
             return (x_value, y_value)
 
@@ -111,13 +111,13 @@ class Logger:
 
     def plot_train_dice_mean(self):
         # #         self.super_title = self.super_title + 'valid_dice_mean'
-        x, y = self._get_va_data(self.val_out_mean)
+        x, y = self._get_tr_data(self.train_out_mean)
         self._plot(x_train=x, y_train=y, x_valid=None, y_valid=None, title='train_dice_mean')
 
 
     def plot_val_dice_mean(self):
         #         self.super_title = self.task_name + 'train_dice_mean'
-        x, y = self._get_tr_data(self.train_out_mean)
+        x, y = self._get_va_data(self.val_out_mean)
         self._plot(x_train=None, y_train=None, x_valid=x, y_valid=y, title='valid_dice_mean')
 
     def plot_train_val_dice(self):
@@ -156,6 +156,7 @@ class Logger:
         frame.axes.get_xaxis().set_visible(True)
         # plt.show()
         plt.savefig(self.va_log.split('.log')[0] + 'all_valid_dice.png')
+        print('save fig at', self.va_log.split('.log')[0] + 'all_valid_dice.png')
 
 
         plt.close()
@@ -189,6 +190,8 @@ class Logger:
         frame.axes.get_yaxis().set_visible(True)
         frame.axes.get_xaxis().set_visible(True)
         plt.savefig(self.tr_log.split('.log')[0] + 'all_train_dice.png')
+        print('save fig at', self.tr_log.split('.log')[0] + 'all_train_dice.png')
+
         plt.close()
 
 
@@ -559,25 +562,33 @@ class Hist_:
 #              ]
 
 task_name = 'lobe'
-str_names = ['1589063905_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96',
-             '1589063920_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
-             '1589063927_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb10ptsz144ptzsz96',
-             '1589064177_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
-             '1589064200_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb10ptsz144ptzsz96',
-             '1589064207_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
-             '1589064214_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96',
-             '1589064234_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96'
+str_names = ['1589148525_lr0.0001ld0ao0ds2dr1bn1fn8trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+             '1589148417_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.6ptch_per_scan10tr_nb19ptsz144ptzsz96',
+             '1589148328_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.6ptch_per_scan10tr_nb19ptsz144ptzsz96',
+             '1589148298_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1trzsp1ptch_per_scan10tr_nb19ptsz144ptzsz96',
+             '1589148187_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
+             '1589148121_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb10ptsz144ptzsz96',
+             '1589148113_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb15ptsz144ptzsz96',
+             '1589148106_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+             '1589148078_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96',
+             '1589148061_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
+             '1589148055_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
+             '1589148044_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb10ptsz144ptzsz96',
+             '1589148016_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+             '1589147476_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96',
+
 
              ]
 
 for str_name in str_names:
     tr_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'train.log'
     va_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'tr_va.log'
-    hist = Logger(tr_log, va_log, task_name, skip_nb=10, average_N=1)
+    hist = Logger(tr_log, va_log, task_name, skip_nb=500, average_N=4)
 
     hist.plot_all_val_dice()
     hist.plot_all_train_dice()
     hist.plot_val_dice_mean()
+    hist.plot_train_dice_mean()
 
 #hist.plot_all_train_dice()
 
