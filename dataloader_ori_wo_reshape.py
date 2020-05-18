@@ -582,7 +582,7 @@ class TwoScanIterator(Iterator):
             # are discarded.
             self.filenames = list(a_files.intersection(b_files))
             if nb:
-                self.filenames = self.filenames[:5]
+                self.filenames = self.filenames[:nb]
 
             self.b_fnames = self.filenames
             if c_dir_name is not None:
@@ -667,6 +667,7 @@ class TwoScanIterator(Iterator):
         """Get a pair of images with index idx."""
 
         a_fname = self.filenames[idx] + self.a_extension
+        print('start load file: ', a_fname)
 
         a = self.load_scan(file_name=os.path.join(self.a_dir, a_fname))  # (200, 512, 512, 1)
 
@@ -700,7 +701,7 @@ class TwoScanIterator(Iterator):
         # print('time before downscale:', time1)
         print('shape before downscale', scan.shape)
         if self.trgt_space and self.trgt_z_space:  # put trgt space more priority
-            trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space]
+            trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space] # (x, y, x)
 
             zoom_seq = np.array(self.spacing, dtype='float') / np.array(trgt_sp_list, dtype='float')  # order is correct
             zoom_seq = np.append(zoom_seq, 1)  # because here the scan is 4 dimentions
