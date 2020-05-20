@@ -13,6 +13,8 @@ import SimpleITK as sitk
 from scipy import ndimage
 from skimage.io import imsave
 import nrrd
+import copy
+
 
 
 MIN_BOUND = -1000.0
@@ -81,7 +83,7 @@ def save_itk(filename,scan,origin,spacing,dtype = 'int16'):
     
         
         stk = sitk.GetImageFromArray(scan.astype(dtype))
-        stk.SetOrigin(origin[::-1])
+        stk.SetOrigin(origin[::-1])  # numpy array is reversed after convertion from image, but origin and spacing keep unchanged
         stk.SetSpacing(spacing[::-1])
         
         
