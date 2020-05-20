@@ -583,6 +583,8 @@ class TwoScanIterator(Iterator):
             self.filenames = list(a_files.intersection(b_files))
             if nb:
                 self.filenames = self.filenames[:nb]
+                print('from this directory:', self.a_dir)
+                print('these files in are used ', self.filenames)
 
             self.b_fnames = self.filenames
             if c_dir_name is not None:
