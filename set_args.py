@@ -22,7 +22,7 @@ parser.add_argument(
     '--aux_output',
     help='Value of Auxiliary Output',
     type=float,
-    default=1)
+    default=0)
 
 parser.add_argument(
     '-ds',
@@ -36,7 +36,7 @@ parser.add_argument(
     '--feature_number',
     help='Number of initial of conv channels',
     type=int,
-    default=16)
+    default=8)
 
 parser.add_argument(
     '-bn',
@@ -71,14 +71,14 @@ parser.add_argument(
     '--trgt_space',
     help='spacing along x, y ',
     type=float,
-    default=1.4)
+    default=None)
 
 parser.add_argument(
     '-trgt_z_space',
     '--trgt_z_space',
     help='spacing along z',
     type=float,
-    default=2.5)
+    default=None)
 
 parser.add_argument(
     '-ptch_sz',
@@ -120,6 +120,26 @@ parser.add_argument(
     '--tr_nb',
     help='nunber of training samples',
     type=int,
-    default=5)
+    default=1)
 
+parser.add_argument(
+    '-no_label_dir',
+    '--no_label_dir',
+    help='sub directory of no_label data',
+    type=str,
+    default='SSc')
+
+parser.add_argument(
+    '-shallower_lobe',
+    '--shallower_lobe',
+    help='get a shallower lobe net with 4 levels (normally there are 5 levels)',
+    type=int,
+    default=0)
+
+parser.add_argument(
+    '-deeper_vessel',
+    '--deeper_vessel',
+    help='get a deeper_vessel  net with 6 levels (normally there are 5 levels)',
+    type=int,
+    default=1)
 args = parser.parse_args()

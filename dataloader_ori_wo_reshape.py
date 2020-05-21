@@ -512,7 +512,8 @@ class TwoScanIterator(Iterator):
                  patches_per_scan=5,
 
                  ds=2, labels=[],
-                 batch_size=1, shuffle=True, seed=None, nb=None):
+                 batch_size=1, shuffle=True, seed=None, nb=None,
+                                   no_label_dir=None):
         """
         Iterate through two directories at the same time.
 
@@ -540,7 +541,10 @@ class TwoScanIterator(Iterator):
 
         if self.task == 'no_label':
             self.new_spacing = new_spacing
-            self.a_dir = os.path.join(directory, a_dir_name)
+            if no_label_dir:
+                self.a_dir = os.path.join(directory, no_label_dir)
+            else:
+                self.a_dir = os.path.join(directory, a_dir_name)
             self.a_extension = a_extension
             a_files = set(x.split(a_extension)[0].split(self.a_dir + '/')[-1] for x in
                           sorted(glob.glob(self.a_dir + '/*' + self.a_extension)))
