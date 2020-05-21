@@ -264,7 +264,7 @@ def down_trans(
         downconv = Dropout(0.5, name=name+'_dr_0')(downconv)
 
     conv = downconv
-    for i in range(nconvs-1):
+    for i in range(nconvs):
         conv = Conv3D(nf, 3, padding='same', name=name+'_Conv3D_'+str(i+1))(conv)
         conv = PReLU(shared_axes=[1, 2, 3], name=name+'_PReLU_'+str(i+1))(conv)
         if bn:
@@ -347,7 +347,8 @@ def load_cp_models(model_names,
                    dr=1,
                    ds=2,
                    aux=0.5,
-                   net_type='v'):
+                   net_type='v',
+                   deeper_vessel=0):
 
     ## start model
     inputs_data_wt_gt = Input ((None, None, None, nch), name='input_jia')  # input data with ground truth
@@ -424,7 +425,6 @@ def load_cp_models(model_names,
         out_lobe.append (d_out_2)
 
 
-
     #######################################################-----------------------#####################################
     # decoder for vessel segmentation. up_path for segmentation V-Net, with shot connections
     up_tr4_vessel = up_trans (dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='vessel_block5')
@@ -458,6 +458,54 @@ def load_cp_models(model_names,
         d_out_2 = Activation ('softmax', name='vessel_d2') (res)
         out_vessel.append (d_out_2)
 
+        # ------------------------------------------------------------------------------
+    if deeper_vessel:
+        inputs_data_wt_gt_deeper = Input((None, None, None, nch), name='input_jia_deeper')  # input data with ground truth
+        in_tr_deeper = intro(inputs_data_wt_gt_deeper, nf/2, nch, bn)
+        dwn_tr0_deeper = down_trans(in_tr_deeper, nf, 2, bn, dr, ty=net_type, name='block0')
+
+        # down_path
+        dwn_tr1_deeper = down_trans(in_tr_deeper, nf * 2, 2, bn, dr, ty=net_type, name='block1')
+        dwn_tr2_deeper = down_trans(dwn_tr1_deeper, nf * 4, 2, bn, dr, ty=net_type, name='block2')
+        dwn_tr3_deeper = down_trans(dwn_tr2_deeper, nf * 8, 2, bn, dr, ty=net_type, name='block3')
+        dwn_tr4_deeper = down_trans(dwn_tr3_deeper, nf * 16, 2, bn, dr, ty=net_type, name='block4')
+        # decoder for vessel segmentation. up_path for segmentation V-Net, with shot connections
+        up_tr4_vessel_deeper = up_trans(dwn_tr4_deeper, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3_deeper, name='vessel_block5')
+        up_tr3_vessel_deeper = up_trans(up_tr4_vessel_deeper, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2_deeper, name='vessel_block6')
+        up_tr2_vessel_deeper = up_trans(up_tr3_vessel_deeper, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1_deeper, name='vessel_block7')
+        up_tr1_vessel_deeper = up_trans(up_tr2_vessel_deeper, nf * 1, 2, bn, dr, ty=net_type, input2=in_tr_deeper, name='vessel_block8')
+        up_tr0_vessel_deeper = up_trans(up_tr2_vessel_deeper, nf, 2, bn, dr, ty=net_type, input2=in_tr_deeper, name='vessel_block9')
+        # classification
+        vessel_out_chn = 2
+        res_vessel_deeper = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_Conv3D_last')(up_tr0_vessel_deeper)
+        out_vessel_deeper = Activation('softmax', name='vessel_out_segmentation')(res_vessel_deeper)
+
+        out_vessel_deeper = [out_vessel_deeper]  # convert to list to append other outputs
+        # vessel_aux=0
+        # if aux:
+        #     # aux_output
+        #     aux_res_deeper = Conv3D(2, 1, padding='same', name='vessel_aux_Conv3D_last')(up_tr1_vessel_deeper)
+        #     aux_out_deeper = Activation('softmax', name='vessel_aux')(aux_res_deeper)
+        #     out_vessel_deeper.append(aux_out_deeper)
+        # if ds:
+        #     out_vessel_deeper = [out_vessel_deeper]
+        #     # deep supervision#1
+        #     deep_1_deeper = UpSampling3D((2, 2, 2), name='vessel_d1_UpSampling3D_0')(up_tr2_vessel_deeper)
+        #     res = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_d1_Conv3D_last')(deep_1_deeper)
+        #     d_out_1 = Activation('softmax', name='vessel_d1')(res)
+        #     out_vessel_deeper.append(d_out_1)
+        #
+        #     # deep supervision#2
+        #     deep_2 = UpSampling3D((2, 2, 2), name='vessel_d2_UpSampling3D_0')(up_tr3_vessel)
+        #     deep_2 = UpSampling3D((2, 2, 2), name='vessel_d2_UpSampling3D_1')(deep_2)
+        #     res = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_d2_Conv3D_last')(deep_2)
+        #     d_out_2 = Activation('softmax', name='vessel_d2')(res)
+        #     out_vessel_deeper.append(d_out_2)
+
+        net_only_vessel_deeper = Model(inputs_data_wt_gt, out_vessel_deeper, name='net_only_vessel_deeper')
+        net_only_vessel_deeper.compile(optimizer=optim,
+                                loss=dice_coef_loss_weight_p,
+                                metrics=metrics_vessel)
 
     #######################################################-----------------------#####################################
     # decoder for airway segmentation. up_path for segmentation V-Net, with shot connections
@@ -738,21 +786,38 @@ def load_cp_models(model_names,
 
     # plot_model(net_integrated, to_file='results/model_pictures/net_integrated.png', show_layer_names=True, show_shapes=True)
 
-    models_dict = {
-        "net_airway": net_airway_recon,
-        "net_lung": net_lung_recon,
-        "net_lobe": net_lobe_recon,
-        "net_vessel": net_vessel_recon,
-        "net_no_label": net_no_label,
+    if deeper_vessel:
+        models_dict = {
+            "net_airway": net_airway_recon,
+            "net_lung": net_lung_recon,
+            "net_lobe": net_lobe_recon,
+            "net_vessel": net_vessel_recon,
+            "net_no_label": net_no_label,
 
-        "net_only_lobe": net_only_lobe,
-        "net_only_vessel": net_only_vessel,
-        "net_only_lung": net_only_lung,
-        "net_only_airway": net_only_airway,
-        #
-        # "net_itgt_lobe_recon": net_itgt_lobe_recon,
-        # "net_itgt_vessel_recon": net_itgt_vessel_recon
-    }
+            "net_only_lobe": net_only_lobe,
+            "net_only_vessel": net_only_vessel_deeper,
+            "net_only_lung": net_only_lung,
+            "net_only_airway": net_only_airway,
+            #
+            # "net_itgt_lobe_recon": net_itgt_lobe_recon,
+            # "net_itgt_vessel_recon": net_itgt_vessel_recon
+        }
+    else:
+        models_dict = {
+            "net_airway": net_airway_recon,
+            "net_lung": net_lung_recon,
+            "net_lobe": net_lobe_recon,
+            "net_vessel": net_vessel_recon,
+            "net_no_label": net_no_label,
+
+            "net_only_lobe": net_only_lobe,
+            "net_only_vessel": net_only_vessel,
+            "net_only_lung": net_only_lung,
+            "net_only_airway": net_only_airway,
+            #
+            # "net_itgt_lobe_recon": net_itgt_lobe_recon,
+            # "net_itgt_vessel_recon": net_itgt_vessel_recon
+        }
 
     results = []
     for i in model_names:
