@@ -29,7 +29,7 @@ parser.add_argument(
     '--deep_supervision',
     help='Number of Deep Supervisers',
     type=int,
-    default=2)
+    default=0)
 
 parser.add_argument(
     '-fn',

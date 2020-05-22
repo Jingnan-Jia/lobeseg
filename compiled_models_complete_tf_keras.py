@@ -461,7 +461,7 @@ def load_cp_models(model_names,
         # ------------------------------------------------------------------------------
     if deeper_vessel:
         inputs_data_wt_gt_deeper = Input((None, None, None, nch), name='input_jia_deeper')  # input data with ground truth
-        in_tr_deeper = intro(inputs_data_wt_gt_deeper, nf/2, nch, bn)
+        in_tr_deeper = intro(inputs_data_wt_gt_deeper, int(nf/2), nch, bn)
         dwn_tr0_deeper = down_trans(in_tr_deeper, nf, 2, bn, dr, ty=net_type, name='block0')
 
         # down_path
@@ -473,8 +473,8 @@ def load_cp_models(model_names,
         up_tr4_vessel_deeper = up_trans(dwn_tr4_deeper, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3_deeper, name='vessel_block5')
         up_tr3_vessel_deeper = up_trans(up_tr4_vessel_deeper, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2_deeper, name='vessel_block6')
         up_tr2_vessel_deeper = up_trans(up_tr3_vessel_deeper, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1_deeper, name='vessel_block7')
-        up_tr1_vessel_deeper = up_trans(up_tr2_vessel_deeper, nf * 1, 2, bn, dr, ty=net_type, input2=in_tr_deeper, name='vessel_block8')
-        up_tr0_vessel_deeper = up_trans(up_tr2_vessel_deeper, nf, 2, bn, dr, ty=net_type, input2=in_tr_deeper, name='vessel_block9')
+        up_tr1_vessel_deeper = up_trans(up_tr2_vessel_deeper, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0_deeper, name='vessel_block8')
+        up_tr0_vessel_deeper = up_trans(up_tr1_vessel_deeper, int(nf/2), 2, bn, dr, ty=net_type, input2=in_tr_deeper, name='vessel_block9')
         # classification
         vessel_out_chn = 2
         res_vessel_deeper = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_Conv3D_last')(up_tr0_vessel_deeper)
@@ -502,10 +502,7 @@ def load_cp_models(model_names,
         #     d_out_2 = Activation('softmax', name='vessel_d2')(res)
         #     out_vessel_deeper.append(d_out_2)
 
-        net_only_vessel_deeper = Model(inputs_data_wt_gt, out_vessel_deeper, name='net_only_vessel_deeper')
-        net_only_vessel_deeper.compile(optimizer=optim,
-                                loss=dice_coef_loss_weight_p,
-                                metrics=metrics_vessel)
+
 
     #######################################################-----------------------#####################################
     # decoder for airway segmentation. up_path for segmentation V-Net, with shot connections
@@ -693,12 +690,19 @@ def load_cp_models(model_names,
     net_only_vessel.compile (optimizer=optim,
                            loss=dice_coef_loss_weight_p,
                            metrics=metrics_vessel)
+    if deeper_vessel:
+        net_only_vessel_deeper = Model(inputs_data_wt_gt_deeper, out_vessel_deeper, name='net_only_vessel_deeper')
+        net_only_vessel_deeper.compile(optimizer=optim,
+                                       loss=dice_coef_loss_weight_p,
+                                       metrics=metrics_vessel)
 
     net_vessel_recon = Model (inputs_data_wt_gt, out_vessel_mt, name='net_vessel')
     net_vessel_recon.compile (optimizer=optim,
                             loss=loss_mt,
                             loss_weights=loss_mt_weights,
                             metrics=metrics_vessel.update ({'out_recon': 'mse'}))
+
+
 
     ###################----------------------------------#########################################
     # compile airway models
