@@ -206,8 +206,8 @@ def get_label_list(task_list):
 def train():
 
     # Define the Model
-    model_names = ['net_only_lobe', 'net_no_label']
-    if args.aux_output and ('net_only_vessel' in model_names):
+    model_names = ['net_only_vessel_6_levels']
+    if args.aux_output and ('net_only_vessel' in model_names or 'net_only_vessel_6_levels' in model_names):
         print(model_names)
         raise Exception('net_only_vessel should not have aux output')
 
@@ -224,7 +224,8 @@ def train():
                                                                 dr=args.dropout,
                                                                 ds=args.deep_supervision,
                                                                 aux=args.aux_output,
-                                                                net_type='v')
+                                                                net_type='v',
+                                                                 deeper_vessel=args.deeper_vessel)
 
 
     if args.load: # need to assign the old file name if args.load is True
@@ -285,7 +286,8 @@ def train():
                                    data_argum=True,
                                    ds=args.deep_supervision,
                                    labels=labels,
-                                   nb=args.tr_nb)
+                                   nb=args.tr_nb,
+                                   no_label_dir=args.no_label_dir)
 
         valid_it = TwoScanIterator(mypath.valid_dir(), task=task,
                                  batch_size=args.batch_size,
@@ -300,7 +302,8 @@ def train():
                                  patches_per_scan=args.patches_per_scan,  # target size
                                  data_argum=False,
                                  ds=args.deep_supervision,
-                                 labels=labels)
+                                 labels=labels,
+                                   no_label_dir=args.no_label_dir)
 
 
         enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=False)
@@ -384,22 +387,7 @@ def train():
             train_csvlogger = callbacks.CSVLogger(mypath.train_log_fpath(), separator=',', append=True)
             tr_va_csvlogger = callbacks.CSVLogger(mypath.tr_va_log_fpath(), separator=',', append=True)
 
-            # if not os.path.exists(mypath.train_log_fpath()):
-            #         df = pd.read_csv(mypath.train_log_fpath())
-            #         EPOCH_INIT = df['epoch'].iloc[-1]
-            #         BEST_TR_LOSS = min(df['loss'])
-            #         best_tr_loss_dic[task] = BEST_TR_LOSS
-            #         print('Resume training {2} from EPOCH_INIT {0}, BEST_LOSS {1}'.format(EPOCH_INIT, BEST_TR_LOSS, task))
-            # else:
             BEST_TR_LOSS = best_tr_loss_dic[task]
-
-            # if not os.path.exists(mypath.tr_va_log_fpath()):
-            #         df = pd.read_csv(mypath.tr_va_log_fpath())
-            #         EPOCH_INIT = df['epoch'].iloc[-1]
-            #         BEST_VA_LOSS = min(df['val_loss'])
-            #         best_va_loss_dic[task] = BEST_VA_LOSS
-            #         print('Resume training {2} from EPOCH_INIT {0}, BEST_VAL_LOSS {1}'.format(EPOCH_INIT, BEST_VA_LOSS, task))
-            # else:
             BEST_VA_LOSS = best_va_loss_dic[task]
 
             class ModelCheckpointWrapper(callbacks.ModelCheckpoint):

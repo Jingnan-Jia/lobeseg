@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1 
 #SBATCH --cpus-per-task=4
 
-#SBATCH --mem=60G
+#SBATCH --mem=40G
 
 #SBATCH --partition=gpu-long
 
@@ -25,7 +25,11 @@ eval $(conda shell.bash hook)
 
 conda activate py37
 ##stdbuf -oL python -u write_preds_save_dice.py
-stdbuf -oL python -u train_ori_fit_rec_epoch.py
+stdbuf -oL python -u train_ori_fit_rec_epoch.py --tr_nb=1
 ##stdbuf -oL python write_preds_save_dice.py
 ##python plot_curve.py
+
+
+
+
 

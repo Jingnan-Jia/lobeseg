@@ -10,6 +10,7 @@ import segmentor as v_seg
 import os
 import re
 from train_ori_fit_rec_epoch import Mypath
+import futils.util as futil
 
 # from train_ori_fit_rec_epoch import Mypath
 #1583105196.4919333_0.00010a_o_0.5ds2dr1bn1fs16ptsz144ptzsz80
@@ -49,9 +50,8 @@ from train_ori_fit_rec_epoch import Mypath
              '1588287353.8400497_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96',
              '1588287759.0237665_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96',
              '1588287839.3979223_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96',
-'''
-task='vessel'
-str_names = ['1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz96ptzsz96',
+             
+             '1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz96ptzsz96',
              '1588718049_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz64ptzsz64',
              '1588717836_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz96ptzsz64',
              '1588717764_lr0.001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz96ptzsz144',
@@ -67,6 +67,18 @@ str_names = ['1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzs
              '1588717176_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz128ptzsz96',
              '1588716830_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
              '1588710600_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96'
+             
+             '1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz96ptzsz96',
+             '1588887205_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz96ptzsz144',
+             '1588886816_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz64ptzsz64',
+             '1588886682_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz144ptzsz96'
+             ''
+
+'''
+task='lobe'
+str_names = [
+             '1584789581.1021984_1e-051a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
+
 
              ]
 
@@ -76,14 +88,19 @@ mypath = Mypath(task)
 
 for str_name in str_names:
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
-    model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + '_tr_best.hdf5'
+    # model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'
     # ptch_z_sz = int(str_name.split('ptzsz')[-1])
+    model_name =  '/data/jjia/e2e_new/models/' + task + '/' + str_name + 'MODEL.hdf5'
+
     # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
 
     ptch_z_sz = int(re.findall(r'\d+', str_name.split('ptzsz')[-1])[0])
     ptch_sz = int(re.findall(r'\d+', str_name.split('ptsz')[-1])[0])
-    tr_sp = float(re.findall(r'\d+', str_name.split('trsp')[-1])[0])
-    tr_z_sp = float(re.findall(r'\d+', str_name.split('trzsp')[-1])[0])
+    # tr_sp = float(re.findall(r'\d+', str_name.split('trsp')[-1])[0])
+    # tr_z_sp = float(re.findall(r'\d+', str_name.split('trzsp')[-1])[0])
+
+    tr_sp = 1.4
+    tr_z_sp = 2.5
 
     print('patch_sz', ptch_sz, 'patch_z_size', ptch_z_sz)
 
@@ -110,3 +127,5 @@ for str_name in str_names:
                             gdth_path=mypath.gdth_path(phase),
                             pred_path=mypath.pred_path(phase),
                             csv_file=mypath.dices_location(phase))
+
+
