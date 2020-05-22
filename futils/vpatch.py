@@ -12,9 +12,7 @@ import random
 def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None):
     sh = np.array(scan.shape)
     p_sh = np.array(patch_shape)
-    
-    
-    
+
     range_vals = sh[0:3] - p_sh
     print('scan shape', sh)
     print('patch shape', p_sh)
