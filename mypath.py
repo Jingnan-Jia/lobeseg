@@ -2,7 +2,7 @@
 from set_args import args
 import os
 import time
-
+import numpy as np
 class Mypath:
     '''
     Here, I use 'location' to indicatate full file path and name, 'path' to respresent the directory,
@@ -18,7 +18,7 @@ class Mypath:
         self.results_path = os.path.join (self.dir_path, 'results')
 
 
-        self.current_time = str (int(time.time ()))
+        self.current_time = str (int(time.time ())) + '_' + str(np.random.randint(1000))
         self.setting = '_lr' + str (args.lr) +'ld'+str (args.load) + 'm6l' + str(args.model_6_levels) + 'm7l' + str(args.model_7_levels) +'pm' + str(args.p_middle) +\
                        'no_label_dir' + str(args.no_label_dir) + 'ao' + str (
             args.aux_output) + 'ds' + str (args.deep_supervision) + 'dr' + str (args.dropout) + 'bn' + str (
