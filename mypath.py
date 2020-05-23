@@ -96,12 +96,12 @@ class Mypath:
 
     @mkdir_dcrt
     def log_fpath(self):
-        task_log_dir = self.task_log_dir
+        task_log_dir = self.task_log_dir()
         return task_log_dir + '/' + self.str_name + '.log'
 
     @mkdir_dcrt
     def tr_va_log_fpath(self):
-        task_log_dir = self.task_log_dir
+        task_log_dir = self.task_log_dir()
         return task_log_dir + '/' + self.str_name + 'tr_va.log'
 
     @mkdir_dcrt
@@ -121,12 +121,12 @@ class Mypath:
 
     @mkdir_dcrt
     def best_va_loss_location(self):
-        task_model_path = self.task_model_dir
+        task_model_path = self.task_model_dir()
         return task_model_path + '/' + self.str_name + 'MODEL.hdf5'
 
     @mkdir_dcrt
     def best_tr_loss_location(self):
-        task_model_path = self.task_model_dir
+        task_model_path = self.task_model_dir()
         return task_model_path + '/' + self.str_name + '_tr_best.hdf5'
 
     @mkdir_dcrt
