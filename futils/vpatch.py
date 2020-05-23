@@ -14,12 +14,13 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     p_sh = np.array(patch_shape)
 
     range_vals = sh[0:3] - p_sh
-    print('scan shape', sh)
-    print('patch shape', p_sh)
-    print('range values', range_vals)
+    # print('scan shape', sh)
+    # print('patch shape', p_sh)
+    # print('range values', range_vals)
     
    
     if p_middle:
+        print('p_middle, select more big vessels')
         tmp_nb = int(1/p_middle)
         if random.randint(tmp_nb)==0: #patch from middle part
             range_vals_low = list(map(int, (sh[0:3]/3 - p_sh//2) ))
@@ -35,6 +36,9 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     else:
         origin = [random.randint(0, x) for x in range_vals] # here, x+1 can avoid lob>high
     finish  = origin + p_sh
+    for finish_voxel, scan_size in zip(finish, sh):
+        if finish_voxel > scan_size:
+            print('warning!:patch size is bigger than scan size', file=sys.stderr)
     
     
     
