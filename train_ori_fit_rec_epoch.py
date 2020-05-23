@@ -15,12 +15,13 @@ from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.keras import callbacks
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.callbacks import TensorBoard
-import compiled_models_complete_tf_keras
+import compiled_models_complete_tf_keras as cpmodels
 
 from set_args import args
 from write_dice import write_dices_to_csv
 from write_batch_preds import write_preds_to_disk
 import segmentor as v_seg
+from mypath import Mypath
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
 tf.keras.mixed_precision.experimental.set_policy('infer') # mix precision training
@@ -32,141 +33,6 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 
 K.set_learning_phase(1)  # try with 1
 
-class Mypath:
-    '''
-    Here, I use 'location' to indicatate full file path and name, 'path' to respresent the directory,
-    'file_name' to respresent the file name in the parent directory.
-    '''
-    def __init__(self, task):
-
-        self.task = task
-        self.dir_path = os.path.dirname (os.path.realpath (__file__)) # abosolute path of the current script
-        self.model_path = os.path.join (self.dir_path, 'models')
-        self.log_path = os.path.join (self.dir_path, 'logs')
-        self.data_path = os.path.join (self.dir_path, 'data')
-        self.results_path = os.path.join (self.dir_path, 'results')
-
-
-        self.current_time = str (int(time.time ()))
-        self.setting = '_lr' + str (args.lr) +'ld'+str (args.load) + 'ao' + str (
-            args.aux_output) + 'ds' + str (args.deep_supervision) + 'dr' + str (args.dropout) + 'bn' + str (
-            args.batch_norm) + 'fn' + str (args.feature_number) + 'trsz' + str(args.trgt_sz) + 'trzsz' + str(args.trgt_z_sz)\
-                       + 'trsp'+ str(args.trgt_space) + 'trzsp'+ str(args.trgt_z_space) + 'ptch_per_scan' + str(args.patches_per_scan)+ \
-                       'tr_nb' + str(args.tr_nb) + 'ptsz' + str (args.ptch_sz) + 'ptzsz' + str (args.ptch_z_sz)
-        self.str_name = self.current_time + self.setting
-
-
-
-    def sub_dir(self):
-
-        if self.task=='lobe':
-            if args.iso==1.5:
-                sub_dir = 'GLUCOLD_isotropic1dot5'
-            elif args.iso==0.7:
-                sub_dir = 'GLUCOLD_isotropic0dot7'
-            elif args.iso==0:
-                sub_dir = 'GLUCOLD'
-            elif args.iso==-1:
-                sub_dir = 'luna16'
-            else:
-                raise Exception('Please enter the correct args.iso for isotropic parameter')
-        elif self.task=='vessel':
-            sub_dir = None
-        else:
-            sub_dir = None
-
-        return sub_dir
-
-    def train_dir(self):
-        train_dir = self.data_path + '/' + self.task + '/train'
-        if not os.path.exists (train_dir):
-            os.makedirs (train_dir)
-        return train_dir
-
-    def valid_dir(self):
-        if self.task=='no_label':
-            valid_dir = self.train_dir()
-        else:
-            valid_dir = self.data_path + '/' + self.task + '/valid'
-        if not os.path.exists(valid_dir):
-            os.makedirs(valid_dir)
-        return valid_dir
-
-    def log_fpath(self):
-        task_log_dir = self.log_path + '/' + self.task
-        if not os.path.exists (task_log_dir):
-            os.makedirs (task_log_dir)
-        return task_log_dir + '/' + self.str_name + '.log'
-    def tr_va_log_fpath(self):
-        task_log_dir = self.log_path + '/' + self.task
-        if not os.path.exists(task_log_dir):
-            os.makedirs(task_log_dir)
-        return task_log_dir + '/' + self.str_name + 'tr_va.log'
-
-    def train_log_fpath(self):
-        task_log_dir = self.log_path + '/' + self.task
-        if not os.path.exists(task_log_dir):
-            os.makedirs(task_log_dir)
-        return task_log_dir + '/' + self.str_name + 'train.log'
-
-    def model_figure_path(self):
-        model_figure_path = self.dir_path + '/figures'
-        if not os.path.exists (model_figure_path):
-            os.makedirs (model_figure_path)
-        return model_figure_path
-
-    def json_fpath(self):
-        task_model_path = self.model_path + '/' + self.task
-        if not os.path.exists (task_model_path):
-            os.makedirs (task_model_path)
-        return task_model_path + '/' + self.str_name + 'MODEL.json'
-
-    def best_va_loss_location(self):
-        task_model_path = self.model_path + '/' + self.task
-        if not os.path.exists(task_model_path):
-            os.makedirs(task_model_path)
-        return task_model_path + '/' + self.str_name + 'MODEL.hdf5'
-
-    def best_tr_loss_location(self):
-        task_model_path = self.model_path + '/' + self.task
-        if not os.path.exists(task_model_path):
-            os.makedirs(task_model_path)
-        return task_model_path + '/' + self.str_name + '_tr_best.hdf5'
-
-    def ori_ct_path(self, phase='train'):
-        if self.task=='lobe':
-            data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
-        else:
-            data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct'
-        if not os.path.exists(data_path):
-            os.makedirs(data_path)
-        return data_path
-
-    def gdth_path(self, phase='train'):
-        if self.task == 'lobe':
-            gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
-        else:
-            gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct'
-        if not os.path.exists(gdth_path):
-            os.makedirs(gdth_path)
-        return gdth_path
-
-    def pred_path(self, phase='train'):
-        if self.task == 'lobe':
-            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
-               + '/' + self.current_time
-        else:
-            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time
-        if not os.path.exists(pred_path):
-            os.makedirs(pred_path)
-        return pred_path
-
-    def dices_fpath(self, phase='train'):
-        if self.task == 'lobe':
-            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
-               + '/' + self.current_time + '/dices.csv'
-        else:
-            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.current_time + '/dices.csv'
 
 def get_task_list(model_names):
 
@@ -206,34 +72,42 @@ def get_label_list(task_list):
 def train():
 
     # Define the Model
-    model_names = ['net_only_vessel_6_levels']
-    if args.aux_output and ('net_only_vessel' in model_names or 'net_only_vessel_6_levels' in model_names):
+    model_names = ['net_only_lobe', 'net_no_label']
+    if args.aux_output and ('net_only_vessel' in model_names):
         print(model_names)
         raise Exception('net_only_vessel should not have aux output')
-
 
     task_list = get_task_list(model_names)
     label_list = get_label_list(task_list)
     path_list = [Mypath(x) for x in task_list] # a list of Mypath objectives
 
-    net_list = compiled_models_complete_tf_keras.load_cp_models (model_names,
-                                                                nch=1,
-                                                                lr=args.lr,
-                                                                nf=args.feature_number,
-                                                                bn=args.batch_norm,
-                                                                dr=args.dropout,
-                                                                ds=args.deep_supervision,
-                                                                aux=args.aux_output,
-                                                                net_type='v',
-                                                                 deeper_vessel=args.deeper_vessel)
+    if args.model_6_levels:
+        net_list = cpmodels.load_cp_models_6_levels(model_names,
+                                                    nch=1,
+                                                    lr=args.lr,
+                                                    nf=args.feature_number,
+                                                    bn=args.batch_norm,
+                                                    dr=args.dropout,
+                                                    net_type='v')
+    elif args.model_7_levels:
+        net_list = cpmodels.load_cp_models_7_levels(model_names,
+                                                    nch=1,
+                                                    lr=args.lr,
+                                                    nf=args.feature_number,
+                                                    bn=args.batch_norm,
+                                                    dr=args.dropout,
+                                                    net_type='v')
+    else:
+        net_list = cpmodels.load_cp_models (model_names,
+                                            nch=1,
+                                            lr=args.lr,
+                                            nf=args.feature_number,
+                                            bn=args.batch_norm,
+                                            dr=args.dropout,
+                                            ds=args.deep_supervision,
+                                            aux=args.aux_output,
+                                            net_type='v')
 
-
-    if args.load: # need to assign the old file name if args.load is True
-        str_name = '1584923362.8464801_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
-        for net, task, mypath in zip (net_list, task_list, path_list):
-            old_model_fpath = mypath.model_path + '/' + task + '/' + str_name + 'MODEL.hdf5'
-            net.load_weights (old_model_fpath)
-            print ('loaded weights successfully: ', old_model_fpath)
 
     train_data_gen_list = []
     valid_data_gen_list = []
@@ -254,56 +128,48 @@ def train():
             json_file.write (model_json)
         print ('successfully write json file of task ', task, mypath.json_fpath())
 
-        if args.iso==1.5:
-            new_spacing=[1.5, 1.5, 1.5]
-        elif args.iso==0.7:
-            new_spacing=[0.7, 0.7, 0.7]
-        else:
-            new_spacing=None
-
-
-        if task == 'vessel':
+        if task == 'vessel' or task=='no_label':
             b_extension = '.mhd'
+            aux=0
         else:
             b_extension = '.nrrd'
-
-        if args.aux_output:
-            c_dir_name = 'aux_gdth'
-        else:
-            c_dir_name = None
+            aux=args.aux_output
 
         train_it = TwoScanIterator(mypath.train_dir(), task=task,
                                    batch_size=args.batch_size,
-                                   c_dir_name=c_dir_name,
                                    sub_dir=mypath.sub_dir(),
                                    trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
                                    trgt_space=args.trgt_space, trgt_z_space=args.trgt_z_space,
                                    ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-                                   new_spacing=new_spacing,
                                    b_extension=b_extension,
-                                   shuffle=True,
+                                   shuffle=False,
                                    patches_per_scan=args.patches_per_scan,
                                    data_argum=True,
                                    ds=args.deep_supervision,
                                    labels=labels,
                                    nb=args.tr_nb,
-                                   no_label_dir=args.no_label_dir)
+                                   no_label_dir=args.no_label_dir,
+                                   p_middle=args.p_middle,
+                                   phase='train',
+                                   aux=aux)
 
         valid_it = TwoScanIterator(mypath.valid_dir(), task=task,
                                  batch_size=args.batch_size,
-                                 c_dir_name=c_dir_name,
                                  sub_dir=mypath.sub_dir(),
                                  trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
                                  trgt_space=args.trgt_space, trgt_z_space=args.trgt_z_space,
                                  ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-                                 new_spacing=new_spacing,
                                  b_extension=b_extension,
                                  shuffle=False,
                                  patches_per_scan=args.patches_per_scan,  # target size
                                  data_argum=False,
                                  ds=args.deep_supervision,
                                  labels=labels,
-                                   no_label_dir=args.no_label_dir)
+                                   nb=1, # only use one scan to extract valid patches,avoid introducing complex data
+                                   no_label_dir=args.no_label_dir,
+                                   p_middle=args.p_middle,
+                                   phase='valid',
+                                   aux=aux)
 
 
         enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=False)
@@ -419,6 +285,7 @@ def train():
                                    callbacks=[saver_valid, tr_va_csvlogger])
 
                 current_val_loss = history.history['val_loss'][0]
+                print('val_loss: ', current_val_loss)
                 old_val_loss = np.float(best_va_loss_dic[task])
                 if current_val_loss<old_val_loss:
                     best_va_loss_dic[task] = current_val_loss
