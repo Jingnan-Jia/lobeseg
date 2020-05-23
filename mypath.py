@@ -6,21 +6,22 @@ import numpy as np
 from functools import wraps
 
 
-def mkdir_dcrt(fun):
+def mkdir_dcrt(fun): # decorator to create directory if not exist
     @wraps(fun)
     def decorated(*args, **kwargs):
         output = fun(*args, **kwargs)
-        if os.path.isdir(output):
-            if not os.path.exists (output):
-                os.makedirs (output)
-                print('successfully create directory:', output)
-        elif os.path.isfile(output):
+        if '.' in output.split('/')[-1]:
             output = os.path.dirname(output)
+            if not os.path.exists(output):
+                os.makedirs(output)
+                print('successfully create directory:', output)
+        else:
             if not os.path.exists (output):
                 os.makedirs (output)
                 print('successfully create directory:', output)
 
-        return output
+        return fun(*args, **kwargs)
+
     return decorated
 
 
@@ -65,20 +66,11 @@ class Mypath:
     def sub_dir(self):
 
         if self.task=='lobe':
-            if args.iso==1.5:
-                sub_dir = 'GLUCOLD_isotropic1dot5'
-            elif args.iso==0.7:
-                sub_dir = 'GLUCOLD_isotropic0dot7'
-            elif args.iso==0:
-                sub_dir = 'GLUCOLD'
-            elif args.iso==-1:
-                sub_dir = 'luna16'
-            else:
-                raise Exception('Please enter the correct args.iso for isotropic parameter')
+            sub_dir = 'GLUCOLD'
         elif self.task=='vessel':
-            sub_dir = None # todo: set different vessel dataset apart form SSc, to verify the effect of spacing
-        else:
-            sub_dir = None
+            sub_dir = 'SSc' # todo: set different vessel dataset apart form SSc, to verify the effect of spacing
+        elif self.task == 'no_label':
+            sub_dir = args.no_label_dir
 
         return sub_dir
 
@@ -89,10 +81,7 @@ class Mypath:
 
     @mkdir_dcrt
     def valid_dir(self):
-        if self.task=='no_label':
-            valid_dir = self.train_dir()
-        else:
-            valid_dir = self.data_path + '/' + self.task + '/valid'
+        valid_dir = self.data_path + '/' + self.task + '/valid'
         return valid_dir
 
     @mkdir_dcrt
@@ -100,19 +89,22 @@ class Mypath:
         task_log_dir = self.log_path + '/' + self.task
         return task_log_dir
 
+    @mkdir_dcrt
     def task_model_dir(self):
         task_model_dir = self.model_path + '/' + self.task
         return task_model_dir
 
-
-
+    @mkdir_dcrt
     def log_fpath(self):
-        task_log_dir = self.task_log_dir()
+        task_log_dir = self.task_log_dir
         return task_log_dir + '/' + self.str_name + '.log'
+
+    @mkdir_dcrt
     def tr_va_log_fpath(self):
-        task_log_dir = self.task_log_dir()
+        task_log_dir = self.task_log_dir
         return task_log_dir + '/' + self.str_name + 'tr_va.log'
 
+    @mkdir_dcrt
     def train_log_fpath(self):
         task_log_dir = self.task_log_dir()
         return task_log_dir + '/' + self.str_name + 'train.log'
@@ -122,48 +114,37 @@ class Mypath:
         model_figure_path = self.dir_path + '/figures'
         return model_figure_path
 
+    @mkdir_dcrt
     def json_fpath(self):
         task_model_path = self.task_model_dir()
         return task_model_path + '/' + self.str_name + 'MODEL.json'
 
+    @mkdir_dcrt
     def best_va_loss_location(self):
-        task_model_path = self.task_model_dir()
+        task_model_path = self.task_model_dir
         return task_model_path + '/' + self.str_name + 'MODEL.hdf5'
 
+    @mkdir_dcrt
     def best_tr_loss_location(self):
-        task_model_path = self.task_model_dir()
+        task_model_path = self.task_model_dir
         return task_model_path + '/' + self.str_name + '_tr_best.hdf5'
 
     @mkdir_dcrt
     def ori_ct_path(self, phase='train'):
-        if self.task=='lobe':
-            data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
-        else:
-            data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct'
+        ata_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
         return data_path
 
     @mkdir_dcrt
     def gdth_path(self, phase='train'):
-        if self.task == 'lobe':
-            gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
-        else:
-            gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct'
-
-
+        gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
         return gdth_path
 
     @mkdir_dcrt
     def pred_path(self, phase='train'):
-        if self.task == 'lobe':
-            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
-               + '/' + self.current_time
-        else:
-            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/'+ self.current_time
+        pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir() + '/' + self.current_time
         return pred_path
 
+    @mkdir_dcrt
     def dices_fpath(self, phase='train'):
-        if self.task == 'lobe':
-            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir()\
-               + '/' + self.current_time + '/dices.csv'
-        else:
-            return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.current_time + '/dices.csv'
+        pred_path = self.pred_path(phase)
+        return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir() + '/' + self.current_time + '/dices.csv'
