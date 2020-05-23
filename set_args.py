@@ -22,21 +22,21 @@ parser.add_argument(
     '--aux_output',
     help='Value of Auxiliary Output',
     type=float,
-    default=0)
+    default=1)
 
 parser.add_argument(
     '-ds',
     '--deep_supervision',
     help='Number of Deep Supervisers',
     type=int,
-    default=0)
+    default=2)
 
 parser.add_argument(
     '-fn',
     '--feature_number',
     help='Number of initial of conv channels',
     type=int,
-    default=8)
+    default=16)
 
 parser.add_argument(
     '-bn',
@@ -71,14 +71,14 @@ parser.add_argument(
     '--trgt_space',
     help='spacing along x, y ',
     type=float,
-    default=None)
+    default=1.4)
 
 parser.add_argument(
     '-trgt_z_space',
     '--trgt_z_space',
     help='spacing along z',
     type=float,
-    default=None)
+    default=2.5)
 
 parser.add_argument(
     '-ptch_sz',
@@ -127,19 +127,27 @@ parser.add_argument(
     '--no_label_dir',
     help='sub directory of no_label data',
     type=str,
-    default='SSc')
+    default='GLUCOLD')
+
 
 parser.add_argument(
-    '-shallower_lobe',
-    '--shallower_lobe',
-    help='get a shallower lobe net with 4 levels (normally there are 5 levels)',
+    '-p_middle',
+    '--p_middle',
+    help='p_middle = 0.5 means sample in the middle parts',
+    type=str,
+    default=0)
+
+parser.add_argument(
+    '-model_6_levels',
+    '--model_6_levels',
+    help='get a model_6_levels  net with 6 levels (normally there are 5 levels)',
     type=int,
     default=0)
 
 parser.add_argument(
-    '-deeper_vessel',
-    '--deeper_vessel',
-    help='get a deeper_vessel  net with 6 levels (normally there are 5 levels)',
+    '-model_7_levels',
+    '--model_7_levels',
+    help='get a model_7_levels  net with 6 levels (normally there are 5 levels)',
     type=int,
-    default=1)
+    default=0)
 args = parser.parse_args()
