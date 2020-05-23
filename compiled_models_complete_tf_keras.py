@@ -339,6 +339,390 @@ def connect(a, b):
     else:
         return [a, b]
 
+
+def load_cp_models_7_levels(model_names,
+                        nch=1,
+                        lr=0.0001,
+                        nf=16,
+                        bn=1,
+                        dr=1,
+                        net_type='v'):
+    ## start model
+    inputs_data_wt_gt = Input((None, None, None, nch), name='input_jia')  # input data with ground truth
+    in_tr = intro(inputs_data_wt_gt, int(nf / 4), nch, bn)
+    
+    # down_path
+    dwn_tra = down_trans(in_tr, int(nf / 2), 2, bn, dr, ty=net_type, name='blocka')
+    dwn_tr0 = down_trans(in_tr, nf, 2, bn, dr, ty=net_type, name='block0')
+    dwn_tr1 = down_trans(dwn_tr0, nf * 2, 2, bn, dr, ty=net_type, name='block1')
+    dwn_tr2 = down_trans(dwn_tr1, nf * 4, 2, bn, dr, ty=net_type, name='block2')
+    dwn_tr3 = down_trans(dwn_tr2, nf * 8, 2, bn, dr, ty=net_type, name='block3')
+    dwn_tr4 = down_trans(dwn_tr3, nf * 16, 2, bn, dr, ty=net_type, name='block4')
+    
+    #######################################################-----------------------#####################################
+    # decoder for lung segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_lung = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='lung_block5')
+    up_tr3_lung = up_trans(up_tr4_lung, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='lung_block6')
+    up_tr2_lung = up_trans(up_tr3_lung, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='lung_block7')
+    up_tr1_lung = up_trans(up_tr2_lung, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0, name='lung_block8')
+    up_tr0_lung = up_trans(up_tr1_lung, int(nf / 2), 2, bn, dr, ty=net_type, input2=dwn_tra, name='lung_block9')
+    up_tra_lung = up_trans(up_tr0_lung, int(nf / 4), 2, bn, dr, ty=net_type, input2=in_tr, name='lung_block10')
+    # classification
+    lung_out_chn = 2
+    res_lung = Conv3D(lung_out_chn, 1, padding='same', name='lung_Conv3D_last')(up_tra_lung)
+    out_lung = Activation('softmax', name='lung_out_segmentation')(res_lung)
+    
+    out_lung = [out_lung]  # convert to list to append other outputs
+    
+    #######################################################-----------------------#####################################
+    # decoder for lobe segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_lobe = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='lobe_block5')
+    up_tr3_lobe = up_trans(up_tr4_lobe, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='lobe_block6')
+    up_tr2_lobe = up_trans(up_tr3_lobe, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='lobe_block7')
+    up_tr1_lobe = up_trans(up_tr2_lobe, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0, name='lobe_block8')
+    up_tr0_lobe = up_trans(up_tr1_lobe, int(nf / 2), 2, bn, dr, ty=net_type, input2=dwn_tra, name='lobe_block9')
+    up_tra_lobe = up_trans(up_tr0_lobe, int(nf / 4), 2, bn, dr, ty=net_type, input2=in_tr, name='lobe_block10')
+    # classification
+    lobe_out_chn = 6
+    res_lobe = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_Conv3D_last')(up_tra_lobe)
+    out_lobe = Activation('softmax', name='lobe_out_segmentation')(res_lobe)
+    
+    out_lobe = [out_lobe]  # convert to list to append other outputs
+    
+    #######################################################-----------------------#####################################
+    # decoder for vessel segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_vessel = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='vessel_block5')
+    up_tr3_vessel = up_trans(up_tr4_vessel, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='vessel_block6')
+    up_tr2_vessel = up_trans(up_tr3_vessel, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='vessel_block7')
+    up_tr1_vessel = up_trans(up_tr2_vessel, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0, name='vessel_block8')
+    up_tr0_vessel = up_trans(up_tr1_vessel, int(nf / 2), 2, bn, dr, ty=net_type, input2=dwn_tra, name='vessel_block9')
+    up_tra_vessel = up_trans(up_tr0_vessel, int(nf / 4), 2, bn, dr, ty=net_type, input2=in_tr, name='vessel_block10')
+    # classification
+    vessel_out_chn = 2
+    res_vessel = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_Conv3D_last')(up_tra_vessel)
+    out_vessel = Activation('softmax', name='vessel_out_segmentation')(res_vessel)
+    
+    out_vessel = [out_vessel]  # convert to list to append other outputs
+    
+    #######################################################-----------------------#####################################
+    # decoder for airway segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_airway = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='airway_block5')
+    up_tr3_airway = up_trans(up_tr4_airway, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='airway_block6')
+    up_tr2_airway = up_trans(up_tr3_airway, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='airway_block7')
+    up_tr1_airway = up_trans(up_tr2_airway, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0, name='airway_block8')
+    up_tr0_airway = up_trans(up_tr1_airway, int(nf / 2), 2, bn, dr, ty=net_type, input2=dwn_tra, name='airway_block9')
+    up_tra_airway = up_trans(up_tr0_airway, int(nf / 4), 2, bn, dr, ty=net_type, input2=in_tr, name='airway_block10')
+    # classification
+    airway_out_chn = 2
+    res_airway = Conv3D(airway_out_chn, 1, padding='same', name='airway_Conv3D_last')(up_tra_airway)
+    out_airway = Activation('softmax', name='airway_out_segmentation')(res_airway)
+    
+    out_airway = [out_airway]  # convert to list to append other outputs
+    
+    #######################################################-----------------------#####################################
+    # decoder for reconstruction. up_path for segmentation V-Net, with shot connections
+    up_tr4_rec = up_trans(dwn_tr4, nf * 8, 3, bn, dr, ty=net_type, name='rec_block5')
+    up_tr3_rec = up_trans(up_tr4_rec, nf * 4, 3, bn, dr, ty=net_type, name='rec_block6')
+    up_tr2_rec = up_trans(up_tr3_rec, nf * 2, 2, bn, dr, ty=net_type, name='rec_block7')
+    up_tr1_rec = up_trans(up_tr2_rec, nf * 1, 2, bn, dr, ty=net_type, name='rec_block8')
+    up_tr0_rec = up_trans(up_tr1_rec, int(nf / 2), 2, bn, dr, ty=net_type, name='rec_block9')
+    up_tra_rec = up_trans(up_tr0_rec, int(nf / 4), 2, bn, dr, ty=net_type, name='rec_block10')
+    # classification
+    rec_out_chn = 1
+    out_recon = Conv3D(rec_out_chn, 1, padding='same', name='rec_Conv3D_last')(up_tra_rec)
+    # out_rec = Activation ('softmax', name='rec_out_segmentation') (res_rec)
+    
+    
+    loss = [dice_coef_loss_weight_p]
+    loss_weights = [1]
+    
+    optim = Adam(lr=lr)
+    
+    out_vessel_mt = out_vessel + [out_recon]
+    out_airway_mt = out_airway + [out_recon]
+    out_lobe_mt = out_lobe + [out_recon]
+    out_lung_mt = out_lung + [out_recon]
+    loss_mt = loss + ['mse']
+    loss_mt_weights = loss_weights + [0.1]
+    
+    metrics_seg_6_classes = [dice_coef_mean, dice_0, dice_1, dice_2, dice_3, dice_4, dice_5]
+    metrics_seg_2_classes = [dice_coef_mean, dice_0, dice_1]
+    
+    ###################----------------------------------#########################################
+    # compile lobe models
+    metrics_lobe = {'lobe_out_segmentation': metrics_seg_6_classes}
+    
+    net_only_lobe = Model(inputs_data_wt_gt, out_lobe, name='net_only_lobe')
+    net_only_lobe.compile(optimizer=optim,
+                          loss=dice_coef_loss_weight_p,
+                          metrics=metrics_lobe)
+    
+    net_lobe_recon = Model(inputs_data_wt_gt, out_lobe_mt, name='net_lobe')
+    net_lobe_recon.compile(optimizer=optim,
+                           loss=loss_mt,
+                           loss_weights=loss_mt_weights,
+                           metrics=metrics_lobe.update({'out_recon': 'mse'}))
+    
+    ###################----------------------------------#########################################
+    # compile vessel models
+    metrics_vessel = {'vessel_out_segmentation': metrics_seg_2_classes}
+    
+    net_only_vessel = Model(inputs_data_wt_gt, out_vessel, name='net_only_vessel')
+    net_only_vessel.compile(optimizer=optim,
+                            loss=dice_coef_loss_weight_p,
+                            metrics=metrics_vessel)
+    
+    net_vessel_recon = Model(inputs_data_wt_gt, out_vessel_mt, name='net_vessel')
+    net_vessel_recon.compile(optimizer=optim,
+                             loss=loss_mt,
+                             loss_weights=loss_mt_weights,
+                             metrics=metrics_vessel.update({'out_recon': 'mse'}))
+    
+    ###################----------------------------------#########################################
+    # compile airway models
+    metrics_airway = {'airway_out_segmentation': metrics_seg_2_classes}
+    
+    net_only_airway = Model(inputs_data_wt_gt, out_airway, name='net_only_airway')
+    net_only_airway.compile(optimizer=optim,
+                            loss=dice_coef_loss_weight_p,
+                            metrics=metrics_airway)
+    
+    net_airway_recon = Model(inputs_data_wt_gt, out_airway_mt, name='net_airway')
+    net_airway_recon.compile(optimizer=optim,
+                             loss=loss_mt,
+                             loss_weights=loss_mt_weights,
+                             metrics=metrics_airway.update({'out_recon': 'mse'}))
+    ###################----------------------------------#########################################
+    # compile lung models
+    metrics_lung = {'lung_out_segmentation': metrics_seg_2_classes}
+    
+    net_only_lung = Model(inputs_data_wt_gt, out_lung, name='net_only_lung')
+    net_only_lung.compile(optimizer=optim,
+                          loss=dice_coef_loss_weight_p,
+                          metrics=metrics_lung)
+    
+    net_lung_recon = Model(inputs_data_wt_gt, out_lung_mt, name='net_lung')
+    net_lung_recon.compile(optimizer=optim,
+                           loss=loss_mt,
+                           loss_weights=loss_mt_weights,
+                           metrics=metrics_lung.update({'out_recon': 'mse'}))
+    
+    # configeration and compilization for network in recon task
+    net_no_label = Model(inputs_data_wt_gt, out_recon, name='net_no_label')
+    net_no_label.compile(optimizer=Adam(lr=0.00001), loss='mse', metrics=['mse'])
+    # plot_model(net_integrated, to_file='results/model_pictures/net_integrated.png', show_layer_names=True, show_shapes=True)
+    
+    
+    models_dict = {
+        "net_airway": net_airway_recon,
+        "net_lung": net_lung_recon,
+        "net_lobe": net_lobe_recon,
+        "net_vessel": net_vessel_recon,
+        "net_no_label": net_no_label,
+    
+        "net_only_lobe": net_only_lobe,
+        "net_only_vessel": net_only_vessel,
+        "net_only_lung": net_only_lung,
+        "net_only_airway": net_only_airway,
+    }
+    
+    results = []
+    for i in model_names:
+        net_name = models_dict[i]
+        results.append(net_name)
+    
+    return results
+
+
+def load_cp_models_6_levels(model_names,
+                   nch=1,
+                   lr=0.0001,
+                   nf=16,
+                   bn=1,
+                   dr=1,
+                   net_type='v'):
+    ## start model
+    inputs_data_wt_gt = Input((None, None, None, nch), name='input_jia')  # input data with ground truth
+    in_tr = intro(inputs_data_wt_gt, int(nf/2), nch, bn)
+    
+    # down_path
+    dwn_tr0 = down_trans(in_tr, nf, 2, bn, dr, ty=net_type, name='block0')
+    dwn_tr1 = down_trans(dwn_tr0, nf * 2, 2, bn, dr, ty=net_type, name='block1')
+    dwn_tr2 = down_trans(dwn_tr1, nf * 4, 2, bn, dr, ty=net_type, name='block2')
+    dwn_tr3 = down_trans(dwn_tr2, nf * 8, 2, bn, dr, ty=net_type, name='block3')
+    dwn_tr4 = down_trans(dwn_tr3, nf * 16, 2, bn, dr, ty=net_type, name='block4')
+    
+    #######################################################-----------------------#####################################
+    # decoder for lung segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_lung = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='lung_block5')
+    up_tr3_lung = up_trans(up_tr4_lung, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='lung_block6')
+    up_tr2_lung = up_trans(up_tr3_lung, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='lung_block7')
+    up_tr1_lung = up_trans(up_tr2_lung, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0, name='lung_block8')
+    up_tr0_lung = up_trans(up_tr1_lung, int(nf/2), 2, bn, dr, ty=net_type, input2=in_tr, name='lung_block9')
+    # classification
+    lung_out_chn = 2
+    res_lung = Conv3D(lung_out_chn, 1, padding='same', name='lung_Conv3D_last')(up_tr0_lung)
+    out_lung = Activation('softmax', name='lung_out_segmentation')(res_lung)
+    
+    out_lung = [out_lung]  # convert to list to append other outputs
+
+    #######################################################-----------------------#####################################
+    # decoder for lobe segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_lobe = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='lobe_block5')
+    up_tr3_lobe = up_trans(up_tr4_lobe, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='lobe_block6')
+    up_tr2_lobe = up_trans(up_tr3_lobe, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='lobe_block7')
+    up_tr1_lobe = up_trans(up_tr2_lobe, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0, name='lobe_block8')
+    up_tr0_lobe = up_trans(up_tr1_lobe, int(nf/2), 2, bn, dr, ty=net_type, input2=in_tr, name='lobe_block9')
+    # classification
+    lobe_out_chn = 6
+    res_lobe = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_Conv3D_last')(up_tr0_lobe)
+    out_lobe = Activation('softmax', name='lobe_out_segmentation')(res_lobe)
+    
+    out_lobe = [out_lobe]  # convert to list to append other outputs
+
+#######################################################-----------------------#####################################
+    # decoder for vessel segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_vessel = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='vessel_block5')
+    up_tr3_vessel = up_trans(up_tr4_vessel, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='vessel_block6')
+    up_tr2_vessel = up_trans(up_tr3_vessel, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='vessel_block7')
+    up_tr1_vessel = up_trans(up_tr2_vessel, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0, name='vessel_block8')
+    up_tr0_vessel = up_trans(up_tr1_vessel, int(nf/2), 2, bn, dr, ty=net_type, input2=in_tr, name='vessel_block9')
+    # classification
+    vessel_out_chn = 2
+    res_vessel = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_Conv3D_last')(up_tr0_vessel)
+    out_vessel = Activation('softmax', name='vessel_out_segmentation')(res_vessel)
+    
+    out_vessel = [out_vessel]  # convert to list to append other outputs
+    
+    #######################################################-----------------------#####################################
+    # decoder for airway segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_airway = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='airway_block5')
+    up_tr3_airway = up_trans(up_tr4_airway, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='airway_block6')
+    up_tr2_airway = up_trans(up_tr3_airway, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='airway_block7')
+    up_tr1_airway = up_trans(up_tr2_airway, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0, name='airway_block8')
+    up_tr0_airway = up_trans(up_tr1_airway, int(nf/2), 2, bn, dr, ty=net_type, input2=in_tr, name='airway_block9')
+    # classification
+    airway_out_chn = 2
+    res_airway = Conv3D(airway_out_chn, 1, padding='same', name='airway_Conv3D_last')(up_tr0_airway)
+    out_airway = Activation('softmax', name='airway_out_segmentation')(res_airway)
+    
+    out_airway = [out_airway]  # convert to list to append other outputs
+
+    #######################################################-----------------------#####################################
+    # decoder for reconstruction. up_path for segmentation V-Net, with shot connections
+    up_tr4_rec = up_trans(dwn_tr4, nf * 8, 3, bn, dr, ty=net_type, name='rec_block5')
+    up_tr3_rec = up_trans(up_tr4_rec, nf * 4, 3, bn, dr, ty=net_type, name='rec_block6')
+    up_tr2_rec = up_trans(up_tr3_rec, nf * 2, 2, bn, dr, ty=net_type, name='rec_block7')
+    up_tr1_rec = up_trans(up_tr2_rec, nf * 1, 2, bn, dr, ty=net_type, name='rec_block8')
+    up_tr0_rec = up_trans(up_tr1_rec, int(nf/2), 2, bn, dr, ty=net_type, name='rec_block9')
+    # classification
+    rec_out_chn = 1
+    out_recon = Conv3D(rec_out_chn, 1, padding='same', name='rec_Conv3D_last')(up_tr0_rec)
+    # out_rec = Activation ('softmax', name='rec_out_segmentation') (res_rec)
+    
+    
+    loss = [dice_coef_loss_weight_p]
+    loss_weights = [1]
+    
+    optim = Adam(lr=lr)
+    
+    out_vessel_mt = out_vessel + [out_recon]
+    out_airway_mt = out_airway + [out_recon]
+    out_lobe_mt = out_lobe + [out_recon]
+    out_lung_mt = out_lung + [out_recon]
+    loss_mt = loss + ['mse']
+    loss_mt_weights = loss_weights + [0.1]
+
+    metrics_seg_6_classes = [dice_coef_mean, dice_0, dice_1, dice_2, dice_3, dice_4, dice_5]
+    metrics_seg_2_classes = [dice_coef_mean, dice_0, dice_1]
+    
+    ###################----------------------------------#########################################
+    # compile lobe models
+    metrics_lobe = {'lobe_out_segmentation': metrics_seg_6_classes}
+
+    net_only_lobe = Model(inputs_data_wt_gt, out_lobe, name='net_only_lobe')
+    net_only_lobe.compile(optimizer=optim,
+                          loss=dice_coef_loss_weight_p,
+                          metrics=metrics_lobe)
+    
+    net_lobe_recon = Model(inputs_data_wt_gt, out_lobe_mt, name='net_lobe')
+    net_lobe_recon.compile(optimizer=optim,
+                           loss=loss_mt,
+                           loss_weights=loss_mt_weights,
+                           metrics=metrics_lobe.update({'out_recon': 'mse'}))
+    
+    ###################----------------------------------#########################################
+    # compile vessel models
+    metrics_vessel = {'vessel_out_segmentation': metrics_seg_2_classes}
+    
+    net_only_vessel = Model(inputs_data_wt_gt, out_vessel, name='net_only_vessel')
+    net_only_vessel.compile(optimizer=optim,
+                            loss=dice_coef_loss_weight_p,
+                            metrics=metrics_vessel)
+
+    net_vessel_recon = Model(inputs_data_wt_gt, out_vessel_mt, name='net_vessel')
+    net_vessel_recon.compile(optimizer=optim,
+                             loss=loss_mt,
+                             loss_weights=loss_mt_weights,
+                             metrics=metrics_vessel.update({'out_recon': 'mse'}))
+    
+    ###################----------------------------------#########################################
+    # compile airway models
+    metrics_airway = {'airway_out_segmentation': metrics_seg_2_classes}
+    
+    net_only_airway = Model(inputs_data_wt_gt, out_airway, name='net_only_airway')
+    net_only_airway.compile(optimizer=optim,
+                            loss=dice_coef_loss_weight_p,
+                            metrics=metrics_airway)
+    
+    net_airway_recon = Model(inputs_data_wt_gt, out_airway_mt, name='net_airway')
+    net_airway_recon.compile(optimizer=optim,
+                             loss=loss_mt,
+                             loss_weights=loss_mt_weights,
+                             metrics=metrics_airway.update({'out_recon': 'mse'}))
+    ###################----------------------------------#########################################
+    # compile lung models
+    metrics_lung = {'lung_out_segmentation': metrics_seg_2_classes}
+    
+    net_only_lung = Model(inputs_data_wt_gt, out_lung, name='net_only_lung')
+    net_only_lung.compile(optimizer=optim,
+                          loss=dice_coef_loss_weight_p,
+                          metrics=metrics_lung)
+    
+    net_lung_recon = Model(inputs_data_wt_gt, out_lung_mt, name='net_lung')
+    net_lung_recon.compile(optimizer=optim,
+                           loss=loss_mt,
+                           loss_weights=loss_mt_weights,
+                           metrics=metrics_lung.update({'out_recon': 'mse'}))
+    
+    # configeration and compilization for network in recon task
+    net_no_label = Model(inputs_data_wt_gt, out_recon, name='net_no_label')
+    net_no_label.compile(optimizer=Adam(lr=0.00001), loss='mse', metrics=['mse'])
+    # plot_model(net_integrated, to_file='results/model_pictures/net_integrated.png', show_layer_names=True, show_shapes=True)
+    
+
+    models_dict = {
+        "net_airway": net_airway_recon,
+        "net_lung": net_lung_recon,
+        "net_lobe": net_lobe_recon,
+        "net_vessel": net_vessel_recon,
+        "net_no_label": net_no_label,
+
+        "net_only_lobe": net_only_lobe,
+        "net_only_vessel": net_only_vessel,
+        "net_only_lung": net_only_lung,
+        "net_only_airway": net_only_airway,
+    }
+
+    results = []
+    for i in model_names:
+        net_name = models_dict[i]
+        results.append(net_name)
+    
+    return results
+
+
+
 def load_cp_models(model_names,
                    nch=1,
                    lr=0.0001,
@@ -347,8 +731,7 @@ def load_cp_models(model_names,
                    dr=1,
                    ds=2,
                    aux=0.5,
-                   net_type='v',
-                   deeper_vessel=0):
+                   net_type='v'):
 
     ## start model
     inputs_data_wt_gt = Input ((None, None, None, nch), name='input_jia')  # input data with ground truth
@@ -458,52 +841,6 @@ def load_cp_models(model_names,
         d_out_2 = Activation ('softmax', name='vessel_d2') (res)
         out_vessel.append (d_out_2)
 
-        # ------------------------------------------------------------------------------
-    if deeper_vessel:
-        inputs_data_wt_gt_deeper = Input((None, None, None, nch), name='input_jia_deeper')  # input data with ground truth
-        in_tr_deeper = intro(inputs_data_wt_gt_deeper, int(nf/2), nch, bn)
-        dwn_tr0_deeper = down_trans(in_tr_deeper, nf, 2, bn, dr, ty=net_type, name='block0')
-
-        # down_path
-        dwn_tr1_deeper = down_trans(in_tr_deeper, nf * 2, 2, bn, dr, ty=net_type, name='block1')
-        dwn_tr2_deeper = down_trans(dwn_tr1_deeper, nf * 4, 2, bn, dr, ty=net_type, name='block2')
-        dwn_tr3_deeper = down_trans(dwn_tr2_deeper, nf * 8, 2, bn, dr, ty=net_type, name='block3')
-        dwn_tr4_deeper = down_trans(dwn_tr3_deeper, nf * 16, 2, bn, dr, ty=net_type, name='block4')
-        # decoder for vessel segmentation. up_path for segmentation V-Net, with shot connections
-        up_tr4_vessel_deeper = up_trans(dwn_tr4_deeper, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3_deeper, name='vessel_block5')
-        up_tr3_vessel_deeper = up_trans(up_tr4_vessel_deeper, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2_deeper, name='vessel_block6')
-        up_tr2_vessel_deeper = up_trans(up_tr3_vessel_deeper, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1_deeper, name='vessel_block7')
-        up_tr1_vessel_deeper = up_trans(up_tr2_vessel_deeper, nf * 1, 2, bn, dr, ty=net_type, input2=dwn_tr0_deeper, name='vessel_block8')
-        up_tr0_vessel_deeper = up_trans(up_tr1_vessel_deeper, int(nf/2), 2, bn, dr, ty=net_type, input2=in_tr_deeper, name='vessel_block9')
-        # classification
-        vessel_out_chn = 2
-        res_vessel_deeper = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_Conv3D_last')(up_tr0_vessel_deeper)
-        out_vessel_deeper = Activation('softmax', name='vessel_out_segmentation')(res_vessel_deeper)
-
-        out_vessel_deeper = [out_vessel_deeper]  # convert to list to append other outputs
-        # vessel_aux=0
-        # if aux:
-        #     # aux_output
-        #     aux_res_deeper = Conv3D(2, 1, padding='same', name='vessel_aux_Conv3D_last')(up_tr1_vessel_deeper)
-        #     aux_out_deeper = Activation('softmax', name='vessel_aux')(aux_res_deeper)
-        #     out_vessel_deeper.append(aux_out_deeper)
-        # if ds:
-        #     out_vessel_deeper = [out_vessel_deeper]
-        #     # deep supervision#1
-        #     deep_1_deeper = UpSampling3D((2, 2, 2), name='vessel_d1_UpSampling3D_0')(up_tr2_vessel_deeper)
-        #     res = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_d1_Conv3D_last')(deep_1_deeper)
-        #     d_out_1 = Activation('softmax', name='vessel_d1')(res)
-        #     out_vessel_deeper.append(d_out_1)
-        #
-        #     # deep supervision#2
-        #     deep_2 = UpSampling3D((2, 2, 2), name='vessel_d2_UpSampling3D_0')(up_tr3_vessel)
-        #     deep_2 = UpSampling3D((2, 2, 2), name='vessel_d2_UpSampling3D_1')(deep_2)
-        #     res = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_d2_Conv3D_last')(deep_2)
-        #     d_out_2 = Activation('softmax', name='vessel_d2')(res)
-        #     out_vessel_deeper.append(d_out_2)
-
-
-
     #######################################################-----------------------#####################################
     # decoder for airway segmentation. up_path for segmentation V-Net, with shot connections
     up_tr4_airway = up_trans (dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='airway_block5')
@@ -612,14 +949,11 @@ def load_cp_models(model_names,
             loss.append(dice_coef_loss_weight_p)
             loss.append(dice_coef_loss_weight_p)
             loss_weights = [0.375, 0.375, 0.125, 0.125]
-    else:
-        if ds==2:
+    elif ds==2:
             loss.append(dice_coef_loss_weight_p)
             loss.append(dice_coef_loss_weight_p)
             loss_weights = [0.5, 0.25, 0.25]
-        else:
-            loss = dice_coef_loss_weight_p #right?? todo: check it
-            loss_weights = 1
+
 
     optim = Adam (lr=lr)
 
@@ -690,11 +1024,7 @@ def load_cp_models(model_names,
     net_only_vessel.compile (optimizer=optim,
                            loss=dice_coef_loss_weight_p,
                            metrics=metrics_vessel)
-    if deeper_vessel:
-        net_only_vessel_deeper = Model(inputs_data_wt_gt_deeper, out_vessel_deeper, name='net_only_vessel_deeper')
-        net_only_vessel_deeper.compile(optimizer=optim,
-                                       loss=dice_coef_loss_weight_p,
-                                       metrics=metrics_vessel)
+
 
     net_vessel_recon = Model (inputs_data_wt_gt, out_vessel_mt, name='net_vessel')
     net_vessel_recon.compile (optimizer=optim,
@@ -789,39 +1119,21 @@ def load_cp_models(model_names,
 
 
     # plot_model(net_integrated, to_file='results/model_pictures/net_integrated.png', show_layer_names=True, show_shapes=True)
+    models_dict = {
+        "net_airway": net_airway_recon,
+        "net_lung": net_lung_recon,
+        "net_lobe": net_lobe_recon,
+        "net_vessel": net_vessel_recon,
+        "net_no_label": net_no_label,
 
-    if deeper_vessel:
-        models_dict = {
-            "net_airway": net_airway_recon,
-            "net_lung": net_lung_recon,
-            "net_lobe": net_lobe_recon,
-            "net_vessel": net_vessel_recon,
-            "net_no_label": net_no_label,
-
-            "net_only_lobe": net_only_lobe,
-            "net_only_vessel": net_only_vessel_deeper,
-            "net_only_lung": net_only_lung,
-            "net_only_airway": net_only_airway,
-            #
-            # "net_itgt_lobe_recon": net_itgt_lobe_recon,
-            # "net_itgt_vessel_recon": net_itgt_vessel_recon
-        }
-    else:
-        models_dict = {
-            "net_airway": net_airway_recon,
-            "net_lung": net_lung_recon,
-            "net_lobe": net_lobe_recon,
-            "net_vessel": net_vessel_recon,
-            "net_no_label": net_no_label,
-
-            "net_only_lobe": net_only_lobe,
-            "net_only_vessel": net_only_vessel,
-            "net_only_lung": net_only_lung,
-            "net_only_airway": net_only_airway,
-            #
-            # "net_itgt_lobe_recon": net_itgt_lobe_recon,
-            # "net_itgt_vessel_recon": net_itgt_vessel_recon
-        }
+        "net_only_lobe": net_only_lobe,
+        "net_only_vessel": net_only_vessel,
+        "net_only_lung": net_only_lung,
+        "net_only_airway": net_only_airway,
+        #
+        # "net_itgt_lobe_recon": net_itgt_lobe_recon,
+        # "net_itgt_vessel_recon": net_itgt_vessel_recon
+    }
 
     results = []
     for i in model_names:
