@@ -21,6 +21,7 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
         scan_files = scan_files[:number]
     elif isinstance(number, list): # number = [3,7]
         scan_files = scan_files[number[0]:number[1]]
+    print('predicted files are:', scan_files)
 
     # segment = v_seg.v_segmentor (batch_size=batch_size, model=model_name,
     #                              ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,

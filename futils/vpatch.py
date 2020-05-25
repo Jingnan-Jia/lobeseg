@@ -20,9 +20,9 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     
    
     if p_middle:
-        print('p_middle, select more big vessels')
+        # print('p_middle, select more big vessels')
         tmp_nb = int(1/p_middle)
-        if random.randint(tmp_nb)==0: #patch from middle part
+        if random.randint(0,tmp_nb-1)==0: #patch from middle part
             range_vals_low = list(map(int, (sh[0:3]/3 - p_sh//2) ))
             range_vals_high = list(map(int,(sh[0:3] * 2 /3 - p_sh//2) ))
             # assert range_vals_low > 0 and range_vals_high > 0

@@ -56,7 +56,7 @@ class v_segmentor(object):
 
         if type(self.model) is str: # if model is loaded from a file
             model_path = model.split(".hdf5")
-            model_path = model.split(".hdf5")[0][:-8]+'MODEL.json'
+            model_path = model.split(".hdf5")[0][:-5]+'MODEL.json'
             with open(model_path, "r") as json_file:
                 json_model = json_file.read()
                 self.v = model_from_json(json_model)
@@ -134,18 +134,12 @@ class v_segmentor(object):
       
         #run predict
         x5 = time.time()
-        pred_array = self.v.predict(x_patch,self.batch_size,verbose=0)
+        pred = self.v.predict(x_patch,self.batch_size,verbose=0)
         x6 = time.time()
         print('time for prediction:', x6-x5)
 
-
-        # chooses our output :P (0:main pred, 1:aux output, 2-3: deep superv)
-        if len(pred_array)>1:
-            pred = pred_array[0]  # (125, 128, 128, 64, 6)
-        else:
-            pred = pred_array
-        
         #turn back to image shape
+        print('pred.shape before reshape:', pred.shape)
         pred = np.reshape(pred,(pred.shape[0],self.ptch_sz,self.ptch_sz,self.z_sz,-1))
         pred = np.rollaxis(pred,3,1) # (125, 64, 128, 128, 6)
         

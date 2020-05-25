@@ -380,8 +380,13 @@ class TwoScanIterator(Iterator):
                     A.append(batch_a)
                     B.append(batch_b)
                     C.append(batch_c)
+                a_np = np.array(A)
+                b_np = np.array(B)
+                c_np = np.array(C)
+                print('after patching, the shape is ', a_np.shape)
 
-                return [np.array(A), np.array(B), np.array(C)]
+
+                return [a_np, b_np, c_np]
 
 
             else:
@@ -409,8 +414,11 @@ class TwoScanIterator(Iterator):
 
                     A.append(batch_a)
                     B.append(batch_b)
+                a_np = np.array(A)
+                b_np = np.array(B)
+                print('after patching, the shape is ', a_np.shape)
 
-                return [np.array(A), np.array(B)]
+                return [a_np, b_np]
 
 
 
@@ -419,8 +427,8 @@ class TwoScanIterator(Iterator):
         x = None
         while 1:
             if self.aux:
-                for i in range(5):
-                    x, y, y_aux = self.next()
+                # for i in range(5):
+                x, y, y_aux = self.next()
                 #     try:
                 #         x, y, y_aux = self.next()
                 #         break
@@ -441,8 +449,8 @@ class TwoScanIterator(Iterator):
                     else:
                         yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :]]
             else:
-                for i in range(5):
-                    x, y = self.next()
+                # for i in range(5):
+                x, y = self.next()
                     # try:
                     #     x, y = self.next()
                     #     break
@@ -462,4 +470,4 @@ class TwoScanIterator(Iterator):
                         if self.ds == 2:
                             yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
                         else:
-                            yield x[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]
+                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :]]
