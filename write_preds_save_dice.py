@@ -9,7 +9,7 @@ from write_dice import write_dices_to_csv
 import segmentor as v_seg
 import os
 import re
-from train_ori_fit_rec_epoch import Mypath
+from mypath import Mypath
 import futils.util as futil
 
 # from train_ori_fit_rec_epoch import Mypath
