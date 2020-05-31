@@ -86,6 +86,8 @@ def save_itk(filename,scan,origin,spacing,dtype = 'int16'):
     
         
         stk = sitk.GetImageFromArray(scan.astype(dtype))
+        # origin and spacing 's coordinate are (z,y,x). but for image class,
+        # the order shuld be (x,y,z), that's why we reverse the order here.
         stk.SetOrigin(origin[::-1])  # numpy array is reversed after convertion from image, but origin and spacing keep unchanged
         stk.SetSpacing(spacing[::-1])
         
@@ -99,7 +101,7 @@ def load_nrrd(filename):
         origin = np.array(options['space origin']).astype(float)
         spacing = np.array(options['space directions']).astype(float)
         spacing = np.sum(spacing,axis=0)
-        return np.transpose(np.array(readdata).astype(float)),origin[::-1],spacing[::-1]
+        return np.transpose(np.array(readdata).astype(float)),origin[::-1],spacing[::-1] #all of them has coordinate (z,y,x)
                 
 #%% Save in _nii.gz format
 def save_nii(dirname,savefilename,lung_mask):    
@@ -113,6 +115,13 @@ def save_slice_img(folder,scan,uid):
         imsave(os.path.join(folder,uid+'sl_'+str(i)+'.png'),s)
 #%%
 def normalize(image,min_=MIN_BOUND,max_=MAX_BOUND):
+    '''
+    set the values to [0~1]
+    :param image:
+    :param min_:
+    :param max_:
+    :return:
+    '''
     image = (image - min_) / (max_ - min_)
     image[image>1] = 1.
     image[image<0] = 0.
