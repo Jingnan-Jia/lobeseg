@@ -30,7 +30,7 @@ class Mypath:
     Here, I use 'location' to indicatate full file path and name, 'path' to respresent the directory,
     'file_name' to respresent the file name in the parent directory.
     '''
-    def __init__(self, task):
+    def __init__(self, task, current_time=None):
 
         self.task = task
         self.dir_path = os.path.dirname (os.path.realpath (__file__)) # abosolute path of the current script
@@ -39,8 +39,10 @@ class Mypath:
         self.data_path = os.path.join (self.dir_path, 'data')
         self.results_path = os.path.join (self.dir_path, 'results')
 
-
-        self.current_time = str (int(time.time ())) + '_' + str(np.random.randint(1000))
+        if current_time:
+            self.current_time = current_time
+        else:
+            self.current_time = str (int(time.time ())) + '_' + str(np.random.randint(1000))
         self.setting = '_lr' + str (args.lr) \
                        + 'ld' + str (args.load) \
                        + 'm6l' + str(args.model_6_levels) \
@@ -131,7 +133,7 @@ class Mypath:
 
     @mkdir_dcrt
     def ori_ct_path(self, phase='train'):
-        ata_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
+        data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
         return data_path
 
     @mkdir_dcrt
