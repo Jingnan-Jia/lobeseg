@@ -9,9 +9,19 @@ import numpy as np
 
 
 def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
+    '''
 
 
-    print('start write_preds_to_disk, this model is loaded from disk')
+    :param segment: an object or an instance
+    :param data_dir: directory where ct data is
+    :param preds_dir: directory where prediction result will be saved
+    :param number: number of predicted ct
+    :param stride: stride or overlap ratio during patching
+    :return: None
+    '''
+
+
+    print('Start write_preds_to_disk')
     scan_files = sorted (glob.glob (data_dir + '/' + '*.mhd'))
     if scan_files is None:
         scan_files = sorted (glob.glob (data_dir + '/' + '*.nrrd'))
@@ -21,7 +31,7 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
         scan_files = scan_files[:number]
     elif isinstance(number, list): # number = [3,7]
         scan_files = scan_files[number[0]:number[1]]
-    print('predicted files are:', scan_files)
+    print('Predicted files are:', scan_files)
 
     # segment = v_seg.v_segmentor (batch_size=batch_size, model=model_name,
     #                              ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
@@ -32,18 +42,12 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
     for scan_file in scan_files:
 
         # ct_scan.shape: (717,, 512, 512), spacing: 0.5, 0.741, 0.741
-        ct_scan, origin, spacing, orientation = futil.load_itk (filename=scan_file, get_orientation=True)
+        ct_scan, origin, spacing = futil.load_itk (filename=scan_file, get_orientation=True)
 
-        # noise = np.random.randint(low = -90, high = 90, size = ct_scan.shape)
-        # ct_scan = ct_scan + noise
-
-        if (orientation[-1] == -1):
-            ct_scan = ct_scan[::-1]
         print ('Spacing: ', spacing, 'size', ct_scan.shape)
 
         # NORMALIZATION
         ct_scan = futil.normalize (ct_scan)
-
 
         mask = segment.predict (ct_scan, ori_space_list=spacing, stride=stride) # shape: 717, 512, 512
 

@@ -14,7 +14,7 @@ from scipy import ndimage
 from skimage.io import imsave
 import nrrd
 import copy
-
+import nibabel as nib
 
 
 MIN_BOUND = -1000.0
@@ -69,15 +69,11 @@ def load_itk(filename,original=False,get_orientation=False):
 
     # Read the spacing along each dimension
     spacing = np.array(list(reversed(itkimage.GetSpacing())))
-#     print('get_orientation', get_orientation)
-    if get_orientation:
-        # print('orientation true')
-        orientation = itkimage.GetDirection()
-        # print('orientaton:', orientation)
-        return ct_scan, origin, spacing, orientation
-    else:
-        # print('only 3')
-        return ct_scan, origin, spacing
+    orientation = itkimage.GetDirection()
+    if (orientation[-1] == -1):
+        ct_scan = ct_scan[::-1]
+
+    return ct_scan, origin, spacing
 #%%
 def save_itk(filename,scan,origin,spacing,dtype = 'int16'):
     
