@@ -112,6 +112,7 @@ class Logger:
     def plot_train_dice_mean(self):
         # #         self.super_title = self.super_title + 'valid_dice_mean'
         x, y = self._get_tr_data(self.train_out_mean)
+        x, y = x[::self.skip_nb], y[::self.skip_nb]
         self._plot(x_train=x, y_train=y, x_valid=None, y_valid=None, title='train_dice_mean')
 
 
@@ -558,24 +559,36 @@ class Hist_:
 #              '1588717176_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz128ptzsz96',
 #              '1588716830_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
 #              '1588710600_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96'
+
+#               '1589148525_lr0.0001ld0ao0ds2dr1bn1fn8trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+#              '1589148417_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.6ptch_per_scan10tr_nb19ptsz144ptzsz96',
+#              '1589148328_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.6ptch_per_scan10tr_nb19ptsz144ptzsz96',
+#              '1589148298_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1trzsp1ptch_per_scan10tr_nb19ptsz144ptzsz96',
+#              '1589148187_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
+#              '1589148121_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb10ptsz144ptzsz96',
+#              '1589148113_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb15ptsz144ptzsz96',
+#              '1589148106_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+#              '1589148078_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96',
+#              '1589148061_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
+#              '1589148055_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
+#              '1589148044_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb10ptsz144ptzsz96',
+#              '1589148016_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+#              '1589147476_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96',
+
+# '1588886682_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz144ptzsz96',
+#              '1588886816_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz64ptzsz64',
 #
 #              ]
 
-task_name = 'lobe'
-str_names = ['1589148525_lr0.0001ld0ao0ds2dr1bn1fn8trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
-             '1589148417_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.6ptch_per_scan10tr_nb19ptsz144ptzsz96',
-             '1589148328_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.6ptch_per_scan10tr_nb19ptsz144ptzsz96',
-             '1589148298_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1trzsp1ptch_per_scan10tr_nb19ptsz144ptzsz96',
-             '1589148187_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
-             '1589148121_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb10ptsz144ptzsz96',
-             '1589148113_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb15ptsz144ptzsz96',
-             '1589148106_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
-             '1589148078_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96',
-             '1589148061_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
-             '1589148055_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
-             '1589148044_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb10ptsz144ptzsz96',
-             '1589148016_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
-             '1589147476_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp1.5trzsp1.5ptch_per_scan10tr_nb2ptsz144ptzsz96',
+task_name = 'vessel'
+str_names = ['1588886816_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz64ptzsz64',
+    '1588887205_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz96ptzsz144',
+             '1588717256_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz96ptzsz96',
+             '1588886682_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz144ptzsz96',
+             '1588716830_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96',
+             '1588717176_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz128ptzsz96',
+             '1588717381_lr0.0001ld0ao0ds2dr1bn1fn8trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb5ptsz144ptzsz96'
+
 
 
              ]
@@ -583,7 +596,7 @@ str_names = ['1589148525_lr0.0001ld0ao0ds2dr1bn1fn8trszNonetrzszNonetrsp1.5trzsp
 for str_name in str_names:
     tr_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'train.log'
     va_log = os.path.dirname (os.path.realpath (__file__)) +'/logs/' + task_name + '/' + str_name + 'tr_va.log'
-    hist = Logger(tr_log, va_log, task_name, skip_nb=500, average_N=4)
+    hist = Logger(tr_log, va_log, task_name, skip_nb=5000, average_N=4)
 
     hist.plot_all_val_dice()
     hist.plot_all_train_dice()
