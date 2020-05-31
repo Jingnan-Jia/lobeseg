@@ -42,7 +42,7 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
     for scan_file in scan_files:
 
         # ct_scan.shape: (717,, 512, 512), spacing: 0.5, 0.741, 0.741
-        ct_scan, origin, spacing = futil.load_itk (filename=scan_file, get_orientation=True)
+        ct_scan, origin, spacing = futil.load_itk (filename=scan_file)
 
         print ('Spacing: ', spacing, 'size', ct_scan.shape)
 
