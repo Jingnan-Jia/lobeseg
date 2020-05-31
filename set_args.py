@@ -22,21 +22,21 @@ parser.add_argument(
     '--aux_output',
     help='Value of Auxiliary Output',
     type=float,
-    default=1)
+    default=0)
 
 parser.add_argument(
     '-ds',
     '--deep_supervision',
     help='Number of Deep Supervisers',
     type=int,
-    default=2)
+    default=0)
 
 parser.add_argument(
     '-fn',
     '--feature_number',
     help='Number of initial of conv channels',
     type=int,
-    default=16)
+    default=8)
 
 parser.add_argument(
     '-bn',
@@ -71,28 +71,28 @@ parser.add_argument(
     '--trgt_space',
     help='spacing along x, y ',
     type=float,
-    default=1.4)
+    default=None)
 
 parser.add_argument(
     '-trgt_z_space',
     '--trgt_z_space',
     help='spacing along z',
     type=float,
-    default=2.5)
+    default=None)
 
 parser.add_argument(
     '-ptch_sz',
     '--ptch_sz',
     help='patch size',
     type=int,
-    default=144)
+    default=288)
 
 parser.add_argument(
     '-ptch_z_sz',
     '--ptch_z_sz',
     help='patch z size',
     type=int,
-    default=96)
+    default=192)
 
 parser.add_argument(
     '-batch_size',
@@ -106,7 +106,7 @@ parser.add_argument(
     '--patches_per_scan',
     help='patches_per_scan',
     type=int,
-    default=10)
+    default=5)
 
 parser.add_argument(
     '-iso',
@@ -127,7 +127,7 @@ parser.add_argument(
     '--no_label_dir',
     help='sub directory of no_label data',
     type=str,
-    default='GLUCOLD')
+    default='SSc')
 
 
 parser.add_argument(
@@ -135,14 +135,14 @@ parser.add_argument(
     '--p_middle',
     help='p_middle = 0.5 means sample in the middle parts',
     type=str,
-    default=0)
+    default=0.5)
 
 parser.add_argument(
     '-model_6_levels',
     '--model_6_levels',
     help='get a model_6_levels  net with 6 levels (normally there are 5 levels)',
     type=int,
-    default=0)
+    default=1)
 
 parser.add_argument(
     '-model_7_levels',
@@ -150,4 +150,12 @@ parser.add_argument(
     help='get a model_7_levels  net with 6 levels (normally there are 5 levels)',
     type=int,
     default=0)
+
+parser.add_argument(
+    '-model_mt_scales',
+    '--model_mt_scales',
+    help='get a model of multi scales  net with 5 levels (normally there are 5 levels)',
+    type=int,
+    default=0)
+
 args = parser.parse_args()
