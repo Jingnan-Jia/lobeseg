@@ -134,7 +134,8 @@ class v_segmentor(object):
       
         #run predict
         x5 = time.time()
-        pred = self.v.predict(x_patch,self.batch_size,verbose=0)
+        pred = self.v.predict(x_patch,self.batch_size,verbose=0) #output a list if aux or deep supervision
+        pred = pred[0]
         x6 = time.time()
         print('time for prediction:', x6-x5)
 
