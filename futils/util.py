@@ -50,7 +50,14 @@ def get_scan(file_name):
     else:
         return[],[],[]
 #%%
-def load_itk(filename,original=False,get_orientation=False):
+def load_itk(filename):
+    '''
+
+    :param filename:
+    :param original:
+    :param get_orientation:
+    :return: ct, origin, spacing, all of them has coordinate (z,y,x)
+    '''
 #     print('start load data')
     # Reads the image using SimpleITK
     if(os.path.isfile(filename) ):
@@ -65,10 +72,10 @@ def load_itk(filename,original=False,get_orientation=False):
         
     #ct_scan[ct_scan>4] = 0 #filter trachea (label 5)
     # Read the origin of the ct_scan, will be used to convert the coordinates from world to voxel and vice versa.
-    origin = np.array(list(reversed(itkimage.GetOrigin())))
+    origin = np.array(list(reversed(itkimage.GetOrigin()))) #note: after reverseing, origin=(z,y,x)
 
     # Read the spacing along each dimension
-    spacing = np.array(list(reversed(itkimage.GetSpacing())))
+    spacing = np.array(list(reversed(itkimage.GetSpacing()))) #note: after reverseing,  spacing =(z,y,x)
     orientation = itkimage.GetDirection()
     if (orientation[-1] == -1):
         ct_scan = ct_scan[::-1]
