@@ -5,18 +5,7 @@ import time
 import copy
 
 
-def load_scan(file_name):
 
-    """Load mhd or nrrd 3d scan"""
-
-    extension = file_name.split('.')[-1]
-    if extension == 'mhd':
-        scan, origin, spacing = futil.load_itk(file_name)
-
-    elif extension == 'nrrd':
-        scan, origin, spacing = futil.load_nrrd(file_name)
-
-    return np.expand_dims(scan, axis=-1), spacing
 
 def metrics_per_chn(gdth, pred):
     gdth = gdth.astype(int)
@@ -75,7 +64,7 @@ def metrics_ave(gdth, pred):
 
     return recall_ave, precision_ave, false_positive_rate_ave, jaccard_ave, dice_ave
 
-def surfd(input1, input2, spacing=1, connectivity=1):
+def surfd(input1, input2, spacing=1, connectivity=3):
     input_1 = np.atleast_1d(input1.astype(np.bool))
     input_2 = np.atleast_1d(input2.astype(np.bool))
 
@@ -92,6 +81,17 @@ def surfd(input1, input2, spacing=1, connectivity=1):
     dtb = morphology.distance_transform_edt(~Sprime, spacing)
     ds1 = np.ravel(dta[Sprime != 0])
     ds2 = np.ravel(dtb[S != 0])
+
+    count1 = np.count_nonzero(ds1)
+    count2 = np.count_nonzero(ds2)
+
+    dta_ = morphology.distance_transform_edt(S, spacing)
+    dtb_ = morphology.distance_transform_edt(Sprime, spacing)
+    ds1_ = np.ravel(dta[Sprime == 0])
+    ds2_ = np.ravel(dtb[S == 0])
+
+    count1_ = np.count_nonzero(ds1_)
+    count2_ = np.count_nonzero(ds2_)
 
     sds = np.concatenate([ds1, ds2])
 
@@ -120,11 +120,12 @@ def one_hot_encode_3D(patch, labels):
     return np.float64(patches)
 
 
-gdth, gdth_spacing = load_scan('/data/jjia/mt/data/vessel/valid/gdth_ct/SSc_patient_51.mhd')
-pred, pred_spacing = load_scan('/data/jjia/practice/add_big_vessel/SSc_patient_51.mhd')
-
-# pred, pred_spacing = load_scan('/data/jjia/e2e_new/results/lobe/preds/valid/GLUCOLD/15847895/GLUCOLD_patients_26.mhd')
-# gdth, gdth_spacing = load_scan('/data/jjia/mt/data/lobe/valid/gdth_ct/GLUCOLD/temp_save/GLUCOLD_patients_26.nrrd')
+gdth_file_name = '/data/jjia/mt/data/vessel/valid/gdth_ct/SSc/SSc_patient_51.mhd'
+pred_file_name = '/data/jjia/practice/SSc_patient_51.mhd'
+gdth, _, gdth_spacing = futil.load_itk(gdth_file_name)
+pred, _, pred_spacing = futil.load_itk(pred_file_name)
+gdth = np.expand_dims(gdth, axis=-1)
+pred = np.expand_dims(pred, axis=-1)
 
 task = 'vessel'
 if task=='lobe':
@@ -146,7 +147,7 @@ for i in range(len(labels)):
     print('recall_per_chn, precision_per_chn, false_positive_rate_per_chn, jaccard_per_chn, dice_per_chn')
     print(metrics)
 
-    surface_distance = surfd(pred, gdth, gdth_spacing[::-1],1)
+    surface_distance = surfd(pred, gdth, spacing=gdth_spacing)
 
 
     msd = surface_distance.mean()

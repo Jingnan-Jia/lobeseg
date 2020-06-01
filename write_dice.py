@@ -11,18 +11,6 @@ import glob
 import os
 import numpy as np
 
-def load_scan(file_name):
-    
-    """Load mhd or nrrd 3d scan"""
-
-    extension = file_name.split('.')[-1]
-    if extension == 'mhd':
-        scan, origin, spacing = futil.load_itk(file_name)
-
-    elif extension == 'nrrd':
-        scan, origin, spacing = futil.load_nrrd(file_name)
-
-    return np.expand_dims(scan, axis=-1)
 
 def calculate_dices(labels, a, b):
     '''
@@ -83,9 +71,12 @@ def write_dices_to_csv(labels, gdth_path, pred_path, csv_file, gdth_extension='.
         gdth_name = gdth_name
         pred_name = pred_name
         
-        gdth_file = load_scan(gdth_name)  # (219, 253, 253, 1)
-        pred_file = load_scan(pred_name)
-        
+
+        gdth_file, _, _ = futil.load_itk(gdth_name)
+        pred_file, _, _ = futil.load_itk(pred_name)
+        gdth = np.expand_dims(gdth, axis=-1)
+        pred = np.expand_dims(pred, axis=-1)
+
         dices_values = calculate_dices(labels, gdth_file, pred_file)
 
         dices_values_matrix.append(dices_values)

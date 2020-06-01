@@ -2,11 +2,9 @@
 import os
 import random
 import numpy as np
-from tensorflow.keras import backend as K
-from image import Iterator, load_img, img_to_array
+from image import Iterator
 from image import apply_transform
 from image import transform_matrix_offset_center
-from skimage import color, transform
 from futils.vpatch import random_patch
 import futils.util as futil
 from scipy import ndimage
@@ -145,12 +143,7 @@ class TwoScanIterator(Iterator):
     def load_scan(self, file_name):
         """Load mhd or nrrd 3d scan"""
 
-        if file_name.split('.')[-1] == 'mhd':
-            scan, origin, self.spacing = futil.load_itk(file_name)
-
-        elif file_name.split('.')[-1] == 'nrrd':
-            scan, origin, self.spacing = futil.load_nrrd(file_name)
-        # todo: if extensiion == 'mha' or others
+        scan, origin, self.spacing = futil.load_itk(file_name)
 
         return np.expand_dims(scan, axis=-1)  # size=(z,x,y,1)
 
@@ -426,48 +419,70 @@ class TwoScanIterator(Iterator):
     def generator(self):
         x = None
         while 1:
-            if self.aux:
-                # for i in range(5):
-                x, y, y_aux = self.next()
-                #     try:
-                #         x, y, y_aux = self.next()
-                #         break
-                #     except:
-                #         print('fail to generate this ct for ' + self.task + ', pass it', file=sys.stderr)
-                #         pass
-                # if x is None:
-                #     raise Exception('failed 5 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
+            if self.model_mt_scales:
+                # todo
 
-                x_b = np.rollaxis(x, 1, 4)
-                y_b = np.rollaxis(y, 1, 4)
-                y_aux_b = np.rollaxis(y_aux, 1, 4)
-                print('prepare feed the data to model, x, y, y_aux', x_b.shape, y_b.shape, y_aux_b.shape)
-                for x, y, y_aux in zip(x_b, y_b, y_aux_b):
-                    if self.ds == 2:
-                        yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
-
-                    else:
-                        yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :]]
-            else:
-                # for i in range(5):
                 x, y = self.next()
-                    # try:
-                    #     x, y = self.next()
-                    #     break
-                    # except:
-                    #     print('fail to generate this ct for ' + self.task + ', pass it', file=sys.stderr)
-                    #     pass
-                # if x is None:
-                #     raise Exception('failed 5 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
+
                 x_b = np.rollaxis(x, 1, 4)
                 y_b = np.rollaxis(y, 1, 4)
                 print('prepare feed the data to model, x, y', x_b.shape, y_b.shape)
 
                 for x, y in zip(x_b, y_b):
+                    x1 = x
+                    x2 =
                     if self.task == 'no_label':
                         yield x[np.newaxis, ...], y[np.newaxis, ...]
                     else:
                         if self.ds == 2:
-                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
+                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :],
+                                                              y[np.newaxis, :, :, :, :]]
                         else:
                             yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :]]
+
+            else:
+                if self.aux:
+                    # for i in range(5):
+                    x, y, y_aux = self.next()
+                    #     try:
+                    #         x, y, y_aux = self.next()
+                    #         break
+                    #     except:
+                    #         print('fail to generate this ct for ' + self.task + ', pass it', file=sys.stderr)
+                    #         pass
+                    # if x is None:
+                    #     raise Exception('failed 5 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
+
+                    x_b = np.rollaxis(x, 1, 4)
+                    y_b = np.rollaxis(y, 1, 4)
+                    y_aux_b = np.rollaxis(y_aux, 1, 4)
+                    print('prepare feed the data to model, x, y, y_aux', x_b.shape, y_b.shape, y_aux_b.shape)
+                    for x, y, y_aux in zip(x_b, y_b, y_aux_b):
+                        if self.ds == 2:
+                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
+
+                        else:
+                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :]]
+                else:
+                    # for i in range(5):
+                    x, y = self.next()
+                        # try:
+                        #     x, y = self.next()
+                        #     break
+                        # except:
+                        #     print('fail to generate this ct for ' + self.task + ', pass it', file=sys.stderr)
+                        #     pass
+                    # if x is None:
+                    #     raise Exception('failed 5 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
+                    x_b = np.rollaxis(x, 1, 4)
+                    y_b = np.rollaxis(y, 1, 4)
+                    print('prepare feed the data to model, x, y', x_b.shape, y_b.shape)
+
+                    for x, y in zip(x_b, y_b):
+                        if self.task == 'no_label':
+                            yield x[np.newaxis, ...], y[np.newaxis, ...]
+                        else:
+                            if self.ds == 2:
+                                yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
+                            else:
+                                yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :]]
