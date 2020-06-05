@@ -156,21 +156,33 @@
 <li class="toctree-l1"><a class="reference internal" href="test1.html">test1</a></li>
 </ul>
 </div>
-<span class="target" id="module-futils.util"></span><p>Created on Tue Apr  4 09:35:14 2017</p>
-<p>&#64;author: fferreira</p>
+<span class="target" id="module-futils.util"></span><div class="section" id="possible-functions-on-loading-saving-processing-itk-files">
+<h2>Possible functions on loading, saving, processing itk files.<a class="headerlink" href="#possible-functions-on-loading-saving-processing-itk-files" title="Permalink to this headline">¶</a></h2>
+<p>Created on Tue Apr  4 09:35:14 2017</p>
+<p>&#64;author: fferreira and Jingnan</p>
 <dl class="py function">
 <dt id="futils.util.load_itk">
 <code class="sig-prename descclassname">futils.util.</code><code class="sig-name descname">load_itk</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/util.html#load_itk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.util.load_itk" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>filename</strong> -- </p></li>
-<li><p><strong>original</strong> -- </p></li>
-<li><p><strong>get_orientation</strong> -- </p></li>
-</ul>
+<dd class="field-odd"><p><strong>filename</strong> -- absolute file path</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>ct, origin, spacing, all of them has coordinate (z,y,x)</p>
+<dd class="field-even"><p>ct, origin, spacing, all of them has coordinate (z,y,x) if filename exists. Otherwise, 3 empty list.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.util.load_nrrd">
+<code class="sig-prename descclassname">futils.util.</code><code class="sig-name descname">load_nrrd</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/util.html#load_nrrd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.util.load_nrrd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load .nrrd file using package nrrd. Can be replaced by function load_itk().</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> -- absolute file path</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>array of ct, origin and spacing with shape (z, y, x)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -178,11 +190,19 @@
 <dl class="py function">
 <dt id="futils.util.normalize">
 <code class="sig-prename descclassname">futils.util.</code><code class="sig-name descname">normalize</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">image</span></em>, <em class="sig-param"><span class="n">min_</span><span class="o">=</span><span class="default_value">- 1000.0</span></em>, <em class="sig-param"><span class="n">max_</span><span class="o">=</span><span class="default_value">400.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/util.html#normalize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.util.normalize" title="Permalink to this definition">¶</a></dt>
-<dd><p>set the values to [0~1]
-:param image:
-:param <a href="#id1"><span class="problematic" id="id2">min_</span></a>:
-:param <a href="#id3"><span class="problematic" id="id4">max_</span></a>:
-:return:</p>
+<dd><p>Set the values to [0~1].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> -- image array</p></li>
+<li><p><strong>min</strong> -- bottom</p></li>
+<li><p><strong>max</strong> -- top</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>convert ct scan to 0~1</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -191,8 +211,88 @@
 <dd><p>Downscale scan only in slicing direction with nearest interpolation</p>
 </dd></dl>
 
-<span class="target" id="module-futils.vpatch"></span><p>Created on Fri May 26 14:57:47 2017</p>
-<p>&#64;author: fferreira</p>
+<dl class="py function">
+<dt id="futils.util.save_itk">
+<code class="sig-prename descclassname">futils.util.</code><code class="sig-name descname">save_itk</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em>, <em class="sig-param"><span class="n">scan</span></em>, <em class="sig-param"><span class="n">origin</span></em>, <em class="sig-param"><span class="n">spacing</span></em>, <em class="sig-param"><span class="n">dtype</span><span class="o">=</span><span class="default_value">'int16'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/util.html#save_itk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.util.save_itk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a array to itk file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> -- saved file name, a string.</p></li>
+<li><p><strong>scan</strong> -- scan array, shape(z, y, x)</p></li>
+<li><p><strong>origin</strong> -- origin of itk file, shape (z, y, x)</p></li>
+<li><p><strong>spacing</strong> -- spacing of itk file, shape (z, y, x)</p></li>
+<li><p><strong>dtype</strong> -- 'int16' default</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-futils.vpatch"></span><div class="section" id="patch-deconstruct-and-reconstruct-ct-array">
+<h2>patch, deconstruct and reconstruct ct array.<a class="headerlink" href="#patch-deconstruct-and-reconstruct-ct-array" title="Permalink to this headline">¶</a></h2>
+<p>Created on  May 06 14:57:47 2020
+&#64;author: fferreira and Jingnan</p>
+<dl class="py function">
+<dt id="futils.vpatch.deconstruct_patch">
+<code class="sig-prename descclassname">futils.vpatch.</code><code class="sig-name descname">deconstruct_patch</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">scan</span></em>, <em class="sig-param"><span class="n">patch_shape</span><span class="o">=</span><span class="default_value">64, 128, 128</span></em>, <em class="sig-param"><span class="n">stride</span><span class="o">=</span><span class="default_value">0.25</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/vpatch.html#deconstruct_patch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.vpatch.deconstruct_patch" title="Permalink to this definition">¶</a></dt>
+<dd><p>deconstruct a ct to a batch of patches.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scan</strong> -- a ct array which need to be deconstructed to (overlapped) patches. shape (z, x, y, chn)</p></li>
+<li><p><strong>patch_shape</strong> -- shape (z, x, y)</p></li>
+<li><p><strong>stride</strong> -- overlap ratio along each axil. float between 0~1 means the same overlap ratio along all axils;1 means no overlap, a list means the corresponding different overlap ratio along different axils.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a batch of patches, shape (nb_ptches, z, x, y, chn)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.vpatch.random_patch">
+<code class="sig-prename descclassname">futils.vpatch.</code><code class="sig-name descname">random_patch</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">scan</span></em>, <em class="sig-param"><span class="n">gt_scan</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">aux_scan</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">patch_shape</span><span class="o">=</span><span class="default_value">64, 128, 128</span></em>, <em class="sig-param"><span class="n">p_middle</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/vpatch.html#random_patch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.vpatch.random_patch" title="Permalink to this definition">¶</a></dt>
+<dd><p>get ramdom patches from the given ct.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scan</strong> -- one ct scan array, dimensions: 4, shape order: (z, x, y, chn) todo: check the shape order</p></li>
+<li><p><strong>gt_scan</strong> -- ground truth, binary masks of object, shape order: (z, x, y, 2)</p></li>
+<li><p><strong>aux_scan</strong> -- auxiliary scan, binary boundary of object, shape order: (z, x, y, 2)</p></li>
+<li><p><strong>patch_shape</strong> -- patch shape, shape order: (z, x, y) todo: check the shape order</p></li>
+<li><p><strong>p_middle</strong> -- float number between 0~1, probability of patches in the middle parts of ct scan</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>one patch of ct scan (with one patch of gdth and aux if gdth and aux are not None), dimensions: 4,shape oreders are the same as their correspoonding input scans</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.vpatch.reconstruct_patch">
+<code class="sig-prename descclassname">futils.vpatch.</code><code class="sig-name descname">reconstruct_patch</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">scan</span></em>, <em class="sig-param"><span class="n">original_shape</span><span class="o">=</span><span class="default_value">128, 256, 256</span></em>, <em class="sig-param"><span class="n">stride</span><span class="o">=</span><span class="default_value">0.25</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/vpatch.html#reconstruct_patch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.vpatch.reconstruct_patch" title="Permalink to this definition">¶</a></dt>
+<dd><p>reconstruct a ct from a batch of patches.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scan</strong> -- a batch of patches array, shape(nb, z, x, y, chn)</p></li>
+<li><p><strong>original_shape</strong> -- shape of original ct scan, shape (z, x, y)</p></li>
+<li><p><strong>stride</strong> -- overlap ratio on each axil</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a ct with original shape (z, x, y)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
 </div>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
+Possible functions on loading, saving, processing itk files.
+=============================================================
 Created on Tue Apr  4 09:35:14 2017
-
-@author: fferreira
+@author: fferreira and Jingnan
 """
 import os
 import pickle
@@ -16,9 +17,6 @@ import nrrd
 import copy
 import nibabel as nib
 
-
-MIN_BOUND = -1000.0
-MAX_BOUND = 400.0
 #%%
 def get_UID(file_name):
     print(file_name)
@@ -53,10 +51,8 @@ def get_scan(file_name):
 def load_itk(filename):
     '''
 
-    :param filename:
-    :param original:
-    :param get_orientation:
-    :return: ct, origin, spacing, all of them has coordinate (z,y,x)
+    :param filename: absolute file path
+    :return: ct, origin, spacing, all of them has coordinate (z,y,x) if filename exists. Otherwise, 3 empty list.
     '''
 #     print('start load data')
     # Reads the image using SimpleITK
@@ -83,25 +79,38 @@ def load_itk(filename):
     return ct_scan, origin, spacing
 #%%
 def save_itk(filename,scan,origin,spacing,dtype = 'int16'):
-    
-        
-        stk = sitk.GetImageFromArray(scan.astype(dtype))
-        # origin and spacing 's coordinate are (z,y,x). but for image class,
-        # the order shuld be (x,y,z), that's why we reverse the order here.
-        stk.SetOrigin(origin[::-1])  # numpy array is reversed after convertion from image, but origin and spacing keep unchanged
-        stk.SetSpacing(spacing[::-1])
-        
-        
-        writer = sitk.ImageFileWriter()
-        writer.Execute(stk,filename,True)
+    """
+    Save a array to itk file.
+
+    :param filename: saved file name, a string.
+    :param scan: scan array, shape(z, y, x)
+    :param origin: origin of itk file, shape (z, y, x)
+    :param spacing: spacing of itk file, shape (z, y, x)
+    :param dtype: 'int16' default
+    :return: None
+    """
+    stk = sitk.GetImageFromArray(scan.astype(dtype))
+    # origin and spacing 's coordinate are (z,y,x). but for image class,
+    # the order shuld be (x,y,z), that's why we reverse the order here.
+    stk.SetOrigin(origin[::-1])  # numpy array is reversed after convertion from image, but origin and spacing keep unchanged
+    stk.SetSpacing(spacing[::-1])
+
+    writer = sitk.ImageFileWriter()
+    writer.Execute(stk,filename,True)
 #%%
 
 def load_nrrd(filename):
-        readdata, options = nrrd.read(filename)
-        origin = np.array(options['space origin']).astype(float)
-        spacing = np.array(options['space directions']).astype(float)
-        spacing = np.sum(spacing,axis=0)
-        return np.transpose(np.array(readdata).astype(float)),origin[::-1],spacing[::-1] #all of them has coordinate (z,y,x)
+    """
+    Load .nrrd file using package nrrd. Can be replaced by function load_itk().
+
+    :param filename: absolute file path
+    :return: array of ct, origin and spacing with shape (z, y, x)
+    """
+    readdata, options = nrrd.read(filename)
+    origin = np.array(options['space origin']).astype(float)
+    spacing = np.array(options['space directions']).astype(float)
+    spacing = np.sum(spacing,axis=0)
+    return np.transpose(np.array(readdata).astype(float)),origin[::-1],spacing[::-1] #all of them has coordinate (z,y,x)
                 
 #%% Save in _nii.gz format
 def save_nii(dirname,savefilename,lung_mask):    
@@ -114,20 +123,23 @@ def save_slice_img(folder,scan,uid):
     for i,s in enumerate(scan):
         imsave(os.path.join(folder,uid+'sl_'+str(i)+'.png'),s)
 #%%
-def normalize(image,min_=MIN_BOUND,max_=MAX_BOUND):
+def normalize(image,min_=-1000.0,max_=400.0):
     '''
-    set the values to [0~1]
-    :param image:
-    :param min_:
-    :param max_:
-    :return:
+    Set the values to [0~1].
+
+    :param image: image array
+    :param min_: bottom
+    :param max_: top
+    :return: convert ct scan to 0~1
     '''
     image = (image - min_) / (max_ - min_)
     image[image>1] = 1.
     image[image<0] = 0.
+
     return image
 #%%
 def dice(seg,gt):
+
     
     im1 = np.asarray(seg).astype(float)
     im2 = np.asarray(gt).astype(float)

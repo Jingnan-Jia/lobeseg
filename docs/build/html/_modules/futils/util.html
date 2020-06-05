@@ -147,9 +147,11 @@
   <h1>Source code for futils.util</h1><div class="highlight"><pre>
 <span></span><span class="c1"># -*- coding: utf-8 -*-</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Possible functions on loading, saving, processing itk files.</span>
+<span class="sd">=============================================================</span>
 <span class="sd">Created on Tue Apr  4 09:35:14 2017</span>
 
-<span class="sd">@author: fferreira</span>
+<span class="sd">@author: fferreira and Jingnan</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">pickle</span>
@@ -163,9 +165,6 @@
 <span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nib</span>
 
-
-<span class="n">MIN_BOUND</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1000.0</span>
-<span class="n">MAX_BOUND</span> <span class="o">=</span> <span class="mf">400.0</span>
 <span class="c1">#%%</span>
 <span class="k">def</span> <span class="nf">get_UID</span><span class="p">(</span><span class="n">file_name</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
@@ -200,10 +199,8 @@
 <div class="viewcode-block" id="load_itk"><a class="viewcode-back" href="../../index.html#futils.util.load_itk">[docs]</a><span class="k">def</span> <span class="nf">load_itk</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 
-<span class="sd">    :param filename:</span>
-<span class="sd">    :param original:</span>
-<span class="sd">    :param get_orientation:</span>
-<span class="sd">    :return: ct, origin, spacing, all of them has coordinate (z,y,x)</span>
+<span class="sd">    :param filename: absolute file path</span>
+<span class="sd">    :return: ct, origin, spacing, all of them has coordinate (z,y,x) if filename exists. Otherwise, 3 empty list.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 <span class="c1">#     print(&#39;start load data&#39;)</span>
     <span class="c1"># Reads the image using SimpleITK</span>
@@ -229,26 +226,39 @@
 
     <span class="k">return</span> <span class="n">ct_scan</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span></div>
 <span class="c1">#%%</span>
-<span class="k">def</span> <span class="nf">save_itk</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="n">scan</span><span class="p">,</span><span class="n">origin</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">dtype</span> <span class="o">=</span> <span class="s1">&#39;int16&#39;</span><span class="p">):</span>
-    
-        
-        <span class="n">stk</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetImageFromArray</span><span class="p">(</span><span class="n">scan</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="c1"># origin and spacing &#39;s coordinate are (z,y,x). but for image class,</span>
-        <span class="c1"># the order shuld be (x,y,z), that&#39;s why we reverse the order here.</span>
-        <span class="n">stk</span><span class="o">.</span><span class="n">SetOrigin</span><span class="p">(</span><span class="n">origin</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># numpy array is reversed after convertion from image, but origin and spacing keep unchanged</span>
-        <span class="n">stk</span><span class="o">.</span><span class="n">SetSpacing</span><span class="p">(</span><span class="n">spacing</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-        
-        
-        <span class="n">writer</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">ImageFileWriter</span><span class="p">()</span>
-        <span class="n">writer</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">stk</span><span class="p">,</span><span class="n">filename</span><span class="p">,</span><span class="kc">True</span><span class="p">)</span>
+<div class="viewcode-block" id="save_itk"><a class="viewcode-back" href="../../index.html#futils.util.save_itk">[docs]</a><span class="k">def</span> <span class="nf">save_itk</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="n">scan</span><span class="p">,</span><span class="n">origin</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">dtype</span> <span class="o">=</span> <span class="s1">&#39;int16&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Save a array to itk file.</span>
+
+<span class="sd">    :param filename: saved file name, a string.</span>
+<span class="sd">    :param scan: scan array, shape(z, y, x)</span>
+<span class="sd">    :param origin: origin of itk file, shape (z, y, x)</span>
+<span class="sd">    :param spacing: spacing of itk file, shape (z, y, x)</span>
+<span class="sd">    :param dtype: &#39;int16&#39; default</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stk</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetImageFromArray</span><span class="p">(</span><span class="n">scan</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">))</span>
+    <span class="c1"># origin and spacing &#39;s coordinate are (z,y,x). but for image class,</span>
+    <span class="c1"># the order shuld be (x,y,z), that&#39;s why we reverse the order here.</span>
+    <span class="n">stk</span><span class="o">.</span><span class="n">SetOrigin</span><span class="p">(</span><span class="n">origin</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># numpy array is reversed after convertion from image, but origin and spacing keep unchanged</span>
+    <span class="n">stk</span><span class="o">.</span><span class="n">SetSpacing</span><span class="p">(</span><span class="n">spacing</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">ImageFileWriter</span><span class="p">()</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">stk</span><span class="p">,</span><span class="n">filename</span><span class="p">,</span><span class="kc">True</span><span class="p">)</span></div>
 <span class="c1">#%%</span>
 
-<span class="k">def</span> <span class="nf">load_nrrd</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
-        <span class="n">readdata</span><span class="p">,</span> <span class="n">options</span> <span class="o">=</span> <span class="n">nrrd</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-        <span class="n">origin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;space origin&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-        <span class="n">spacing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;space directions&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-        <span class="n">spacing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">readdata</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)),</span><span class="n">origin</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">spacing</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1">#all of them has coordinate (z,y,x)</span>
+<div class="viewcode-block" id="load_nrrd"><a class="viewcode-back" href="../../index.html#futils.util.load_nrrd">[docs]</a><span class="k">def</span> <span class="nf">load_nrrd</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load .nrrd file using package nrrd. Can be replaced by function load_itk().</span>
+
+<span class="sd">    :param filename: absolute file path</span>
+<span class="sd">    :return: array of ct, origin and spacing with shape (z, y, x)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">readdata</span><span class="p">,</span> <span class="n">options</span> <span class="o">=</span> <span class="n">nrrd</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">origin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;space origin&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">spacing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;space directions&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">spacing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">readdata</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)),</span><span class="n">origin</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">spacing</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1">#all of them has coordinate (z,y,x)</span></div>
                 
 <span class="c1">#%% Save in _nii.gz format</span>
 <span class="k">def</span> <span class="nf">save_nii</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span><span class="n">savefilename</span><span class="p">,</span><span class="n">lung_mask</span><span class="p">):</span>    
@@ -261,20 +271,23 @@
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">scan</span><span class="p">):</span>
         <span class="n">imsave</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span><span class="n">uid</span><span class="o">+</span><span class="s1">&#39;sl_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;.png&#39;</span><span class="p">),</span><span class="n">s</span><span class="p">)</span>
 <span class="c1">#%%</span>
-<div class="viewcode-block" id="normalize"><a class="viewcode-back" href="../../index.html#futils.util.normalize">[docs]</a><span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">min_</span><span class="o">=</span><span class="n">MIN_BOUND</span><span class="p">,</span><span class="n">max_</span><span class="o">=</span><span class="n">MAX_BOUND</span><span class="p">):</span>
+<div class="viewcode-block" id="normalize"><a class="viewcode-back" href="../../index.html#futils.util.normalize">[docs]</a><span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">min_</span><span class="o">=-</span><span class="mf">1000.0</span><span class="p">,</span><span class="n">max_</span><span class="o">=</span><span class="mf">400.0</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    set the values to [0~1]</span>
-<span class="sd">    :param image:</span>
-<span class="sd">    :param min_:</span>
-<span class="sd">    :param max_:</span>
-<span class="sd">    :return:</span>
+<span class="sd">    Set the values to [0~1].</span>
+
+<span class="sd">    :param image: image array</span>
+<span class="sd">    :param min_: bottom</span>
+<span class="sd">    :param max_: top</span>
+<span class="sd">    :return: convert ct scan to 0~1</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">image</span> <span class="o">=</span> <span class="p">(</span><span class="n">image</span> <span class="o">-</span> <span class="n">min_</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">max_</span> <span class="o">-</span> <span class="n">min_</span><span class="p">)</span>
     <span class="n">image</span><span class="p">[</span><span class="n">image</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
     <span class="n">image</span><span class="p">[</span><span class="n">image</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+
     <span class="k">return</span> <span class="n">image</span></div>
 <span class="c1">#%%</span>
 <span class="k">def</span> <span class="nf">dice</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span><span class="n">gt</span><span class="p">):</span>
+
     
     <span class="n">im1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">seg</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">im2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
