@@ -317,6 +317,7 @@ class TwoScanIterator(Iterator):
             return a, b
 
     def one_hot_encode_3D(self, patch, labels):
+        # todo: simplify this function
 
         # assert len(patch.shape)==5 # (5, 128, 128, 64, 1)
         labels = np.array(labels)  # i.e. [0,4,5,6,7,8]
@@ -430,7 +431,7 @@ class TwoScanIterator(Iterator):
 
                 for x, y in zip(x_b, y_b):
                     x1 = x
-                    x2 =
+                    x2 = 0
                     if self.task == 'no_label':
                         yield x[np.newaxis, ...], y[np.newaxis, ...]
                     else:

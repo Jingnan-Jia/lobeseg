@@ -10,16 +10,40 @@ Welcome to Multi task learning for CT segmentation's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   test2
-   test1
-   
+   ../../futils 
+   ../../mypath   
 
+set_args
+=========
+create_parset
+-------------
+.. automodule:: set_args.create_parset
 
+train_ori_fit_rec_epoch
+=======================
+.. automodule:: train_ori_fit_rec_epoch.get_task_list
+   :members:
 
+futils
+==============
+
+compiled_models
+---------------------
+.. automodule:: futils.compiled_models
+   :members:
+util
+----
 .. automodule:: futils.util
    :members:
 
+vpatch
+--------------
 .. automodule:: futils.vpatch
+   :members:
+
+mypath
+=======
+.. automodule:: mypath
    :members:
 
 

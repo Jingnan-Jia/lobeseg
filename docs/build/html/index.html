@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="test2" href="test2.html" /> 
+    <link rel="next" title="futils module" href="futils.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -81,8 +81,8 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="test2.html">test2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="test1.html">test1</a></li>
+<li class="toctree-l1"><a class="reference internal" href="futils.html">futils module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mypath.html">mypath module</a></li>
 </ul>
 
             
@@ -152,14 +152,188 @@
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="test2.html">test2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="test1.html">test1</a></li>
+<li class="toctree-l1"><a class="reference internal" href="futils.html">futils module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mypath.html">mypath module</a></li>
 </ul>
 </div>
-<span class="target" id="module-futils.util"></span><div class="section" id="possible-functions-on-loading-saving-processing-itk-files">
-<h2>Possible functions on loading, saving, processing itk files.<a class="headerlink" href="#possible-functions-on-loading-saving-processing-itk-files" title="Permalink to this headline">¶</a></h2>
-<p>Created on Tue Apr  4 09:35:14 2017</p>
-<p>&#64;author: fferreira and Jingnan</p>
+</div>
+<div class="section" id="set-args">
+<h1>set_args<a class="headerlink" href="#set-args" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="create-parset">
+<h2>create_parset<a class="headerlink" href="#create-parset" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+<div class="section" id="train-ori-fit-rec-epoch">
+<h1>train_ori_fit_rec_epoch<a class="headerlink" href="#train-ori-fit-rec-epoch" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="futils">
+<h1>futils<a class="headerlink" href="#futils" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-futils.compiled_models">
+<span id="compiled-models"></span><h2>compiled_models<a class="headerlink" href="#module-futils.compiled_models" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="compiled-models-for-different-tasks">
+<h3>Compiled models for different tasks.<a class="headerlink" href="#compiled-models-for-different-tasks" title="Permalink to this headline">¶</a></h3>
+<p>Created on Tue Apr  4 09:35:14 2017
+&#64;author: Jingnan</p>
+<dl class="py function">
+<dt id="futils.compiled_models.dice_coef">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dice_coef</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dice_coef"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dice_coef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns overall dice coefficient after supressing the background</p>
+<p>TODO : Choose channel(and axis) of background</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> -- </p></li>
+<li><p><strong>y_pred</strong> -- </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.dice_coef_every_class">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dice_coef_every_class</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dice_coef_every_class"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dice_coef_every_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>dice coefficient for every class/label.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> -- ground truth</p></li>
+<li><p><strong>y_pred</strong> -- prediction results</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dice value</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.dice_coef_every_class_old">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dice_coef_every_class_old</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dice_coef_every_class_old"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dice_coef_every_class_old" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns overall dice coefficient after supressing the background</p>
+<p>TODO : Choose channel(and axis) of background</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.dice_coef_mean">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dice_coef_mean</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dice_coef_mean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dice_coef_mean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the product of dice coefficient for each class
+it assumes channel 0 as background</p>
+<dl class="simple">
+<dt>TODO<span class="classifier">Choose channel (and axis) of background</span></dt><dd><p>Choose other merge methods (sum,avg,etc)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.dice_coef_prod">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dice_coef_prod</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dice_coef_prod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dice_coef_prod" title="Permalink to this definition">¶</a></dt>
+<dd><p>completely same with dice_coef but cahieved with different operations</p>
+<dl class="simple">
+<dt>TODO<span class="classifier">Choose channel (and axis) of background</span></dt><dd><p>Choose other merge methods (sum,avg,etc)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.dice_coef_weight_pow">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dice_coef_weight_pow</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dice_coef_weight_pow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dice_coef_weight_pow" title="Permalink to this definition">¶</a></dt>
+<dd><p>this dice is designed to increase the ratio of class which include smaller area,
+by the function: K.pow(ratio_y_pred + 0.001, -1.0)
+hope this can make the model pay more attention to the small classes like the right middle lobe</p>
+<dl class="simple">
+<dt>TODO<span class="classifier">Choose channel (and axis) of background</span></dt><dd><p>Choose other merge methods (sum,avg,etc)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.dice_coef_weight_sub">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dice_coef_weight_sub</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dice_coef_weight_sub"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dice_coef_weight_sub" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the product of dice coefficient for each class
+this dice is designed to increase the ratio of class which include smaller area,
+by the function: ratio_y_pred = 1.0 - ratio_y_pred)
+hope this can make the model pay more attention to the small classes like the right middle lobe
+can be used but not powerful as power weights</p>
+<dl class="simple">
+<dt>TODO<span class="classifier">Choose channel (and axis) of background</span></dt><dd><p>Choose other merge methods (sum,avg,etc)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.dice_coef_wo_bg">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dice_coef_wo_bg</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dice_coef_wo_bg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dice_coef_wo_bg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns overall dice coefficient after supressing the background</p>
+<p>TODO : Choose channel(and axis) of background</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.dices_all_class">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">dices_all_class</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y_true</span></em>, <em class="sig-param"><span class="n">y_pred</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#dices_all_class"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.dices_all_class" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> -- </p></li>
+<li><p><strong>y_pred</strong> -- </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dices list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.intro">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">intro</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inputs</span></em>, <em class="sig-param"><span class="n">nf</span></em>, <em class="sig-param"><span class="n">bn</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#intro"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.intro" title="Permalink to this definition">¶</a></dt>
+<dd><p>introduction convolution + PReLU (+ batch_normalization).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inputs</strong> -- data from last output</p></li>
+<li><p><strong>nf</strong> -- number of filters (or feature maps)</p></li>
+<li><p><strong>bn</strong> -- if batch normalization</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>convolution results</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.up_trans">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">up_trans</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input1</span></em>, <em class="sig-param"><span class="n">nf</span></em>, <em class="sig-param"><span class="n">nconvs</span></em>, <em class="sig-param"><span class="n">bn</span></em>, <em class="sig-param"><span class="n">dr</span></em>, <em class="sig-param"><span class="n">wt_cnt</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">ty</span><span class="o">=</span><span class="default_value">'v'</span></em>, <em class="sig-param"><span class="n">input2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">'block'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#up_trans"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.up_trans" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nf</strong> -- </p></li>
+<li><p><strong>nconvs</strong> -- number of convolutions</p></li>
+<li><p><strong>nch</strong> -- </p></li>
+<li><p><strong>nch2</strong> -- </p></li>
+<li><p><strong>bn</strong> -- </p></li>
+<li><p><strong>dr</strong> -- </p></li>
+<li><p><strong>wt_cnt</strong> -- true if with connection</p></li>
+<li><p><strong>ty</strong> -- net type: 'u' or 'v'</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-futils.util">
+<span id="util"></span><h2>util<a class="headerlink" href="#module-futils.util" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="possible-functions-on-loading-saving-processing-itk-files">
+<h3>Possible functions on loading, saving, processing itk files.<a class="headerlink" href="#possible-functions-on-loading-saving-processing-itk-files" title="Permalink to this headline">¶</a></h3>
+<p>Created on Tue Apr  4 09:35:14 2017
+&#64;author: fferreira and Jingnan</p>
 <dl class="py function">
 <dt id="futils.util.load_itk">
 <code class="sig-prename descclassname">futils.util.</code><code class="sig-name descname">load_itk</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/util.html#load_itk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.util.load_itk" title="Permalink to this definition">¶</a></dt>
@@ -232,8 +406,11 @@
 </dd></dl>
 
 </div>
-<span class="target" id="module-futils.vpatch"></span><div class="section" id="patch-deconstruct-and-reconstruct-ct-array">
-<h2>patch, deconstruct and reconstruct ct array.<a class="headerlink" href="#patch-deconstruct-and-reconstruct-ct-array" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-futils.vpatch">
+<span id="vpatch"></span><h2>vpatch<a class="headerlink" href="#module-futils.vpatch" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="patch-deconstruct-and-reconstruct-ct-array">
+<h3>patch, deconstruct and reconstruct ct array.<a class="headerlink" href="#patch-deconstruct-and-reconstruct-ct-array" title="Permalink to this headline">¶</a></h3>
 <p>Created on  May 06 14:57:47 2020
 &#64;author: fferreira and Jingnan</p>
 <dl class="py function">
@@ -294,6 +471,10 @@
 
 </div>
 </div>
+</div>
+<div class="section" id="mypath">
+<h1>mypath<a class="headerlink" href="#mypath" title="Permalink to this headline">¶</a></h1>
+</div>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
@@ -311,7 +492,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="test2.html" class="btn btn-neutral float-right" title="test2" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="futils.html" class="btn btn-neutral float-right" title="futils module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>
