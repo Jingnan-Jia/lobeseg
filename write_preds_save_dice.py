@@ -73,34 +73,39 @@ import futils.util as futil
              '1588886816_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz64ptzsz64',
              '1588886682_lr0.0001ld0ao0ds2dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb50ptsz144ptzsz96'
              ''
+              '1585000103.6170883_0.00011a_o_0ds2dr1bn1fs16ptsz96ptzsz64',
+    '1584925363.1298258_0.00010a_o_0ds2dr1bn1fs16ptsz96ptzsz64'
 
 '''
-task='lobe'
-str_names = [
-             '1584789581.1021984_1e-051a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
-
-
-             ]
+task='vessel'
+str_names = ['1591438344_307_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrspNonetrzspNoneptch_per_scan500tr_nb18ptsz144ptzsz96']
 
 print(str_names)
 
-mypath = Mypath(task)
+
 
 for str_name in str_names:
+    mypath = Mypath(task, current_time=str_name)
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
     # model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'
     # ptch_z_sz = int(str_name.split('ptzsz')[-1])
-    model_name =  '/data/jjia/e2e_new/models/' + task + '/' + str_name + 'MODEL.hdf5'
+    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL.hdf5'
 
     # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
+    a = str_name.split('trsp')
+    b = str_name.split('ptsz')
 
     ptch_z_sz = int(re.findall(r'\d+', str_name.split('ptzsz')[-1])[0])
     ptch_sz = int(re.findall(r'\d+', str_name.split('ptsz')[-1])[0])
     # tr_sp = float(re.findall(r'\d+', str_name.split('trsp')[-1])[0])
     # tr_z_sp = float(re.findall(r'\d+', str_name.split('trzsp')[-1])[0])
+    # tr_sz = float(re.findall(r'\d+', str_name.split('trsz')[-1])[0])
+    # tr_z_sz = float(re.findall(r'\d+', str_name.split('trzsz')[-1])[0])
 
-    tr_sp = 1.4
-    tr_z_sp = 2.5
+    tr_sp = None
+    tr_z_sp = None
+    tr_sz = None
+    tr_z_sz = None
 
     print('patch_sz', ptch_sz, 'patch_z_size', ptch_z_sz)
 
@@ -113,19 +118,25 @@ for str_name in str_names:
         segment = v_seg.v_segmentor(batch_size=1,
                                     model=model_name,
                                     ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
-                                    trgt_sz=None, trgt_z_sz=None,
+                                    trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
                                     trgt_space_list=[tr_z_sp, tr_sp, tr_sp],  # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
                                     task=task)
 
+        # write_preds_to_disk(segment=segment,
+        #                     data_dir='/data/jjia/mt/data/vessel/valid/ori_ct/SSc',
+        #                     preds_dir='results/SSc_51_lobe_segmentation',
+        #                     number=1, stride=0.5)
+
+        #
         write_preds_to_disk(segment=segment,
                             data_dir=mypath.ori_ct_path(phase),
                             preds_dir=mypath.pred_path(phase),
-                            number=3, stride=0.5)
+                            number=[3,5], stride=0.5)
 
 
         write_dices_to_csv (labels=labels,
                             gdth_path=mypath.gdth_path(phase),
                             pred_path=mypath.pred_path(phase),
-                            csv_file=mypath.dices_location(phase))
+                            csv_file=mypath.dices_fpath(phase))
 
 

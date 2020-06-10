@@ -22,7 +22,7 @@ parser.add_argument(
     '--aux_output',
     help='Value of Auxiliary Output',
     type=float,
-    default=0)
+    default=1)
 
 parser.add_argument(
     '-ds',
@@ -36,7 +36,7 @@ parser.add_argument(
     '--feature_number',
     help='Number of initial of conv channels',
     type=int,
-    default=8)
+    default=16)
 
 parser.add_argument(
     '-bn',
@@ -71,28 +71,28 @@ parser.add_argument(
     '--trgt_space',
     help='spacing along x, y ',
     type=float,
-    default=None)
+    default=1.4)
 
 parser.add_argument(
     '-trgt_z_space',
     '--trgt_z_space',
     help='spacing along z',
     type=float,
-    default=None)
+    default=2.5)
 
 parser.add_argument(
     '-ptch_sz',
     '--ptch_sz',
     help='patch size',
     type=int,
-    default=288)
+    default=144)
 
 parser.add_argument(
     '-ptch_z_sz',
     '--ptch_z_sz',
     help='patch z size',
     type=int,
-    default=192)
+    default=96)
 
 parser.add_argument(
     '-batch_size',
@@ -106,28 +106,21 @@ parser.add_argument(
     '--patches_per_scan',
     help='patches_per_scan',
     type=int,
-    default=5)
-
-parser.add_argument(
-    '-iso',
-    '--iso',
-    help='do isotropic',
-    type=int,
-    default=0)
+    default=500)
 
 parser.add_argument(
     '-tr_nb',
     '--tr_nb',
     help='nunber of training samples',
     type=int,
-    default=1)
+    default=18)
 
 parser.add_argument(
     '-no_label_dir',
     '--no_label_dir',
     help='sub directory of no_label data',
     type=str,
-    default='SSc')
+    default='GLUCOLD')
 
 
 parser.add_argument(
@@ -135,14 +128,21 @@ parser.add_argument(
     '--p_middle',
     help='p_middle = 0.5 means sample in the middle parts',
     type=str,
-    default=0.5)
+    default=0)
+
+parser.add_argument(
+    '-model_names',
+    '--model_names',
+    help='model names',
+    type=str,
+    default='net_only_lobe')
 
 parser.add_argument(
     '-model_6_levels',
     '--model_6_levels',
     help='get a model_6_levels  net with 6 levels (normally there are 5 levels)',
     type=int,
-    default=1)
+    default=0)
 
 parser.add_argument(
     '-model_7_levels',
