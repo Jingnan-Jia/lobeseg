@@ -14,6 +14,14 @@ import time
 
 
 def one_hot_decoding(img,labels,thresh=[]):
+    """
+    get the one hot decode of img.
+
+    :param img:
+    :param labels:
+    :param thresh:
+    :return:
+    """
     
     new_img = np.zeros((img.shape[0],img.shape[1]))
     r_img   = img.reshape(img.shape[0],img.shape[1],-1)
@@ -130,12 +138,14 @@ class v_segmentor(object):
         # x_patch = x_patch
         #update shape to NN - > slice axis is the last in the network
         x_patch = np.rollaxis(x_patch,1,4) # 48, 144, 144, 80, 1
+        print('shape before feeding data to model', x_patch.shape)
         
       
         #run predict
         x5 = time.time()
         pred = self.v.predict(x_patch,self.batch_size,verbose=0) #output a list if aux or deep supervision
-        pred = pred[0]
+        if isinstance(pred, list):
+            pred = pred[0]
         x6 = time.time()
         print('time for prediction:', x6-x5)
 
@@ -152,9 +162,6 @@ class v_segmentor(object):
             x8 = time.time()
             print('time for reconstruct patch:', x8-x7)
 
-        
-
-        
         #one hot decoding
         masks = []
         for p in pred:
