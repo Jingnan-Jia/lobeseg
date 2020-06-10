@@ -1,4 +1,11 @@
-"""Auxiliar methods to deal with loading the dataset."""
+# -*- coding: utf-8 -*-
+"""
+3D Extension of the work in https://github.com/costapt/vess2ret/blob/master/util/data.py.
+===========================================================================================
+Created on Tue Apr  4 09:35:14 2017
+@author: Jingnan
+"""
+
 import os
 import random
 import numpy as np
@@ -12,7 +19,7 @@ import time
 import glob
 import sys
 
-"""3D Extension of the work in https://github.com/costapt/vess2ret/blob/master/util/data.py"""
+""""""
 
 class TwoScanIterator(Iterator):
     """Class to iterate A and B 3D scans (mhd or nrrd) at the same time."""
@@ -420,8 +427,8 @@ class TwoScanIterator(Iterator):
     def generator(self):
         x = None
         while 1:
-            if self.model_mt_scales:
-                # todo
+            if 0:
+                # todo: not finished yet
 
                 x, y = self.next()
 
