@@ -305,23 +305,48 @@ can be used but not powerful as power weights</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="futils.compiled_models.up_trans">
-<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">up_trans</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input1</span></em>, <em class="sig-param"><span class="n">nf</span></em>, <em class="sig-param"><span class="n">nconvs</span></em>, <em class="sig-param"><span class="n">bn</span></em>, <em class="sig-param"><span class="n">dr</span></em>, <em class="sig-param"><span class="n">wt_cnt</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">ty</span><span class="o">=</span><span class="default_value">'v'</span></em>, <em class="sig-param"><span class="n">input2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">'block'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#up_trans"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.up_trans" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
+<dt id="futils.compiled_models.load_cp_models">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">load_cp_models</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model_names</span></em>, <em class="sig-param"><span class="n">nch</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">lr</span><span class="o">=</span><span class="default_value">0.0001</span></em>, <em class="sig-param"><span class="n">nf</span><span class="o">=</span><span class="default_value">16</span></em>, <em class="sig-param"><span class="n">bn</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">dr</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">ds</span><span class="o">=</span><span class="default_value">2</span></em>, <em class="sig-param"><span class="n">aux</span><span class="o">=</span><span class="default_value">0.5</span></em>, <em class="sig-param"><span class="n">net_type</span><span class="o">=</span><span class="default_value">'v'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#load_cp_models"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.load_cp_models" title="Permalink to this definition">¶</a></dt>
+<dd><p>load compiled models.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>nf</strong> -- </p></li>
-<li><p><strong>nconvs</strong> -- number of convolutions</p></li>
-<li><p><strong>nch</strong> -- </p></li>
-<li><p><strong>nch2</strong> -- </p></li>
-<li><p><strong>bn</strong> -- </p></li>
-<li><p><strong>dr</strong> -- </p></li>
-<li><p><strong>wt_cnt</strong> -- true if with connection</p></li>
-<li><p><strong>ty</strong> -- net type: 'u' or 'v'</p></li>
+<li><p><strong>model_names</strong> -- a list of model names</p></li>
+<li><p><strong>nch</strong> -- number of input image channel</p></li>
+<li><p><strong>lr</strong> -- learning rate</p></li>
+<li><p><strong>nf</strong> -- number of basic filters (or feature maps)</p></li>
+<li><p><strong>bn</strong> -- if batch normalization</p></li>
+<li><p><strong>dr</strong> -- if dropout</p></li>
+<li><p><strong>ds</strong> -- number of deep supervision</p></li>
+<li><p><strong>aux</strong> -- if auxilary task</p></li>
+<li><p><strong>net_type</strong> -- 'v' means 'V-Net', 'u' means 'U-Net'</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p></p>
+<dd class="field-even"><p>a list of compiled models</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="futils.compiled_models.up_trans">
+<code class="sig-prename descclassname">futils.compiled_models.</code><code class="sig-name descname">up_trans</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input1</span></em>, <em class="sig-param"><span class="n">nf</span></em>, <em class="sig-param"><span class="n">nconvs</span></em>, <em class="sig-param"><span class="n">bn</span></em>, <em class="sig-param"><span class="n">dr</span></em>, <em class="sig-param"><span class="n">ty</span><span class="o">=</span><span class="default_value">'v'</span></em>, <em class="sig-param"><span class="n">input2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">'block'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/futils/compiled_models.html#up_trans"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#futils.compiled_models.up_trans" title="Permalink to this definition">¶</a></dt>
+<dd><p>up transform convolution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input1</strong> -- output from last layer</p></li>
+<li><p><strong>nf</strong> -- number of filters (or feature maps)</p></li>
+<li><p><strong>nconvs</strong> -- number of convolution operations</p></li>
+<li><p><strong>bn</strong> -- if batch normalization</p></li>
+<li><p><strong>dr</strong> -- if dropout</p></li>
+<li><p><strong>ty</strong> -- model type, 'v' means V-Net, 'u' means 'U-Net'</p></li>
+<li><p><strong>input2</strong> -- second input, necessary for merge results from short connection</p></li>
+<li><p><strong>name</strong> -- block name</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>convolution results</p>
 </dd>
 </dl>
 </dd></dl>
