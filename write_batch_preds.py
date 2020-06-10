@@ -66,3 +66,28 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
     t2 = time.time()
     print ('finishe a batch of predition, time cost: ', t2 - t1)
 
+def main():
+
+    from set_args import args
+    import segmentor as v_seg
+    from mypath import Mypath
+
+    task = 'lobe'
+    mypath = Mypath(task)
+
+    for phase in ['train', 'valid']:
+        segment = v_seg.v_segmentor(batch_size=args.batch_size,
+                                    model=net,
+                                    ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
+                                    trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
+                                    trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
+                                    task=task)
+
+        write_preds_to_disk(segment=segment,
+                            data_dir=mypath.ori_ct_path(phase),
+                            preds_dir=mypath.pred_path(phase),
+                            number=1, stride=0.8)
+
+
+if __name__=='__main__':
+    main()
