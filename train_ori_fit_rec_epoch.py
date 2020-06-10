@@ -10,7 +10,8 @@ import numpy as np
 # import matplotlib.pyplot as plt
 from futils.dataloader import TwoScanIterator
 import os
-
+import csv
+import sys
 import tensorflow as tf
 from tensorflow.keras.utils import GeneratorEnqueuer
 from tensorflow.keras import backend as K
@@ -76,6 +77,25 @@ def get_label_list(task_list):
 
     return list (map (task_label_dict.get, task_list))
 
+def save_model_best_valid(dice_file, model, model_fpath):
+    with open(dice_file, 'r', newline='') as f:
+        reader = csv.DictReader(f, delimiter=',')
+        dice_list = []
+        for row in reader:
+            dice = row['ave_total']
+            dice_list.append(dice)
+
+        max_dice = max(dice_list)
+        if dice>=max_dice:
+            model.save(model_fpath)
+            print("this 'ave_total' is the best: ", str(dice), "save valid model at: ", model_fpath)
+        else:
+            print("this 'ave_total' is not the best: ", str(dice), file=sys.stderr)
+
+    return max_dice
+
+
+
 
 def train():
     """
@@ -84,7 +104,10 @@ def train():
     :return: None
     """
     # Define the Model
-    model_names = ['net_only_vessel']
+    model_names = args.model_names.split(',')
+    model_names = [i.lstrip() for i in model_names] # remove backspace before each model name
+
+    print('model names', model_names)
     if args.aux_output and ('net_only_vessel' in model_names):
         print(model_names)
         raise Exception('net_only_vessel should not have aux output')
@@ -174,38 +197,29 @@ def train():
                                    aux=aux)
 
         enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=False)
-
         train_datas = enqueuer_train.get ()
-
         enqueuer_train.start ()
-
         train_data_gen_list.append(train_datas)
 
     best_tr_loss_dic = {'lobe': 10000,
                      'vessel': 10000,
                      'airway': 10000,
                      'no_label': 10000}
-    best_va_loss_dic = {'lobe': 10000,
-                     'vessel': 10000,
-                     'airway': 10000,
-                     'no_label': 10000}
 
-    segment = None # segmentor for prediction every epoch
     training_step = 2500000
     for idx_ in range(training_step):
         print ('step number: ', idx_)
-        for task, net, tr_data, va_data, label, mypath in zip(task_list, net_list, train_data_gen_list, valid_data_npy_list, label_list, path_list):
+
+
+        for task, net, tr_data, label, mypath in zip(task_list, net_list, train_data_gen_list, label_list, path_list):
 
 
             x, y = next(tr_data) # tr_data is a generator or enquerer
-            valid_data = va_data  # va_data is a fixed numpy data
 
             # callbacks
             train_csvlogger = callbacks.CSVLogger(mypath.train_log_fpath(), separator=',', append=True)
-            tr_va_csvlogger = callbacks.CSVLogger(mypath.tr_va_log_fpath(), separator=',', append=True)
 
             BEST_TR_LOSS = best_tr_loss_dic[task]
-            BEST_VA_LOSS = best_va_loss_dic[task]
 
             class ModelCheckpointWrapper(callbacks.ModelCheckpoint):
                 def __init__(self, best_init=None, *arg, **kwagrs):
@@ -214,72 +228,55 @@ def train():
                         self.best = best_init
 
             saver_train = ModelCheckpointWrapper(best_init=BEST_TR_LOSS,
-                                                  filepath=mypath.best_tr_loss_location(),
+                                                  filepath=mypath.model_fpath_best_train(),
                                                   verbose=1,
                                                   save_best_only=True,
                                                   monitor='loss',
                                                   save_weights_only=True,
                                                   save_freq=1)
-            saver_valid = ModelCheckpointWrapper (best_init=BEST_VA_LOSS,
-                                                   filepath=mypath.best_va_loss_location(),
-                                                   verbose=1,
-                                                   save_best_only=True,
-                                                   monitor='val_loss',
-                                                   save_weights_only=True,
-                                                   save_freq=1)
+            history = net.fit(x, y,
+                              batch_size=args.batch_size,
+                              use_multiprocessing=True,
+                              callbacks=[saver_train, train_csvlogger])
 
-            if idx_ % (500) == 0: # one epoch for lobe segmentation, 20 epochs for vessel segmentation
+            current_tr_loss = history.history['loss'][0]
+            old_tr_loss = np.float(best_tr_loss_dic[task])
+            if current_tr_loss < old_tr_loss:
+                best_tr_loss_dic[task] = current_tr_loss
 
-                history = net.fit (x, y,
-                                   batch_size=args.batch_size,
-                                   validation_data=valid_data,
-                                   use_multiprocessing=True,
-                                   callbacks=[saver_valid, tr_va_csvlogger])
+            if task == 'lobe':
+                period_valid = 5000
+            elif task == 'vessel':
+                period_valid = 5000
+            if (idx_ % (period_valid) == 0) and (task != 'no_label'): # one epoch for lobe segmentation, 20 epochs for vessel segmentation
+                 # save predicted results and compute the dices
+                for phase in ['train', 'valid']:
 
-                current_val_loss = history.history['val_loss'][0]
-                print('val_loss: ', current_val_loss)
-                old_val_loss = np.float(best_va_loss_dic[task])
-                if current_val_loss<old_val_loss:
-                    best_va_loss_dic[task] = current_val_loss
+                    segment = v_seg.v_segmentor(batch_size=args.batch_size,
+                                                model=net,
+                                                ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
+                                                trgt_sz = args.trgt_sz, trgt_z_sz = args.trgt_z_sz,
+                                                trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
+                                                task=task)
 
-                current_tr_loss = history.history['loss'][0]
-                old_tr_loss = np.float(best_tr_loss_dic[task])
-                if current_tr_loss < old_tr_loss:
-                    best_tr_loss_dic[task] = current_tr_loss
+                    write_preds_to_disk(segment=segment,
+                                        data_dir = mypath.ori_ct_path( phase),
+                                        preds_dir= mypath.pred_path( phase),
+                                        number=1, stride = 0.8) # set stride 0.8 to save time
 
-                if task != 'no_label': # save predicted results and compute the dices
-                    for phase in ['train', 'valid']:
+                    write_dices_to_csv (labels=label,
+                                        gdth_path=mypath.gdth_path(phase),
+                                        pred_path=mypath.pred_path(phase),
+                                        csv_file= mypath.dices_fpath(phase))
 
-                        segment = v_seg.v_segmentor(batch_size=args.batch_size,
-                                                    model=net,
-                                                    ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
-                                                    trgt_sz = args.trgt_sz, trgt_z_sz = args.trgt_z_sz,
-                                                    trgt_space_list=[args.trgt_z_space, args.trgt_space, args.trgt_space],
-                                                    task=task)
+                    best_dice_valid = save_model_best_valid(dice_file=mypath.dices_fpath(phase), model=net, model_fpath=mypath.model_fpath_best_valid())
+                    if task=='lobe' and best_dice_valid>0.94:
+                        K.set_value(net.optimizer.learning_rate, 0.00001)
+                        print("Learning rate before second fit:", net.optimizer.learning_rate.numpy())
+                    elif task=='vessel' and best_dice_valid>0.84:
+                        K.set_value(net.optimizer.learning_rate, 0.000001)
+                        print("Learning rate before second fit:", net.optimizer.learning_rate.numpy())
 
-                        write_preds_to_disk(segment=segment,
-                                            data_dir = mypath.ori_ct_path( phase),
-                                            preds_dir= mypath.pred_path( phase),
-                                            number=1, stride = 0.8)
-
-                        write_dices_to_csv (labels=label,
-                                            gdth_path=mypath.gdth_path(phase),
-                                            pred_path=mypath.pred_path(phase),
-                                            csv_file= mypath.dices_fpath(phase))
-
-
-            else:
-                history = net.fit (x, y,
-                                   batch_size=args.batch_size,
-                                   use_multiprocessing=True,
-                                   callbacks=[saver_train, train_csvlogger])
-
-                current_tr_loss = history.history['loss'][0]
-                old_tr_loss = np.float(best_tr_loss_dic[task])
-                if current_tr_loss < old_tr_loss:
-                    best_tr_loss_dic[task] = current_tr_loss
-
-            #print (history.history.keys ())
             for key, result in history.history.items ():
                 print(key, result)
 
