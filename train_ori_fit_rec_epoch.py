@@ -82,7 +82,7 @@ def save_model_best_valid(dice_file, model, model_fpath):
         reader = csv.DictReader(f, delimiter=',')
         dice_list = []
         for row in reader:
-            dice = row['ave_total']
+            dice = float(row['ave_total']) # str is the default type from csv
             dice_list.append(dice)
 
         max_dice = max(dice_list)
@@ -207,11 +207,17 @@ def train():
                      'no_label': 10000}
 
     training_step = 2500000
+    lr_seg = 0.0001
+    lr_changed_steps_nb = 0
+
     for idx_ in range(training_step):
         print ('step number: ', idx_)
 
 
         for task, net, tr_data, label, mypath in zip(task_list, net_list, train_data_gen_list, label_list, path_list):
+            lr_seg = 0.00001
+            K.set_value(net.optimizer.lr, lr_seg)
+            print(K.eval(net.optimizer.lr))
 
 
             x, y = next(tr_data) # tr_data is a generator or enquerer
@@ -238,6 +244,13 @@ def train():
                               batch_size=args.batch_size,
                               use_multiprocessing=True,
                               callbacks=[saver_train, train_csvlogger])
+
+
+
+
+
+
+
 
             current_tr_loss = history.history['loss'][0]
             old_tr_loss = np.float(best_tr_loss_dic[task])
@@ -270,12 +283,47 @@ def train():
                                         csv_file= mypath.dices_fpath(phase))
 
                     best_dice_valid = save_model_best_valid(dice_file=mypath.dices_fpath(phase), model=net, model_fpath=mypath.model_fpath_best_valid())
-                    if task=='lobe' and best_dice_valid>0.94:
-                        K.set_value(net.optimizer.learning_rate, 0.00001)
-                        print("Learning rate before second fit:", net.optimizer.learning_rate.numpy())
-                    elif task=='vessel' and best_dice_valid>0.84:
-                        K.set_value(net.optimizer.learning_rate, 0.000001)
-                        print("Learning rate before second fit:", net.optimizer.learning_rate.numpy())
+
+                    if lr_changed_steps_nb==0 or lr_seg == 0:
+                        if task=='lobe' and (float(best_dice_valid)>9.3):
+                            lr_seg = 0.00001
+                            K.set_value(net.optimizer.lr, lr_seg)
+                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            lr_changed_steps_nb = idx_
+                        elif (task=='vessel') and (best_dice_valid>8.4):
+                            lr_seg = 0.00001
+                            K.set_value(net.optimizer.lr, lr_seg)
+                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            lr_changed_steps_nb = idx_
+                        elif (task=='no_label') and lr_changed_steps_nb!=0:
+                            lr_seg = 0.1 * lr_seg
+                            K.set_value(net.optimizer.lr, lr_seg)
+                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+
+                    elif idx_==(lr_changed_steps_nb*2):
+                        if task == 'lobe' or task=='lobe':
+                            lr_seg = 0.000001
+                            K.set_value(net.optimizer.lr, lr_seg)
+                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                        elif task=='no_label':
+                            lr_seg = 0.1 * lr_seg
+                            K.set_value(net.optimizer.lr, lr_seg)
+                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+
+                    elif idx_==(lr_changed_steps_nb*3):
+                        if task == 'lobe' or task=='lobe':
+                            lr_seg = 0.0000001
+                            K.set_value(net.optimizer.lr, lr_seg)
+                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                        elif task=='no_label':
+                            lr_seg = 0.1 * lr_seg
+                            K.set_value(net.optimizer.lr, lr_seg)
+                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+
+
+
+
+
 
             for key, result in history.history.items ():
                 print(key, result)
