@@ -16,6 +16,26 @@ from skimage.io import imsave
 import nrrd
 import copy
 import nibabel as nib
+import glob
+
+def get_gdth_pred_names(gdth_path, pred_path):
+    gdth_files = sorted(glob.glob(gdth_path + '/*' + '.nrrd'))
+    if len(gdth_files) == 0:
+        gdth_files = sorted(glob.glob(gdth_path + '/*' + '.mhd'))
+
+    pred_files = sorted(glob.glob(pred_path + '/*' + '.nrrd'))
+    if len(pred_files) == 0:
+        pred_files = sorted(glob.glob(pred_path + '/*' + '.mhd'))
+
+    if len(gdth_files) == 0:
+        raise Exception('ground truth files  are None, Please check the directories', gdth_path)
+    if len(pred_files) == 0:
+        raise Exception(' predicted files are None, Please check the directories', pred_path)
+
+    if len(pred_files) < len(gdth_files):  # only predict several ct
+        gdth_files = gdth_files[:len(pred_files)]
+
+    return gdth_files, pred_files
 
 #%%
 def get_UID(file_name):
