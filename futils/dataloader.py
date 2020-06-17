@@ -69,7 +69,11 @@ class TwoScanIterator(Iterator):
         """
         self.task = task
         self.phase = phase
-        self.p_middle = p_middle
+        if self.task=='vessel':
+            self.p_middle = p_middle
+        else:
+            self.p_middle=None
+
         self.sub_dir = sub_dir
         self.ds = ds
         self.labels = labels
