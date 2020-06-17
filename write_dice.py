@@ -10,6 +10,7 @@ import csv
 import glob
 import os
 import numpy as np
+from futils.util import get_gdth_pred_names
 
 
 def calculate_dices(labels, a, b):
@@ -55,26 +56,12 @@ def write_dices_to_csv(labels, gdth_path, pred_path, csv_file, gdth_extension='.
 
     '''
     print('start calculate dice and write dices to csv')
-    gdth_files = sorted (glob.glob (gdth_path + '/*' + '.nrrd'))
-    if len(gdth_files)==0:
-        gdth_files = sorted (glob.glob (gdth_path + '/*' + '.mhd'))
-
-    pred_files = sorted (glob.glob (pred_path + '/*' + '.nrrd'))
-    if len(pred_files)==0:
-        pred_files = sorted (glob.glob (pred_path + '/*' + '.mhd'))
-
-    if len(gdth_files)==0:
-        raise Exception('ground truth files  are None, Please check the directories', gdth_path)
-    if  len(pred_files)==0:
-        raise Exception (' predicted files are None, Please check the directories', pred_path)
-
-    if len(pred_files) < len(gdth_files): # only predict several ct
-        gdth_files = gdth_files[:len(pred_files)]
+    gdth_names, pred_names = get_gdth_pred_names(gdth_path, pred_path)
 
     total_dices = []
     total_dices_names = []  # dices_names corresponding to total_dices
     dices_values_matrix = [] # for average computation
-    for gdth_name, pred_name in zip(gdth_files, pred_files):
+    for gdth_name, pred_name in zip(gdth_names, pred_names):
 
         gdth_name = gdth_name
         pred_name = pred_name
@@ -114,7 +101,7 @@ def write_dices_to_csv(labels, gdth_path, pred_path, csv_file, gdth_extension='.
     ave_dice_of_imgs = np.average (dices_values_matrix, axis=1)
     total_dices.extend (ave_dice_of_imgs)
 
-    names_ave_of_imgs = ['ave_dice_img_' + str (i) for i in range(len (pred_files))]
+    names_ave_of_imgs = ['ave_dice_img_' + str (i) for i in range(len (pred_names))]
     total_dices_names.extend (names_ave_of_imgs)
 
     # average dices of total class and images

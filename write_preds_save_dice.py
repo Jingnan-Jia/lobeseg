@@ -11,6 +11,7 @@ import os
 import re
 from mypath import Mypath
 import futils.util as futil
+from compute_distance_metrics_and_save import write_all_metrics
 
 # from train_ori_fit_rec_epoch import Mypath
 #1583105196.4919333_0.00010a_o_0.5ds2dr1bn1fs16ptsz144ptzsz80
@@ -78,7 +79,8 @@ import futils.util as futil
 
 '''
 task='vessel'
-str_names = ['1591438344_307_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrspNonetrzspNoneptch_per_scan500tr_nb18ptsz144ptzsz96']
+str_names = ['1591832153_471_lr0.0001ld0m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrspNonetrzspNoneptch_per_scan100tr_nb18ptsz144ptzsz96',
+             '1591833452_568_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrspNonetrzspNoneptch_per_scan100tr_nb18ptsz144ptzsz96']
 
 print(str_names)
 
@@ -89,7 +91,7 @@ for str_name in str_names:
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
     # model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'
     # ptch_z_sz = int(str_name.split('ptzsz')[-1])
-    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL.hdf5'
+    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL_valid.hdf5'
 
     # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
     a = str_name.split('trsp')
@@ -115,28 +117,26 @@ for str_name in str_names:
         elif task=='vessel':
             labels = [0, 1]
 
-        segment = v_seg.v_segmentor(batch_size=1,
-                                    model=model_name,
-                                    ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
-                                    trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
-                                    trgt_space_list=[tr_z_sp, tr_sp, tr_sp],  # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
-                                    task=task)
-
-        # write_preds_to_disk(segment=segment,
-        #                     data_dir='/data/jjia/mt/data/vessel/valid/ori_ct/SSc',
-        #                     preds_dir='results/SSc_51_lobe_segmentation',
-        #                     number=1, stride=0.5)
-
+        # segment = v_seg.v_segmentor(batch_size=1,
+        #                             model=model_name,
+        #                             ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
+        #                             trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
+        #                             trgt_space_list=[tr_z_sp, tr_sp, tr_sp],  # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
+        #                             task=task)
         #
-        write_preds_to_disk(segment=segment,
-                            data_dir=mypath.ori_ct_path(phase),
-                            preds_dir=mypath.pred_path(phase),
-                            number=[3,5], stride=0.5)
+        # write_preds_to_disk(segment=segment,
+        #                     data_dir=mypath.ori_ct_path(phase),
+        #                     preds_dir=mypath.pred_path(phase),
+        #                     number=5, stride=0.5)
+        #
+        #
+        # write_dices_to_csv (labels=labels,
+        #                     gdth_path=mypath.gdth_path(phase),
+        #                     pred_path=mypath.pred_path(phase),
+        #                     csv_file=mypath.dices_fpath(phase))
 
-
-        write_dices_to_csv (labels=labels,
+        write_all_metrics(labels=labels[1:], # exclude background
                             gdth_path=mypath.gdth_path(phase),
                             pred_path=mypath.pred_path(phase),
-                            csv_file=mypath.dices_fpath(phase))
-
+                            csv_file=mypath.all_metrics_fpath(phase))
 
