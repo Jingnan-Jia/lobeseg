@@ -8,19 +8,8 @@ from find_connect_parts import largest_connected_parts
 import copy
 import PySimpleGUI as gui
 import matplotlib.pyplot as plt
+from futils.util import get_gdth_pred_names
 
-Hausdorff_list = list()
-Dice_list = list()
-Jaccard_list = list()
-Volume_list = list()
-mean_surface_dis_list = list()
-median_surface_dis_list = list()
-std_surface_dis_list = list()
-nine5_surface_dis_list = list()
-precision_list = list()
-recall_list = list()
-false_positive_rate_list = list()
-false_negtive_rate_list = list()
 
 def show_itk(itk, idx):
     ref_surface_array = sitk.GetArrayViewFromImage(itk)
@@ -31,8 +20,13 @@ def show_itk(itk, idx):
     return None
 
 def computeQualityMeasures(lP, lT, spacing):
+    """
 
-
+    :param lP: prediction, shape (x, y, z)
+    :param lT: ground truth, shape (x, y, z)
+    :param spacing: shape order (x, y, z)
+    :return: quality: dict contains metircs
+    """
 
     pred = lP.astype(int) # float data does not support bit_and and bit_or
     gdth = lT.astype(int) # float data does not support bit_and and bit_or
@@ -67,22 +61,12 @@ def computeQualityMeasures(lP, lT, spacing):
     jaccard = intersection_sum / (union_sum + smooth)
     dice = 2 * intersection_sum / (gdth_sum + pred_sum + smooth)
 
-
-
-
     quality = dict()
     labelPred = sitk.GetImageFromArray(lP, isVector=False)
     labelPred.SetSpacing(spacing)
     labelTrue = sitk.GetImageFromArray(lT, isVector=False)
-    labelTrue.SetSpacing(spacing)
+    labelTrue.SetSpacing(spacing) # spacing order (x, y, z)
 
-
-    #
-    # # Hausdorff Distance
-    # hausdorffcomputer = sitk.HausdorffDistanceImageFilter()
-    # hausdorffcomputer.Execute(labelTrue > 0.5, labelPred > 0.5)
-    # quality["Hausdorff"] = hausdorffcomputer.GetHausdorffDistance()
-    # Hausdorff_list.append(quality["Hausdorff"])
 
     # Dice,Jaccard,Volume Similarity..
     dicecomputer = sitk.LabelOverlapMeasuresImageFilter()
@@ -96,13 +80,6 @@ def computeQualityMeasures(lP, lT, spacing):
     quality["false_positive_rate"] = false_positive_rate
     quality["volume_similarity"] = dicecomputer.GetVolumeSimilarity()
 
-    Dice_list.append(quality["dice"])
-    Jaccard_list.append(quality["jaccard"])
-    precision_list.append(quality["precision"])
-    recall_list.append(quality["recall"])
-    false_negtive_rate_list.append(quality["false_negtive_rate"])
-    false_positive_rate_list.append(quality["false_positive_rate"])
-    Volume_list.append(quality["volume_similarity"])
 
     slice_idx = 300
     # Surface distance measures
@@ -159,14 +136,68 @@ def computeQualityMeasures(lP, lT, spacing):
     quality["95_surface_distance"] = np.percentile(all_surface_distances, 95)
     quality["Hausdorff"] = np.max(all_surface_distances)
 
-    mean_surface_dis_list.append(quality["mean_surface_distance"])
-    median_surface_dis_list.append(quality["median_surface_distance"])
-    std_surface_dis_list.append(quality["std_surface_distance"])
-    nine5_surface_dis_list.append(quality["95_surface_distance"])
-    Hausdorff_list.append(quality["Hausdorff"])
-
-
     return quality
+
+
+def get_metrics_dict_all_labels(labels, gdth, pred, spacing):
+    """
+
+    :param labels: not include background, e.g. [4,5,6,7,8] or [1]
+    :param gdth: shape: (x, y, z, channels), channels is equal to len(labels) or equal to len(labels)+1 (background)
+    :param pred: the same as above
+    :param spacing: spacing order should be (x, y, z) !!!
+    :return: metrics_dict_all_labels a dict which contain all metrics
+    """
+
+
+    Hausdorff_list = []
+    Dice_list = []
+    Jaccard_list = []
+    Volume_list = []
+    mean_surface_dis_list = []
+    median_surface_dis_list = []
+    std_surface_dis_list = []
+    nine5_surface_dis_list = []
+    precision_list = []
+    recall_list = []
+    false_positive_rate_list = []
+    false_negtive_rate_list = []
+
+    for i, label in enumerate(labels):
+        print('start get metrics for label: ', label)
+        pred_per = pred[..., i]  # select onlabel
+        gdth_per = gdth[..., i]
+
+        metrics = computeQualityMeasures(pred_per, gdth_per, spacing=spacing)
+        print(metrics)
+
+        Dice_list.append(metrics["dice"])
+        Jaccard_list.append(metrics["jaccard"])
+        precision_list.append(metrics["precision"])
+        recall_list.append(metrics["recall"])
+        false_negtive_rate_list.append(metrics["false_negtive_rate"])
+        false_positive_rate_list.append(metrics["false_positive_rate"])
+        Volume_list.append(metrics["volume_similarity"])
+        mean_surface_dis_list.append(metrics["mean_surface_distance"])
+        median_surface_dis_list.append(metrics["median_surface_distance"])
+        std_surface_dis_list.append(metrics["std_surface_distance"])
+        nine5_surface_dis_list.append(metrics["95_surface_distance"])
+        Hausdorff_list.append(metrics["Hausdorff"])
+
+    metrics_dict_all_labels = {'Dice': Dice_list,
+                               'Jaccard': Jaccard_list,
+                               'precision': precision_list,
+                               'recall': recall_list,
+                               'false_positive_rate': false_positive_rate_list,
+                               'false_negtive_rate': false_negtive_rate_list,
+                               'volume': Volume_list,
+                               'Hausdorff Distance': Hausdorff_list,
+                               'Mean Surface Distance': mean_surface_dis_list,
+                               'Median Surface Distance': median_surface_dis_list,
+                               'Std Surface Distance': std_surface_dis_list,
+                               '95 Surface Distance': nine5_surface_dis_list}
+
+    return metrics_dict_all_labels
 
 def one_hot_encode_3D(patch, labels):
 
@@ -189,64 +220,81 @@ gdth_file_name = '/data/jjia/mt/data/lobe/valid/gdth_ct/GLUCOLD/GLUCOLD_patients
 
 '''
 
-# task='lobe'
-# model = '1584790285.7812743_1e-051a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
-# for file_name in ['26', '27', '28', '29', '30']:
-#     pred_file_name= '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + model + '/GLUCOLD_patients_' + file_name + '.mhd'
-#     gdth_file_name = '/data/jjia/mt/data/lobe/valid/gdth_ct/GLUCOLD/GLUCOLD_patients_' + file_name + '.nrrd'
-#     gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_file_name)
-#     pred, pred_origin, pred_spacing = futil.load_itk(pred_file_name)
-#
-task = 'vessel'
-model = '1591438344_307_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrspNonetrzspNoneptch_per_scan500tr_nb18ptsz144ptzsz96'
-for file_name in ['52','53']:
-    pred_file_name = '/data/jjia/new/results/vessel/valid/pred/SSc/' + model + '/SSc_patient_' + file_name + '.mhd'
-    gdth_file_name = '/data/jjia/mt/data/vessel/valid/gdth_ct/SSc/SSc_patient_' + file_name + '.mhd'
-    gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_file_name)
-    pred, pred_origin, pred_spacing = futil.load_itk(pred_file_name)
 
-    # pred, pred_origin, pred_spacing = futil.load_itk('/data/jjia/new/results/SSc_51_lobe_segmentation/loberecon/SSc_patient_51.mhd')
+def write_all_metrics(labels, gdth_path, pred_path, csv_file):
+    """
 
-    # connedted_pred = largest_connected_parts(pred, nb_parts_saved=5)
-    # pred[connedted_pred == 0] = 0
-    # futil.save_itk(
-    #     'results/SSc_51_lobe_segmentation/SSc_patient_51_connected.nrrd',
-    #     pred, pred_origin, pred_spacing)
+    :param labels:  exclude background
+    :param gdth_path:
+    :param pred_path:
+    :param csv_file:
+    :return:
+    """
+    print('start calculate all metrics (volume and distance) and write them to csv')
+    gdth_names, pred_names = get_gdth_pred_names(gdth_path, pred_path)
 
+    for gdth_name, pred_name in zip(gdth_names, pred_names):
+
+        gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_name)
+        pred, pred_origin, pred_spacing = futil.load_itk(pred_name)
+
+
+        gdth = one_hot_encode_3D(gdth, labels=labels)
+        pred = one_hot_encode_3D(pred, labels=labels)
+        print('start calculate all metrics for image: ', pred_name)
+        metrics_dict_all_labels = get_metrics_dict_all_labels(labels, gdth, pred, spacing=gdth_spacing[::-1])
+        metrics_dict_all_labels['filename'] = pred_name  # add a new key to the metrics
+        data_frame = pd.DataFrame(metrics_dict_all_labels)
+        data_frame.to_csv(csv_file, mode='a', header=not os.path.exists(csv_file), index=False)
+
+    return None
+
+
+def main():
+
+    # task='lobe'
+    # model = '1584790285.7812743_1e-051a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
+    # for file_name in ['26', '27', '28', '29', '30']:
+    #     pred_file_name= '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + model + '/GLUCOLD_patients_' + file_name + '.mhd'
+    #     gdth_file_name = '/data/jjia/mt/data/lobe/valid/gdth_ct/GLUCOLD/GLUCOLD_patients_' + file_name + '.nrrd'
+    #     gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_file_name)
+    #     pred, pred_origin, pred_spacing = futil.load_itk(pred_file_name)
     #
-    # pred, pred_origin, pred_spacing = futil.load_itk(pred_file_name)
-    #
-    # connedted_pred = largest_connected_parts(pred, nb_parts_saved=5)
-    # pred[connedted_pred==0] = 0
-    # futil.save_itk('/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + model + '/GLUCOLD_patients_' + file_name + '_connected.nrrd', pred, pred_origin, pred_spacing)
+    task = 'vessel'
+    model = '1591438344_307_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrspNonetrzspNoneptch_per_scan500tr_nb18ptsz144ptzsz96'
+    for file_name in ['52','53']:
+        pred_file_name = '/data/jjia/new/results/vessel/valid/pred/SSc/' + model + '/SSc_patient_' + file_name + '.mhd'
+        gdth_file_name = '/data/jjia/mt/data/vessel/valid/gdth_ct/SSc/SSc_patient_' + file_name + '.mhd'
+        gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_file_name)
+        pred, pred_origin, pred_spacing = futil.load_itk(pred_file_name)
 
-    if task=='vessel':
-        labels=[1]
-    elif task=='lobe':
-        labels=[4,5,6,7,8]
-    gdth_encode = one_hot_encode_3D(gdth, labels=labels)
-    pred_encode = one_hot_encode_3D(pred, labels=labels)
+        # pred, pred_origin, pred_spacing = futil.load_itk('/data/jjia/new/results/SSc_51_lobe_segmentation/loberecon/SSc_patient_51.mhd')
 
-    for i in range(len(labels)):
-        print('start a loop')
-        pred = pred_encode[..., i]
-        gdth = gdth_encode[..., i]
+        # connedted_pred = largest_connected_parts(pred, nb_parts_saved=5)
+        # pred[connedted_pred == 0] = 0
+        # futil.save_itk(
+        #     'results/SSc_51_lobe_segmentation/SSc_patient_51_connected.nrrd',
+        #     pred, pred_origin, pred_spacing)
 
-        quality = computeQualityMeasures(pred, gdth, spacing=gdth_spacing[::-1])
-        print(quality)
+        #
+        # pred, pred_origin, pred_spacing = futil.load_itk(pred_file_name)
+        #
+        # connedted_pred = largest_connected_parts(pred, nb_parts_saved=5)
+        # pred[connedted_pred==0] = 0
+        # futil.save_itk('/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + model + '/GLUCOLD_patients_' + file_name + '_connected.nrrd', pred, pred_origin, pred_spacing)
 
-    data_frame1 = pd.DataFrame({'filename': pred_file_name,
-                                'Dice': Dice_list,
-                                'Jaccard': Jaccard_list,
-                                'precision': precision_list,
-                                'recall': recall_list,
-                                'false_positive_rate': false_positive_rate_list,
-                                'false_negtive_rate': false_negtive_rate_list,
-                                'Hausdorff Distance': Hausdorff_list,
-                                'Mean Surface Distance': mean_surface_dis_list,
-                                'Median Surface Distance': median_surface_dis_list,
-                                'Std Surface Distance': std_surface_dis_list,
-                                '95 Surface Distance': nine5_surface_dis_list})
+        if task=='vessel':
+            labels=[1]
+        elif task=='lobe':
+            labels=[4,5,6,7,8]
+        gdth = one_hot_encode_3D(gdth, labels=labels)
+        pred = one_hot_encode_3D(pred, labels=labels)
 
-    data_frame1.to_csv('/data/jjia/new/results/vessel/valid/pred/SSc/' + model + '/SSc_patient_' + file_name + 'connected.csv', index=False)
-    # data_frame1.to_csv('/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + model + '/GLUCOLD_patients_' + file_name + 'NOconnected.csv', index=False)
+        metrics_dict_all_labels = metrics_dict_all_labels(labels, gdth, pred, spacing=gdth_spacing[::-1])
+        metrics_dict_all_labels['filename']=pred_file_name  # add a new key to the metrics
+        data_frame = pd.DataFrame(metrics_dict_all_labels)
+        data_frame.to_csv('/data/jjia/new/results/vessel/valid/pred/SSc/' + model + '/SSc_patient_' + file_name + 'connected.csv', index=False)
+
+
+if __name__=='__main__':
+    main()

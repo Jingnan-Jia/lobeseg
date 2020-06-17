@@ -249,4 +249,17 @@ class Mypath(object):
         :return: file name to save dice
         """
         pred_path = self.pred_path(phase)
-        return self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir() + '/' + self.current_time + '/dices.csv'
+        return pred_path + '/dices.csv'
+
+    @mkdir_dcrt
+    def all_metrics_fpath(self, phase='train'):
+        """
+        full path of the saved dice
+        :param phase: 'train' or 'valid'
+        :return: file name to save dice
+        """
+        pred_path = self.pred_path(phase)
+        return pred_path + '/all_metrics.csv'
+
+
+
