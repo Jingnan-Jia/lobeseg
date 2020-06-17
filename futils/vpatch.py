@@ -34,22 +34,28 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
    
     if p_middle:  # set sampling specific probability on central part
         # print('p_middle, select more big vessels')
-        if random.random() < p_middle:
+        tmp_nb = random.random()
+        if tmp_nb < p_middle:
             range_vals_low = list(map(int, (sh[0:3]/3 - p_sh//2) ))
             range_vals_high = list(map(int,(sh[0:3] * 2 /3 - p_sh//2) ))
             # assert range_vals_low > 0 and range_vals_high > 0
-            if range_vals_low>0 and range_vals_high>0:
+            if all(i>0 for i in range_vals_low) and all(j>0 for j in range_vals_high):
                 origin = []
                 for low, high in zip(range_vals_low, range_vals_high):
                     origin.append(random.randint(low, high))
+                # print('p_middle, select more big vessels!')
             else:
                 origin = [random.randint(0, x) for x in range_vals]
+                # print('p_middle, but range value is negtive')
 
         else:  #patch from other parts
             origin = [random.randint(0, x) for x in range_vals]
+            # print('p_middle, select small vessels!')
 
     else:
         origin = [random.randint(0, x) for x in range_vals] # here, x+1 can avoid lob>high
+        # print('No p_middle, select all vessels')
+
     finish  = origin + p_sh
     for finish_voxel, scan_size in zip(finish, sh):
         if finish_voxel > scan_size:

@@ -11,7 +11,7 @@ from futils.vpatch import deconstruct_patch,reconstruct_patch
 from tensorflow.keras.models import model_from_json
 import tensorflow.keras.backend as K
 import time
-
+import sys
 
 def one_hot_decoding(img,labels,thresh=[]):
     """
@@ -64,7 +64,10 @@ class v_segmentor(object):
 
         if type(self.model) is str: # if model is loaded from a file
             model_path = model.split(".hdf5")
-            model_path = model.split(".hdf5")[0][:-5]+'MODEL.json'
+            if model.split(".hdf5")[0][-1]=='d': # for models saved according to valid metrics
+                model_path = model.split(".hdf5")[0][:-11] + 'MODEL.json'
+            else:
+                model_path = model.split(".hdf5")[0][:-5]+'MODEL.json'
             with open(model_path, "r") as json_file:
                 json_model = json_file.read()
                 self.v = model_from_json(json_model)

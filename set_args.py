@@ -22,7 +22,7 @@ parser.add_argument(
     '--aux_output',
     help='Value of Auxiliary Output',
     type=float,
-    default=1)
+    default=0)
 
 parser.add_argument(
     '-ds',
@@ -106,7 +106,7 @@ parser.add_argument(
     '--patches_per_scan',
     help='patches_per_scan',
     type=int,
-    default=500)
+    default=100)
 
 parser.add_argument(
     '-tr_nb',
@@ -128,14 +128,14 @@ parser.add_argument(
     '--p_middle',
     help='p_middle = 0.5 means sample in the middle parts',
     type=str,
-    default=0)
+    default=0.5)
 
 parser.add_argument(
     '-model_names',
     '--model_names',
     help='model names',
     type=str,
-    default='net_only_lobe')
+    default='net_only_vessel')
 
 parser.add_argument(
     '-model_6_levels',
