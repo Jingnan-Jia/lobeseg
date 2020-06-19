@@ -133,13 +133,16 @@ def train():
                                                     dr=args.dropout,
                                                     net_type='v')
     elif args.model_mt_scales:
-        net_list = cpmodels.load_cp_models_mt_scales(model_names,
-                                                    nch=1,
-                                                    lr=args.lr,
-                                                    nf=args.feature_number,
-                                                    bn=args.batch_norm,
-                                                    dr=args.dropout,
-                                                    net_type='v')
+        net_list = cpmodels.load_cp_models(model_names,
+                                           nch=1,
+                                           lr=args.lr,
+                                           nf=args.feature_number,
+                                           bn=args.batch_norm,
+                                           dr=args.dropout,
+                                           ds=args.deep_supervision,
+                                           aux=args.aux_output,
+                                           net_type='v',
+                                           mtscale=True)
 
     else:
         net_list = cpmodels.load_cp_models (model_names,

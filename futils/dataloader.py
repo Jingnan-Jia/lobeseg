@@ -44,7 +44,8 @@ class TwoScanIterator(Iterator):
                  no_label_dir=None,
                  p_middle=None,
                  phase='train',
-                 aux=None):
+                 aux=None,
+                 mtscale=None):
         """
         Iterate through two directories at the same time.
 
@@ -67,9 +68,10 @@ class TwoScanIterator(Iterator):
         - labels: output classes
 
         """
+        self.mtscale = mtscale
         self.task = task
         self.phase = phase
-        if self.task=='vessel':
+        if self.mtscale or self.task=='vessel':  # I hope to used p_middle for mtscale
             self.p_middle = p_middle
         else:
             self.p_middle=None
@@ -169,32 +171,29 @@ class TwoScanIterator(Iterator):
         # a = np.array(a)
         a = futil.normalize(a)  # threshold to [-1000,400], then rescale to [0,1]
         a = self._normal_normalize(a)
-        print('downsampling ori ct ...', a_fname)
-        a = self.downscale_scan(a, order=1)
+
         if self.task == 'no_label':
             return a, a
-
         else:
             b_fname = self.filenames[idx] + self.b_extension
             b = self.load_scan(file_name=os.path.join(self.b_dir, b_fname))  # (200, 512, 512, 1)
             # b = np.array(b)
-            print('downsampling masks ...', b_fname)
-            b = self.downscale_scan(b, order=0)  # for masks, order=0, means nearest neighbor downsampling
+
             if not self.aux:
                 return a, b
             else:
                 c_fname = self.filenames[idx] + self.c_extension
                 c = self.load_scan(file_name=os.path.join(self.c_dir, c_fname))  # (200, 512, 512, 1)
                 # c = np.array(c, dtype='float')
-                print('downsampling aux mask ...', c_fname)
-                c = self.downscale_scan(c, order=0)
+
                 return a, b, c
 
-    def downscale_scan(self, scan, order=1):  # scan.shape: (200, 512, 512, 1)
+    def downscale_scan_ifnecessary(self, scan,  order=1):  # scan.shape: (200, 512, 512, 1)
 
         time1 = time.time()
         # print('time before downscale:', time1)
         print('shape before downscale', scan.shape)
+
         if self.trgt_space and self.trgt_z_space:  # put trgt space more priority
             trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space] # (x, y, x)
 
@@ -209,6 +208,7 @@ class TwoScanIterator(Iterator):
             zoom_seq = np.array(trgt_sz_list, dtype='float') / np.array(scan.shape, dtype='float')  # order is correct
             print('downsample to target size', trgt_sz_list, 'zoom_seq', zoom_seq)
             s = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=order)  # (128, 256, 256, 1)
+
 
         else:
             s = scan
@@ -361,11 +361,30 @@ class TwoScanIterator(Iterator):
         for i, j in enumerate(index_array):
 
             if  self.aux:
-                a, b, c = self._load_img_pair(j)
+                a_ori, b, c = self._load_img_pair(j)
                 b = self.one_hot_encode_3D(b, self.labels)
                 c = self.one_hot_encode_3D(c, [0,1])
                 if self.data_argum:
-                    a, b, c = self._random_transform(a, b, c)
+                    a_ori, b, c = self._random_transform(a_ori, b, c)
+
+                if self.task=='lobe':  # if task is lobe, we downsample a,b,c,
+                    print('downsampling ori ct ...')
+                    a = self.downscale_scan_ifnecessary(a_ori, order=1)
+                    print('downsampling masks ...')
+                    b = self.downscale_scan_ifnecessary(b, order=0)  # for masks, order=0, means nearest neighbor downsampling
+                    print('downsampling aux masks ...')
+                    c = self.downscale_scan_ifnecessary(c, order=0)
+                else:  # if task is vessel, we do not downsample a,b,c,
+                    a = a_ori
+
+                if self.mtscale:
+                    if a.shape==a_ori.shape:  # no downsampling, we need a downsampled a2
+                        a2 = self.downscale_scan_ifnecessary(a_ori, order=1)
+                    else:  # downsamplinig, we need a undownsampled a2
+                        a2 = a_ori
+                else:
+                    a2 = None # we do not need a2 if we do not use mtscale
+
                 print('before patching, the shape is ', a.shape)
 
                 A = []
@@ -373,12 +392,12 @@ class TwoScanIterator(Iterator):
                 C = []
                 for _ in range(self.patches_per_scan):
 
-                    if (self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz):
-                        a_img, b_img, c_img = random_patch(a, b, c, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz), p_middle=self.p_middle)
+                    if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
+                        a_img, b_img, c_img = random_patch(a, b, c, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz), p_middle=self.p_middle, a2=a2)
                     else:
                         a_img, b_img, c_img = a, b, c
 
-                    batch_a = a_img.copy()
+                    batch_a = a_img.copy() # shape: 96, 144, 144, 1
                     batch_b = b_img.copy()
                     batch_c = c_img.copy()
 
@@ -395,12 +414,28 @@ class TwoScanIterator(Iterator):
 
 
             else:
-                a, b = self._load_img_pair(j)
-                if self.task != 'no_label':
-                    b = self.one_hot_encode_3D(b, self.labels)
-                # apply random affine transformation
+                a_ori, b = self._load_img_pair(j)
+                b = self.one_hot_encode_3D(b, self.labels)
                 if self.data_argum:
-                    a, b = self._random_transform(a, b)
+                    a_ori, b = self._random_transform(a_ori, b )
+
+                if self.task == 'lobe':
+                    print('downsampling ori ct ...')
+                    a = self.downscale_scan_ifnecessary(a_ori, order=1)
+                    print('downsampling masks ...')
+                    b = self.downscale_scan_ifnecessary(b,
+                                                        order=0)  # for masks, order=0, means nearest neighbor downsampling
+
+                else:
+                    a = a_ori
+
+                if self.mtscale:
+                    if a.shape == a_ori.shape:  # no downsampling, we need a downsampled a2
+                        a2 = self.downscale_scan_ifnecessary(a_ori, order=1)
+                    else:  # downsamplinig, we need a undownsampled a2
+                        a2 = a_ori
+                else:
+                    a2 = None  # we do not need a2 if we do not use mtscale
 
                 print('before patching, the shape is ', a.shape)
 
@@ -408,13 +443,14 @@ class TwoScanIterator(Iterator):
                 B = []
                 for _ in range(self.patches_per_scan):
 
-                    if (self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz):
-                        a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz), p_middle=self.p_middle)
+                    if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
+                        a_img, b_img, c_img = random_patch(a, b,
+                                                           patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
+                                                           p_middle=self.p_middle, a2=a2)
                     else:
-                        a_img, b_img = a, b
+                        a_img, b_img, c_img = a, b
 
-
-                    batch_a = a_img.copy()
+                    batch_a = a_img.copy()  # shape: 96, 144, 144, 1
                     batch_b = b_img.copy()
 
                     A.append(batch_a)
@@ -427,74 +463,57 @@ class TwoScanIterator(Iterator):
 
 
 
-
     def generator(self):
         x = None
         while 1:
-            if 0:
-                # todo: not finished yet
+
+            if self.aux:
+                x, y, y_aux = self.next()
+                x_b = np.rollaxis(x, 1, 4)
+                y_b = np.rollaxis(y, 1, 4)
+                y_aux_b = np.rollaxis(y_aux, 1, 4)
+                print('prepare feed the data to model, x, y, y_aux', x_b.shape, y_b.shape, y_aux_b.shape)
+                for x, y, y_aux in zip(x_b, y_b, y_aux_b):
+                    x = x[np.newaxis, ...]
+                    y = y[np.newaxis, ...]
+                    y_aux = y_aux[np.newaxis, ...]
+                    if self.mtscale:
+                        x1 = x[..., 0]
+                        x2 = x[..., 1]
+                        if self.ds == 2:
+                            yield [x1, x2], [y, y_aux, y, y]
+
+                        else:
+                            yield [x1, x2], [y, y_aux]
+                    else:
+
+                        if self.ds == 2:
+                            yield x, [y, y_aux, y, y]
+
+                        else:
+                            yield x, [y, y_aux]
+            else:
 
                 x, y = self.next()
-
                 x_b = np.rollaxis(x, 1, 4)
                 y_b = np.rollaxis(y, 1, 4)
                 print('prepare feed the data to model, x, y', x_b.shape, y_b.shape)
 
                 for x, y in zip(x_b, y_b):
-                    x1 = x
-                    x2 = 0
-                    if self.task == 'no_label':
-                        yield x[np.newaxis, ...], y[np.newaxis, ...]
+                    x = x[np.newaxis, ...]
+                    y = y[np.newaxis, ...]
+                    if self.mtscale:
+                        x1 = x[..., 0]
+                        x2 = x[..., 1]
+                        if self.ds == 2:
+                            yield [x1, x2], [y, y, y]
+
+                        else:
+                            yield [x1, x2], y
                     else:
+
                         if self.ds == 2:
-                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :],
-                                                              y[np.newaxis, :, :, :, :]]
-                        else:
-                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :]]
-
-            else:
-                if self.aux:
-                    # for i in range(5):
-                    x, y, y_aux = self.next()
-                    #     try:
-                    #         x, y, y_aux = self.next()
-                    #         break
-                    #     except:
-                    #         print('fail to generate this ct for ' + self.task + ', pass it', file=sys.stderr)
-                    #         pass
-                    # if x is None:
-                    #     raise Exception('failed 5 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
-
-                    x_b = np.rollaxis(x, 1, 4)
-                    y_b = np.rollaxis(y, 1, 4)
-                    y_aux_b = np.rollaxis(y_aux, 1, 4)
-                    print('prepare feed the data to model, x, y, y_aux', x_b.shape, y_b.shape, y_aux_b.shape)
-                    for x, y, y_aux in zip(x_b, y_b, y_aux_b):
-                        if self.ds == 2:
-                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
+                            yield x, [y, y, y]
 
                         else:
-                            yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y_aux[np.newaxis, :, :, :, :]]
-                else:
-                    # for i in range(5):
-                    x, y = self.next()
-                        # try:
-                        #     x, y = self.next()
-                        #     break
-                        # except:
-                        #     print('fail to generate this ct for ' + self.task + ', pass it', file=sys.stderr)
-                        #     pass
-                    # if x is None:
-                    #     raise Exception('failed 5 times generation of ct, please check dataset or rescale method, like trgt space or trgt size')
-                    x_b = np.rollaxis(x, 1, 4)
-                    y_b = np.rollaxis(y, 1, 4)
-                    print('prepare feed the data to model, x, y', x_b.shape, y_b.shape)
-
-                    for x, y in zip(x_b, y_b):
-                        if self.task == 'no_label':
-                            yield x[np.newaxis, ...], y[np.newaxis, ...]
-                        else:
-                            if self.ds == 2:
-                                yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :], y[np.newaxis, :, :, :, :]]
-                            else:
-                                yield x[np.newaxis, :, :, :, :], [y[np.newaxis, :, :, :, :]]
+                            yield x, y

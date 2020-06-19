@@ -11,7 +11,7 @@ import numpy as np
 import random
 import sys
 
-def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None):
+def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None, a2=None):
     """
     get ramdom patches from the given ct.
 
@@ -30,8 +30,6 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     # print('scan shape', sh)
     # print('patch shape', p_sh)
     # print('range values', range_vals)
-    
-   
     if p_middle:  # set sampling specific probability on central part
         # print('p_middle, select more big vessels')
         tmp_nb = random.random()
@@ -60,13 +58,39 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     for finish_voxel, scan_size in zip(finish, sh):
         if finish_voxel > scan_size:
             print('warning!:patch size is bigger than scan size', file=sys.stderr)
-    
-    idx = [np.arange(o_,f_) for o_,f_ in zip(origin,finish)]
-    
-       
-    patch = scan[np.ix_(idx[0],idx[1],idx[2])]
 
-    
+    idx = [np.arange(o_,f_) for o_,f_ in zip(origin,finish)]
+    patch = scan[np.ix_(idx[0], idx[1], idx[2])]
+
+    if a2 is not None:
+        scale_ratio = np.array(a2.shape)/np.array(scan.shape)
+        center_idx =  origin + p_sh//2
+        center_idx = np.array(center_idx) * scale_ratio
+        origin_a2 = center_idx - p_sh // 2  # the patch size in a2 is still p_sh
+        finish_a2 = center_idx + p_sh // 2
+
+        if scan.shape[0]<a2.shape[0]: # scan is downsampled from a2
+            idx_a2 = [np.arange(o_,f_) for o_,f_ in zip(origin_a2,finish_a2)]
+            a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
+        if scan.shape[0]>a2.shape[0]:
+            # a2 is downsampled from scan, so origin_a2 might be negative, finish_a2 might be greater than a2.shape
+            if all(i>=0 for i in origin_a2) and all(m<n for m,n in zip(finish_a2, a2.shape)):
+                idx_a2 = [np.arange(o_,f_) for o_,f_ in zip(origin_a2,finish_a2)]
+                a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
+            else:
+                pad_origin = np.zeros_like(origin_a2)
+                pad_finish = np.zeros_like(finish_a2)
+                for i in range(len(origin_a2)):
+                    if origin_a2[i]<0:
+                        origin_a2[i] = 0
+                        pad_origin[i] = abs(origin_a2[i])
+                    if finish_a2[i]>a2.shape[i]:
+                        finish_a2[i] = a2.shape[i]
+                        pad_finish[i] = finish_a2[i]-a2.shape[i]
+                a2_patch = np.pad(a2_patch, [tuple(pad_origin), tuple(pad_finish)], mode='minumum')
+
+        patch = np.concatenate((patch, a2_patch), axis=-1) # concatenate along the channel axil
+
     if(gt_scan is not None):
         gt_patch = gt_scan[np.ix_(idx[0],idx[1],idx[2])]
         if (aux_scan is not None):
@@ -76,7 +100,7 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
             return patch,gt_patch
     else:
         return patch
-        
+
 def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25):
     """
     deconstruct a ct to a batch of patches.
