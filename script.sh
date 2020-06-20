@@ -25,8 +25,8 @@ eval $(conda shell.bash hook)
 
 conda activate py37
 ##stdbuf -oL python -u write_preds_save_dice.py
-##stdbuf -oL python -u train_ori_fit_rec_epoch.py --tr_nb=18  --model_names='net_only_vessel,net_only_lobe,net_no_label'
-stdbuf -oL python -u write_preds_save_dice.py
+stdbuf -oL python -u train_ori_fit_rec_epoch.py --tr_nb=18 --patches_per_scan=100 --model_names='net_only_lobe,net_only_vessel'
+##stdbuf -oL python -u write_preds_save_dice.py
 ##stdbuf -oL python write_preds_save_dice.py
 ##python plot_curve.py
 

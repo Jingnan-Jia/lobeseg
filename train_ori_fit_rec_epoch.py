@@ -132,7 +132,7 @@ def train():
                                                     bn=args.batch_norm,
                                                     dr=args.dropout,
                                                     net_type='v')
-    elif args.model_mt_scales:
+    elif args.mtscale:
         net_list = cpmodels.load_cp_models(model_names,
                                            nch=1,
                                            lr=args.lr,
@@ -197,11 +197,12 @@ def train():
                                    no_label_dir=args.no_label_dir,
                                    p_middle=args.p_middle,
                                    phase='train',
-                                   aux=aux)
+                                   aux=aux,
+                                   mtscale=args.mtscale)
 
-        enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=False)
+        enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=True)
         train_datas = enqueuer_train.get ()
-        enqueuer_train.start ()
+        enqueuer_train.start (workers=2)
         train_data_gen_list.append(train_datas)
 
     best_tr_loss_dic = {'lobe': 10000,
@@ -215,16 +216,9 @@ def train():
 
     for idx_ in range(training_step):
         print ('step number: ', idx_)
-
-
         for task, net, tr_data, label, mypath in zip(task_list, net_list, train_data_gen_list, label_list, path_list):
-            lr_seg = 0.00001
-            K.set_value(net.optimizer.lr, lr_seg)
-            print(K.eval(net.optimizer.lr))
-
 
             x, y = next(tr_data) # tr_data is a generator or enquerer
-
             # callbacks
             train_csvlogger = callbacks.CSVLogger(mypath.train_log_fpath(), separator=',', append=True)
 
@@ -262,7 +256,7 @@ def train():
 
             if task == 'lobe':
                 period_valid = 5000
-            elif task == 'vessel':
+            else:
                 period_valid = 5000
             if (idx_ % (period_valid) == 0) and (task != 'no_label'): # one epoch for lobe segmentation, 20 epochs for vessel segmentation
                  # save predicted results and compute the dices
@@ -291,37 +285,37 @@ def train():
                         if task=='lobe' and (float(best_dice_valid)>9.3):
                             lr_seg = 0.00001
                             K.set_value(net.optimizer.lr, lr_seg)
-                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            print('lobe step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
                             lr_changed_steps_nb = idx_
                         elif (task=='vessel') and (best_dice_valid>8.4):
                             lr_seg = 0.00001
                             K.set_value(net.optimizer.lr, lr_seg)
-                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            print('vessel step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
                             lr_changed_steps_nb = idx_
                         elif (task=='no_label') and lr_changed_steps_nb!=0:
                             lr_seg = 0.1 * lr_seg
                             K.set_value(net.optimizer.lr, lr_seg)
-                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            print('no label step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
 
                     elif idx_==(lr_changed_steps_nb*2):
-                        if task == 'lobe' or task=='lobe':
+                        if task == 'lobe' or task=='vessel':
                             lr_seg = 0.000001
                             K.set_value(net.optimizer.lr, lr_seg)
-                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            print('step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
                         elif task=='no_label':
                             lr_seg = 0.1 * lr_seg
                             K.set_value(net.optimizer.lr, lr_seg)
-                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            print('step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
 
                     elif idx_==(lr_changed_steps_nb*3):
-                        if task == 'lobe' or task=='lobe':
+                        if task == 'lobe' or task=='vessel':
                             lr_seg = 0.0000001
                             K.set_value(net.optimizer.lr, lr_seg)
-                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            print('step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
                         elif task=='no_label':
                             lr_seg = 0.1 * lr_seg
                             K.set_value(net.optimizer.lr, lr_seg)
-                            print(K.eval(net.optimizer.lr), file=sys.stderr)
+                            print('step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
 
 
 

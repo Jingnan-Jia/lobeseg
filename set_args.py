@@ -120,7 +120,7 @@ parser.add_argument(
     '--no_label_dir',
     help='sub directory of no_label data',
     type=str,
-    default='GLUCOLD')
+    default='LUNA16')
 
 
 parser.add_argument(
@@ -135,7 +135,7 @@ parser.add_argument(
     '--model_names',
     help='model names',
     type=str,
-    default='net_only_vessel')
+    default='net_only_vessel,net_only_lobe')
 
 parser.add_argument(
     '-model_6_levels',
@@ -152,10 +152,10 @@ parser.add_argument(
     default=0)
 
 parser.add_argument(
-    '-model_mt_scales',
-    '--model_mt_scales',
+    '-mtscale',
+    '--mtscale',
     help='get a model of multi scales  net with 5 levels (normally there are 5 levels)',
     type=int,
-    default=0)
+    default=1)
 
 args = parser.parse_args()

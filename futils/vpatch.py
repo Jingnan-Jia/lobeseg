@@ -11,6 +11,53 @@ import numpy as np
 import random
 import sys
 
+
+def get_a2_patch(scan, origin, p_sh, a2):
+    """
+
+    :param scan:  shape: (z, x, y, 1)
+    :param origin: (z, x, y)
+    :param p_sh: (z, x, y)
+    :param a2: shape: (z, x, y, 1)
+    :return:
+    """
+    # get a2_patch according scan and its ori, patchshape
+    scale_ratio = np.array(a2.shape) / np.array(scan.shape)  # shape: (z, x,y,1)
+    center_idx = origin + p_sh // 2 # (z, x, y)
+    center_idx = center_idx * scale_ratio[:-1] # (z, x, y)
+    center_idx = center_idx.astype(int)  # (z, x, y)
+    origin_a2 = center_idx - p_sh // 2  # the patch size in a2 is still p_sh
+    finish_a2 = center_idx + p_sh // 2  # (z, x, y)
+
+    if scan.shape[0] < a2.shape[0]:  # scan is downsampled from a2
+        idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
+        a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
+    else:
+        # a2 is downsampled from scan, so origin_a2 might be negative, finish_a2 might be greater than a2.shape
+        if all(i >= 0 for i in origin_a2) and all(m < n for m, n in zip(finish_a2, a2.shape)):
+            idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
+            a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
+        else:
+            pad_origin = np.zeros_like(origin_a2)
+            pad_finish = np.zeros_like(finish_a2)
+            for i in range(len(origin_a2)):
+                if origin_a2[i] < 0:
+                    pad_origin[i] = abs(origin_a2[i])
+                    origin_a2[i] = 0
+
+                if finish_a2[i] > a2.shape[i]:
+                    pad_finish[i] = finish_a2[i] - a2.shape[i]
+                    finish_a2[i] = a2.shape[i]
+
+            idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
+            a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])] # (z, x, y, 1)
+
+            a2_patch = a2_patch[..., 0] # (z, x, y, 1)
+            pad_width = tuple([(i, j) for i, j in zip(pad_origin, pad_finish)])
+            a2_patch = np.pad(a2_patch, pad_width, mode='minimum') # (z, x, y)
+            a2_patch = a2_patch[..., np.newaxis] # (z, x, y, 1)
+    return a2_patch
+
 def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None, a2=None):
     """
     get ramdom patches from the given ct.
@@ -63,35 +110,14 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     patch = scan[np.ix_(idx[0], idx[1], idx[2])]
 
     if a2 is not None:
-        scale_ratio = np.array(a2.shape)/np.array(scan.shape)
-        center_idx =  origin + p_sh//2
-        center_idx = np.array(center_idx) * scale_ratio
-        origin_a2 = center_idx - p_sh // 2  # the patch size in a2 is still p_sh
-        finish_a2 = center_idx + p_sh // 2
-
-        if scan.shape[0]<a2.shape[0]: # scan is downsampled from a2
-            idx_a2 = [np.arange(o_,f_) for o_,f_ in zip(origin_a2,finish_a2)]
-            a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
-        if scan.shape[0]>a2.shape[0]:
-            # a2 is downsampled from scan, so origin_a2 might be negative, finish_a2 might be greater than a2.shape
-            if all(i>=0 for i in origin_a2) and all(m<n for m,n in zip(finish_a2, a2.shape)):
-                idx_a2 = [np.arange(o_,f_) for o_,f_ in zip(origin_a2,finish_a2)]
-                a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
-            else:
-                pad_origin = np.zeros_like(origin_a2)
-                pad_finish = np.zeros_like(finish_a2)
-                for i in range(len(origin_a2)):
-                    if origin_a2[i]<0:
-                        origin_a2[i] = 0
-                        pad_origin[i] = abs(origin_a2[i])
-                    if finish_a2[i]>a2.shape[i]:
-                        finish_a2[i] = a2.shape[i]
-                        pad_finish[i] = finish_a2[i]-a2.shape[i]
-                a2_patch = np.pad(a2_patch, [tuple(pad_origin), tuple(pad_finish)], mode='minumum')
-
-        patch = np.concatenate((patch, a2_patch), axis=-1) # concatenate along the channel axil
+        a2_patch = get_a2_patch( scan, origin, p_sh, a2)
+        if scan.shape[0]>a2.shape[0]:  # scan is original resolution, a2 is downsampled, we put patch from original resolutiion at first
+            patch = np.concatenate((patch, a2_patch), axis=-1) # concatenate along the channel axil
+        else: # a2 is original resolution, scan is downsampled, we put patch from original resolutiion at first still
+            patch = np.concatenate((a2_patch, patch), axis=-1)  # concatenate along the channel axil
 
     if(gt_scan is not None):
+
         gt_patch = gt_scan[np.ix_(idx[0],idx[1],idx[2])]
         if (aux_scan is not None):
             aux_patch = aux_scan[np.ix_(idx[0], idx[1], idx[2])]
@@ -101,19 +127,18 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     else:
         return patch
 
-def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25):
+def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25, a2=None):
     """
     deconstruct a ct to a batch of patches.
 
-    :param scan: a ct array which need to be deconstructed to (overlapped) patches. shape (z, x, y, chn)
+    :param scan: a ct array which need to be deconstructed to (overlapped) patches. shape (z, x, y, 1)
     :param patch_shape: shape (z, x, y)
     :param stride: overlap ratio along each axil. float between 0~1 means the same overlap ratio along all axils;1 means no overlap, a list means the corresponding different overlap ratio along different axils.
     :return: a batch of patches, shape (nb_ptches, z, x, y, chn)
     """
-    
     sh = np.array(scan.shape,dtype=int)
     p_sh = np.array(patch_shape,dtype=int)
-    
+
     if isinstance(stride, float) or stride==1:
         stride  = p_sh * stride
     elif isinstance(stride, list):
@@ -122,45 +147,39 @@ def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25):
         raise Exception('the stride is wrong', stride)
     
     stride = stride.astype(int)
-
     n_patches =   (sh[0:3] - p_sh + 2 * stride)  // stride # number of patches to cover  the whole image
-    
-
-    
     patches = []
     
     for z,x,y in np.ndindex(tuple(n_patches)):
         it = np.array([z,x,y],dtype= int)
         origin = it * stride
         finish = it * stride + p_sh
-
         for i in range(len(finish)): # when we meet the last patch
             if finish[i] >= sh[i]:
                 finish[i] = sh[i]- 1
                 origin[i] = finish[i] - p_sh[i]
-        
         idx = [np.arange(o_,f_) for o_,f_ in zip(origin,finish)]
-        
-       
-        patch = scan[np.ix_(idx[0],idx[1],idx[2])]
-        
+        patch = scan[np.ix_(idx[0],idx[1],idx[2])]  #(96, 144, 144, 1)
+        if a2 is not None:  # mtscale
+            a2_patch = get_a2_patch(scan, origin, p_sh, a2) #(96, 144, 144, 1)
+            patch = np.concatenate((patch, a2_patch), axis=-1)  # concatenate along the channel axil
         patches.append(patch)
-    
-    patches = np.array(patches)    
+
+    patches = np.array(patches)
     return patches
     
 def reconstruct_patch(scan,original_shape=(128,256,256),stride = 0.25):
     """
     reconstruct a ct from a batch of patches.
 
-    :param scan: a batch of patches array, shape(nb, z, x, y, chn)
-    :param original_shape: shape of original ct scan, shape (z, x, y)
+    :param scan: a batch of patches array, shape(nb, z, x, y, chn), 5 dims
+    :param original_shape: shape of original ct scan, shape (z, x, y, 1), 4 dims
     :param stride: overlap ratio on each axil
     :return: a ct with original shape (z, x, y)
     """
     
     p_sh = np.array(scan.shape,dtype=int)[1:4]  # shape (z, x, y)
-    sh = np.array(original_shape,dtype=int)  # shape (z, x, y)
+    sh = np.array(original_shape,dtype=int)[:-1]   # shape (z, x, y)
     
     if isinstance(stride, float) or stride==1:
         stride  = p_sh * stride

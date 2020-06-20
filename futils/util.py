@@ -206,13 +206,43 @@ def recall(seg,gt):
     else:
         return 1.0    
         
-        
-def sample_scan(scan,sz = 128,z_length=64,pivot_axis=1,scale_axis=0,order=0):
-        """Downscale scan only in slicing direction with nearest interpolation """
-        zoom_seq = np.array([z_length,sz,sz,1],dtype='float')/np.array(scan.shape,dtype='float')
-        s = ndimage.interpolation.zoom(scan,zoom_seq,order=order,prefilter=order)
-        
-        return s
+
+def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1):
+    """
+
+
+    :param scan: shape(z,x,y,chn)
+    :param ori_space: shape(z,x,y)
+    :param trgt_space: shape(z,x,y)
+    :param ori_sz: shape(z,x,y,chn)
+    :param trgt_sz: shape(z,x,y)
+    :param order:
+    :return:
+    """
+    if len(scan.shape)==3:
+        scan=scan[..., np.newaxis]
+    if len(ori_sz)==3:
+        ori_sz = list(ori_sz)
+        ori_sz.append(1)
+    print('scan.shape, ori_space, trgt_space, ori_sz, trgt_sz',scan.shape, ori_space, trgt_space, ori_sz, trgt_sz)
+    if any(trgt_space):
+        print('rescaled to new spacing  ')
+        zoom_seq = np.array(ori_space, dtype='float') / np.array(trgt_space, dtype='float')
+        zoom_seq = np.append(zoom_seq, 1)
+        print('zoom_seq', zoom_seq)
+        x = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=1)  # 143, 271, 271, 1
+        print('size after rescale to trgt spacing:', x.shape)
+    elif any(trgt_sz):
+        print('rescaled to target size')
+        zoom_seq = np.array(trgt_sz.append(ori_sz.shape[-1]), dtype='float') / np.array(ori_sz, dtype='float')
+        x = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=order)
+        print('size after rescale to new size:', x.shape)  # 64, 144, 144, 1
+    else:
+        raise Exception('please assign how to rescale')
+        print('please assign how to rescale')
+
+    return x
+
 
 def _one_hot_enc(patch,input_is_grayscale = False,labels=[]):
 

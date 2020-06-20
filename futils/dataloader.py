@@ -18,6 +18,7 @@ from scipy import ndimage
 import time
 import glob
 import sys
+from futils.util import downsample
 
 """"""
 
@@ -86,6 +87,9 @@ class TwoScanIterator(Iterator):
         self.trgt_z_space = trgt_z_space
         self.ptch_sz = ptch_sz
         self.ptch_z_sz = ptch_z_sz
+        self.trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space]
+        self.trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz]
+
         self.aux=aux
         if self.aux:
             self.c_dir_name = 'aux_gdth'
@@ -187,42 +191,6 @@ class TwoScanIterator(Iterator):
                 # c = np.array(c, dtype='float')
 
                 return a, b, c
-
-    def downscale_scan_ifnecessary(self, scan,  order=1):  # scan.shape: (200, 512, 512, 1)
-
-        time1 = time.time()
-        # print('time before downscale:', time1)
-        print('shape before downscale', scan.shape)
-
-        if self.trgt_space and self.trgt_z_space:  # put trgt space more priority
-            trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space] # (x, y, x)
-
-            zoom_seq = np.array(self.spacing, dtype='float') / np.array(trgt_sp_list, dtype='float')  # order is correct
-            zoom_seq = np.append(zoom_seq, 1)  # because here the scan is 4 dimentions
-            print('downsample to target space ', [self.trgt_z_space, self.trgt_space, self.trgt_space, 1], 'zoom_seq',
-                  zoom_seq)
-            s = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=order)  # (128, 256, 256, 1)
-
-        elif self.trgt_sz and self.trgt_z_sz:
-            trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz, 1]
-            zoom_seq = np.array(trgt_sz_list, dtype='float') / np.array(scan.shape, dtype='float')  # order is correct
-            print('downsample to target size', trgt_sz_list, 'zoom_seq', zoom_seq)
-            s = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=order)  # (128, 256, 256, 1)
-
-
-        else:
-            s = scan
-            print('do not assign correct trgt space or size, please assign the correct rescale method')
-
-        # zoom_seq = np.array([z_length, sz, sz, 1], dtype='float') / np.array([100, 100, 100, 1], dtype='float')
-
-        time2 = time.time()
-        # print('time after downscle:', time2)
-        print('shape after downscale', s.shape)
-        print('time during downscle:', time2 - time1, file=sys.stdout)
-        # print('time during downscle:', time2 - time1, file=sys.stderr)
-
-        return s
 
     def _random_transform(self, a, b, c=None, is_batch=True):
         """
@@ -360,107 +328,81 @@ class TwoScanIterator(Iterator):
 
         for i, j in enumerate(index_array):
 
-            if  self.aux:
+            if self.aux:
                 a_ori, b, c = self._load_img_pair(j)
+            else:
+                a_ori, b = self._load_img_pair(j)
+            if self.task!='no_label':
                 b = self.one_hot_encode_3D(b, self.labels)
-                c = self.one_hot_encode_3D(c, [0,1])
-                if self.data_argum:
+                c = self.one_hot_encode_3D(c, [0,1]) if self.aux else None
+
+            if self.data_argum:
+                if self.aux:
                     a_ori, b, c = self._random_transform(a_ori, b, c)
-
-                if self.task=='lobe':  # if task is lobe, we downsample a,b,c,
-                    print('downsampling ori ct ...')
-                    a = self.downscale_scan_ifnecessary(a_ori, order=1)
-                    print('downsampling masks ...')
-                    b = self.downscale_scan_ifnecessary(b, order=0)  # for masks, order=0, means nearest neighbor downsampling
-                    print('downsampling aux masks ...')
-                    c = self.downscale_scan_ifnecessary(c, order=0)
-                else:  # if task is vessel, we do not downsample a,b,c,
-                    a = a_ori
-
-                if self.mtscale:
-                    if a.shape==a_ori.shape:  # no downsampling, we need a downsampled a2
-                        a2 = self.downscale_scan_ifnecessary(a_ori, order=1)
-                    else:  # downsamplinig, we need a undownsampled a2
-                        a2 = a_ori
                 else:
-                    a2 = None # we do not need a2 if we do not use mtscale
+                    a_ori, b = self._random_transform(a_ori, b)
 
-                print('before patching, the shape is ', a.shape)
+            if any(self.trgt_sp_list) or any(self.trgt_sz_list):
+                if not self.mtscale or self.task == 'lobe':
+                    a = downsample(a_ori,
+                                   ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                                   ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
+                                   order=1)
+                    b = downsample(b,
+                                   ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                                   ori_sz=b.shape, trgt_sz=self.trgt_sz_list,
+                                   order=0)
+                    c = downsample(c,
+                                   ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                                   ori_sz=c.shape,trgt_sz=self.trgt_sz_list,
+                                   order=0) if self.aux else None
+                    a2 = a_ori if self.mtscale else None
+                else:
+                    a = a_ori
+                    a2 = downsample(a_ori,
+                                   ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                                   ori_sz=a_ori.shape,trgt_sz=self.trgt_sz_list,
+                                   order=1) if self.mtscale else None
 
-                A = []
-                B = []
-                C = []
-                for _ in range(self.patches_per_scan):
+            else:
+                a = a_ori
+                a2 = None  # if trgt_sp or trgt_sz is not assigned, it means that mtscale is False
 
+            print('before patching, the shape of a is ', a.shape)
+            print('before patching, the shape of a2 is ', a2.shape) if self.mtscale else print('')
+
+
+            A = []
+            B = []
+            C = [] if self.aux else None
+            for _ in range(self.patches_per_scan):
+                if self.aux:
                     if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
                         a_img, b_img, c_img = random_patch(a, b, c, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz), p_middle=self.p_middle, a2=a2)
                     else:
                         a_img, b_img, c_img = a, b, c
-
-                    batch_a = a_img.copy() # shape: 96, 144, 144, 1
-                    batch_b = b_img.copy()
-                    batch_c = c_img.copy()
-
-                    A.append(batch_a)
-                    B.append(batch_b)
-                    C.append(batch_c)
-                a_np = np.array(A)
-                b_np = np.array(B)
-                c_np = np.array(C)
-                print('after patching, the shape is ', a_np.shape)
-
-
-                return [a_np, b_np, c_np]
-
-
-            else:
-                a_ori, b = self._load_img_pair(j)
-                b = self.one_hot_encode_3D(b, self.labels)
-                if self.data_argum:
-                    a_ori, b = self._random_transform(a_ori, b )
-
-                if self.task == 'lobe':
-                    print('downsampling ori ct ...')
-                    a = self.downscale_scan_ifnecessary(a_ori, order=1)
-                    print('downsampling masks ...')
-                    b = self.downscale_scan_ifnecessary(b,
-                                                        order=0)  # for masks, order=0, means nearest neighbor downsampling
-
                 else:
-                    a = a_ori
-
-                if self.mtscale:
-                    if a.shape == a_ori.shape:  # no downsampling, we need a downsampled a2
-                        a2 = self.downscale_scan_ifnecessary(a_ori, order=1)
-                    else:  # downsamplinig, we need a undownsampled a2
-                        a2 = a_ori
-                else:
-                    a2 = None  # we do not need a2 if we do not use mtscale
-
-                print('before patching, the shape is ', a.shape)
-
-                A = []
-                B = []
-                for _ in range(self.patches_per_scan):
-
                     if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
-                        a_img, b_img, c_img = random_patch(a, b,
-                                                           patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
-                                                           p_middle=self.p_middle, a2=a2)
+                        a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz), p_middle=self.p_middle, a2=a2)
                     else:
-                        a_img, b_img, c_img = a, b
+                        a_img, b_img = a, b
 
-                    batch_a = a_img.copy()  # shape: 96, 144, 144, 1
-                    batch_b = b_img.copy()
+                batch_a = a_img.copy() # shape: 96, 144, 144, 1
+                batch_b = b_img.copy()
+                batch_c = c_img.copy() if self.aux else None
 
-                    A.append(batch_a)
-                    B.append(batch_b)
-                a_np = np.array(A)
-                b_np = np.array(B)
-                print('after patching, the shape is ', a_np.shape)
+                A.append(batch_a)
+                B.append(batch_b)
+                C.append(batch_c) if self.aux else None
+            a_np = np.array(A)
+            b_np = np.array(B)
+            c_np = np.array(C) if self.aux else None
+            print('after patching, the shape is ', a_np.shape)
 
+            if self.aux:
+                return [a_np, b_np, c_np]
+            else:
                 return [a_np, b_np]
-
 
 
     def generator(self):
@@ -479,7 +421,9 @@ class TwoScanIterator(Iterator):
                     y_aux = y_aux[np.newaxis, ...]
                     if self.mtscale:
                         x1 = x[..., 0]
+                        x1 = x1[..., np.newaxis]
                         x2 = x[..., 1]
+                        x2 = x2[..., np.newaxis]
                         if self.ds == 2:
                             yield [x1, x2], [y, y_aux, y, y]
 
@@ -495,6 +439,8 @@ class TwoScanIterator(Iterator):
             else:
 
                 x, y = self.next()
+                if self.task=='no_label':
+                    y = x
                 x_b = np.rollaxis(x, 1, 4)
                 y_b = np.rollaxis(y, 1, 4)
                 print('prepare feed the data to model, x, y', x_b.shape, y_b.shape)
@@ -504,7 +450,20 @@ class TwoScanIterator(Iterator):
                     y = y[np.newaxis, ...]
                     if self.mtscale:
                         x1 = x[..., 0]
+                        x1 = x1[..., np.newaxis]
                         x2 = x[..., 1]
+                        x2 = x2[..., np.newaxis]
+
+                        # import matplotlib.pyplot as plt
+                        # plt.figure()
+                        # plt.imshow(x1[0,72,:,:,0])
+                        # plt.savefig('x1_y.png')
+                        # plt.close()
+                        # plt.figure()
+                        # plt.imshow(x2[0,72, :, :, 0])
+                        # plt.savefig('x2_y.png')
+                        # plt.close()
+
                         if self.ds == 2:
                             yield [x1, x2], [y, y, y]
 

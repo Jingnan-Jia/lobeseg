@@ -57,6 +57,7 @@ class Mypath(object):
             self.current_time = str (int(time.time ())) + '_' + str(np.random.randint(1000))
         self.setting = '_lr' + str (args.lr) \
                        + 'ld' + str (args.load) \
+                        + 'mtscale' + str (args.mtscale) \
                        + 'm6l' + str(args.model_6_levels) \
                        + 'm7l' + str(args.model_7_levels) \
                        + 'pm' + str(args.p_middle) \
