@@ -15,7 +15,7 @@ parser.add_argument(
     '--load',
     help='load last model',
     type=int,
-    default=0)
+    default=1)
 
 parser.add_argument(
     '-aux',
@@ -113,21 +113,21 @@ parser.add_argument(
     '--tr_nb',
     help='nunber of training samples',
     type=int,
-    default=18)
+    default=5)
 
 parser.add_argument(
     '-no_label_dir',
     '--no_label_dir',
     help='sub directory of no_label data',
     type=str,
-    default='LUNA16')
+    default='None')
 
 
 parser.add_argument(
     '-p_middle',
     '--p_middle',
     help='p_middle = 0.5 means sample in the middle parts',
-    type=str,
+    type=float,
     default=0.5)
 
 parser.add_argument(
@@ -135,7 +135,7 @@ parser.add_argument(
     '--model_names',
     help='model names',
     type=str,
-    default='net_only_vessel,net_only_lobe')
+    default='net_only_lobe')
 
 parser.add_argument(
     '-model_6_levels',
@@ -157,5 +157,12 @@ parser.add_argument(
     help='get a model of multi scales  net with 5 levels (normally there are 5 levels)',
     type=int,
     default=1)
+
+parser.add_argument(
+    '-no_label_nb',
+    '--no_label_nb',
+    help='number of traiing data for reconstruction)',
+    type=int,
+    default=18)
 
 args = parser.parse_args()

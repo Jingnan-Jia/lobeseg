@@ -74,6 +74,14 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     p_sh = np.array(patch_shape)  # (z, x, y)
 
     range_vals = sh[0:3] - p_sh  # (z, x, y)
+    if any(range_vals<=0): # patch size is smaller than image shape
+        pad_finish = np.zeros_like(range_vals)
+        for i in range(len(range_vals)):
+            if range_vals[i] <= 0:
+                pad_finish[i] = abs(range_vals[i])+1 # here +1 make the scan bigger than patch size
+
+        pad_width = tuple([(0, j) for j in pad_finish])
+        scan = np.pad(scan, pad_width, mode='minimum')
     # print('scan shape', sh)
     # print('patch shape', p_sh)
     # print('range values', range_vals)
@@ -101,6 +109,9 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
         origin = [random.randint(0, x) for x in range_vals] # here, x+1 can avoid lob>high
         # print('No p_middle, select all vessels')
 
+
+
+
     finish  = origin + p_sh
     for finish_voxel, scan_size in zip(finish, sh):
         if finish_voxel > scan_size:
@@ -108,6 +119,7 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
 
     idx = [np.arange(o_,f_) for o_,f_ in zip(origin,finish)]
     patch = scan[np.ix_(idx[0], idx[1], idx[2])]
+
 
     if a2 is not None:
         a2_patch = get_a2_patch( scan, origin, p_sh, a2)
@@ -162,7 +174,12 @@ def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25, a2=None):
         patch = scan[np.ix_(idx[0],idx[1],idx[2])]  #(96, 144, 144, 1)
         if a2 is not None:  # mtscale
             a2_patch = get_a2_patch(scan, origin, p_sh, a2) #(96, 144, 144, 1)
-            patch = np.concatenate((patch, a2_patch), axis=-1)  # concatenate along the channel axil
+
+            if scan.shape[0] > a2.shape[0]:  # scan is original resolution, a2 is downsampled, we put patch from original resolutiion at first
+                patch = np.concatenate((patch, a2_patch), axis=-1)  # concatenate along the channel axil
+            else:  # a2 is original resolution, scan is downsampled, we put patch from original resolutiion at first still
+                patch = np.concatenate((a2_patch, patch), axis=-1)  # concatenate along the channel axil
+
         patches.append(patch)
 
     patches = np.array(patches)

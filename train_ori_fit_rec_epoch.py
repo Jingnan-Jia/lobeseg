@@ -2,7 +2,7 @@
 """
 Main file to train the model.
 =============================================================
-Created on Tue Apr  4 09:35:14 2017
+Created on Tue Apr  4 09:35:14 2020
 @author: Jingnan
 """
 
@@ -25,7 +25,7 @@ from write_batch_preds import write_preds_to_disk
 import segmentor as v_seg
 from mypath import Mypath
 
-os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
+# os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
 tf.keras.mixed_precision.experimental.set_policy('infer') # mix precision training
 
 config = tf.ConfigProto()
@@ -88,14 +88,58 @@ def save_model_best_valid(dice_file, model, model_fpath):
         max_dice = max(dice_list)
         if dice>=max_dice:
             model.save(model_fpath)
-            print("this 'ave_total' is the best: ", str(dice), "save valid model at: ", model_fpath)
+            print("this 'ave_total' is the best: ", str(dice), "save valid model at: ", model_fpath, file=sys.stderr)
         else:
             print("this 'ave_total' is not the best: ", str(dice), file=sys.stderr)
 
     return max_dice
 
 
-
+def set_lr(K, net, model_names, task, idx_):
+    if set(model_names) != set(['net_only_lobe', 'net_only_vessel']) and set(model_names) != set(
+            ['net_only_lobe', 'net_only_vessel', 'net_no_label']):  # lr1
+        if idx_ == 0:
+            if task in ['lobe', 'vessel']:
+                lr_seg = 0.0001
+                K.set_value(net.optimizer.lr, lr_seg)
+                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
+            else:
+                lr_seg = 0.00001
+                K.set_value(net.optimizer.lr, lr_seg)
+                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                      file=sys.stderr)
+        if idx_ == 100000:
+            if task in ['lobe', 'vessel']:
+                lr_seg = 0.00001
+                K.set_value(net.optimizer.lr, lr_seg)
+                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
+            else:
+                lr_seg = 0.000001
+                K.set_value(net.optimizer.lr, lr_seg)
+                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                      file=sys.stderr)
+    else:  # lr1
+        if idx_ == 0:
+            if task in ['lobe']:
+                lr_seg = 0.0001
+                K.set_value(net.optimizer.lr, lr_seg)
+                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
+            else:
+                lr_seg = 0.00001
+                K.set_value(net.optimizer.lr, lr_seg)
+                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                      file=sys.stderr)
+        if idx_ == 100000:
+            if task in ['lobe']:
+                lr_seg = 0.00001
+                K.set_value(net.optimizer.lr, lr_seg)
+                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
+            else:
+                lr_seg = 0.000001  # vessel task
+                K.set_value(net.optimizer.lr, lr_seg)
+                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                      file=sys.stderr)
+    return net
 
 def train():
     """
@@ -163,10 +207,14 @@ def train():
         print('successfully plot model structure at: ', mypath.model_figure_path() + '/' + model_name + '.png')
 
         if args.load: # load saved model
-            old_time = '1584923362.8464801_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64'
-            old_model_fpath = mypath.model_path + '/' + task + '/' + old_time + 'MODEL.hdf5'
-            net.load_weights(old_model_fpath)
-            print('loaded weights successfully: ', old_model_fpath)
+            if task=='lobe':
+                old_name = '1593000414_895_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
+            elif task=='vessel':
+                old_name = '1593000414_802_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
+            elif task=='no_label':
+                old_name = '1593000414_570_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
+            net.load_weights(mypath.model_fpath_best_train(str_name=old_name))
+            print('loaded weights successfully: ', old_name)
 
         # save model architecture and config
         model_json = net.to_json ()
@@ -194,6 +242,7 @@ def train():
                                    ds=args.deep_supervision,
                                    labels=labels,
                                    nb=args.tr_nb,
+                                   nb_no_label=args.no_label_nb,
                                    no_label_dir=args.no_label_dir,
                                    p_middle=args.p_middle,
                                    phase='train',
@@ -210,7 +259,7 @@ def train():
                      'airway': 10000,
                      'no_label': 10000}
 
-    training_step = 2500000
+    training_step = 150000 # 200000steps, 40 validations
     lr_seg = 0.0001
     lr_changed_steps_nb = 0
 
@@ -243,25 +292,15 @@ def train():
                               callbacks=[saver_train, train_csvlogger])
 
 
-
-
-
-
-
-
             current_tr_loss = history.history['loss'][0]
             old_tr_loss = np.float(best_tr_loss_dic[task])
             if current_tr_loss < old_tr_loss:
                 best_tr_loss_dic[task] = current_tr_loss
 
-            if task == 'lobe':
-                period_valid = 5000
-            else:
-                period_valid = 5000
+            period_valid = 5000
             if (idx_ % (period_valid) == 0) and (task != 'no_label'): # one epoch for lobe segmentation, 20 epochs for vessel segmentation
                  # save predicted results and compute the dices
                 for phase in ['train', 'valid']:
-
                     segment = v_seg.v_segmentor(batch_size=args.batch_size,
                                                 model=net,
                                                 ptch_sz = args.ptch_sz, ptch_z_sz = args.ptch_z_sz,
@@ -281,46 +320,53 @@ def train():
 
                     best_dice_valid = save_model_best_valid(dice_file=mypath.dices_fpath(phase), model=net, model_fpath=mypath.model_fpath_best_valid())
 
-                    if lr_changed_steps_nb==0 or lr_seg == 0:
-                        if task=='lobe' and (float(best_dice_valid)>9.3):
-                            lr_seg = 0.00001
-                            K.set_value(net.optimizer.lr, lr_seg)
-                            print('lobe step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
-                            lr_changed_steps_nb = idx_
-                        elif (task=='vessel') and (best_dice_valid>8.4):
-                            lr_seg = 0.00001
-                            K.set_value(net.optimizer.lr, lr_seg)
-                            print('vessel step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
-                            lr_changed_steps_nb = idx_
-                        elif (task=='no_label') and lr_changed_steps_nb!=0:
-                            lr_seg = 0.1 * lr_seg
-                            K.set_value(net.optimizer.lr, lr_seg)
-                            print('no label step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
-
-                    elif idx_==(lr_changed_steps_nb*2):
-                        if task == 'lobe' or task=='vessel':
-                            lr_seg = 0.000001
-                            K.set_value(net.optimizer.lr, lr_seg)
-                            print('step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
-                        elif task=='no_label':
-                            lr_seg = 0.1 * lr_seg
-                            K.set_value(net.optimizer.lr, lr_seg)
-                            print('step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
-
-                    elif idx_==(lr_changed_steps_nb*3):
-                        if task == 'lobe' or task=='vessel':
-                            lr_seg = 0.0000001
-                            K.set_value(net.optimizer.lr, lr_seg)
-                            print('step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
-                        elif task=='no_label':
-                            lr_seg = 0.1 * lr_seg
-                            K.set_value(net.optimizer.lr, lr_seg)
-                            print('step number', idx_, 'lr=', K.eval(net.optimizer.lr), file=sys.stderr)
-
-
-
-
-
+                    if set(model_names) != set(['net_only_lobe', 'net_only_vessel']) and set(model_names) != set(
+                            ['net_only_lobe', 'net_only_vessel', 'net_no_label']):  # lr1
+                        if idx_ == 0:
+                            if task in ['lobe', 'vessel']:
+                                lr_seg = 0.0001
+                                K.set_value(net.optimizer.lr, lr_seg)
+                                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                                      file=sys.stderr)
+                            else:
+                                lr_seg = 0.00001
+                                K.set_value(net.optimizer.lr, lr_seg)
+                                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                                      file=sys.stderr)
+                        if idx_ == 50000:
+                            if task in ['lobe', 'vessel']:
+                                lr_seg = 0.00001
+                                K.set_value(net.optimizer.lr, lr_seg)
+                                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                                      file=sys.stderr)
+                            else:
+                                lr_seg = 0.000001
+                                K.set_value(net.optimizer.lr, lr_seg)
+                                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                                      file=sys.stderr)
+                    else:  # lr1
+                        if idx_ == 0:
+                            if task in ['lobe','vessel']:
+                                lr_seg = 0.0001
+                                K.set_value(net.optimizer.lr, lr_seg)
+                                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                                      file=sys.stderr)
+                            else:
+                                lr_seg = 0.00001
+                                K.set_value(net.optimizer.lr, lr_seg)
+                                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                                      file=sys.stderr)
+                        if idx_ == 50000:
+                            if task in ['lobe','vessel']:
+                                lr_seg = 0.00001
+                                K.set_value(net.optimizer.lr, lr_seg)
+                                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                                      file=sys.stderr)
+                            else:
+                                lr_seg = 0.000001  # vessel task
+                                K.set_value(net.optimizer.lr, lr_seg)
+                                print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr),
+                                      file=sys.stderr)
 
             for key, result in history.history.items ():
                 print(key, result)

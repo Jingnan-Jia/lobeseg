@@ -42,6 +42,7 @@ class TwoScanIterator(Iterator):
                  shuffle=True,
                  seed=None,
                  nb=None,
+                 nb_no_label=None,
                  no_label_dir=None,
                  p_middle=None,
                  phase='train',
@@ -104,8 +105,8 @@ class TwoScanIterator(Iterator):
             files = set(x.split(a_extension)[0].split(self.a_dir + '/')[-1] for x in
                           sorted(glob.glob(self.a_dir + '/*' + self.a_extension)))
             self.filenames = sorted(list(files))
-            if nb:
-                self.filenames = self.filenames[:nb]
+            if nb_no_label:
+                self.filenames = self.filenames[:nb_no_label]
         else:
             self.a_dir = os.path.join(directory, a_dir_name, sub_dir)
             self.b_dir = os.path.join(directory, b_dir_name, sub_dir)

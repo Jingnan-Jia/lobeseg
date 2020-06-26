@@ -76,11 +76,40 @@ from compute_distance_metrics_and_save import write_all_metrics
              ''
               '1585000103.6170883_0.00011a_o_0ds2dr1bn1fs16ptsz96ptzsz64',
     '1584925363.1298258_0.00010a_o_0ds2dr1bn1fs16ptsz96ptzsz64'
+    
+    following 6 models contain lobe task:
+         '1592676170_448_lr0.0001ld0m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', # lobe+vessel 18 cts
+         '1592685339_438_lr0.0001ld0m6l0m7l0pm0.5no_label_dirGLUCOLDao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', # lobe+recon 18 cts
+         '1592685598_920_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', # lobe+vessel+recon 18 cts
+         '1592689121_655_lr0.0001ld0mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96',  # lobe 5 cts
+         '1592689233_654_lr0.0001ld0mtscale1m6l0m7l0pm0.5no_label_dirGLUCOLDao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96',
+         '1592689179_995_lr0.0001ld0mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96'
+             
+    following 6 models contain vessel task:
+         '1592689179_711_lr0.0001ld0mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96', # lobe+vessel 5 cts
+         '1592689254_580_lr0.0001ld0mtscale1m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96', # vessel+recon 5 cts
+         '1592689158_187_lr0.0001ld0mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96', #vessel_only 5 cts
+         
+         '1592685598_203_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', #lobe+vessel+recon 18 cts
+         '1592676170_464_lr0.0001ld0m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', #lobe+vessel 18 cts
+         '1592685256_247_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96',  # vessel + recon 18 cts
+         '1592676155_848_lr0.0001ld0m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96'  #vessel_only, 18 cts
+         
+    follow 4 models are the continuely trained  models:
+    for lobe:
+        '1592867691_416_lr1e-05ld1mtscale1m6l0m7l0pm0.0no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', # mtscale, 18 cts
+        '1592867085_582_lr1e-05ld1mtscale1m6l0m7l0pm0.0no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96', # mtscale, 5 cts
+    for vessel:
+        '1592867294_862_lr1e-05ld1mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', # mtscale, 18 cts
+        '1592867477_914_lr1e-05ld1mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96', # mtscale, 5 cts
+         
+    
 
 '''
-task='vessel'
-str_names = ['1591832153_471_lr0.0001ld0m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrspNonetrzspNoneptch_per_scan100tr_nb18ptsz144ptzsz96',
-             '1591833452_568_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrspNonetrzspNoneptch_per_scan100tr_nb18ptsz144ptzsz96']
+task='lobe'
+str_names = ['1592867294_862_lr1e-05ld1mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', # mtscale, 18 cts
+        '1592867477_914_lr1e-05ld1mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96' # mtscale, 5 cts
+             ]
 
 print(str_names)
 
@@ -91,7 +120,7 @@ for str_name in str_names:
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
     # model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'
     # ptch_z_sz = int(str_name.split('ptzsz')[-1])
-    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL_valid.hdf5'
+    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL.hdf5'
 
     # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
     a = str_name.split('trsp')
@@ -104,8 +133,8 @@ for str_name in str_names:
     # tr_sz = float(re.findall(r'\d+', str_name.split('trsz')[-1])[0])
     # tr_z_sz = float(re.findall(r'\d+', str_name.split('trzsz')[-1])[0])
 
-    tr_sp = None
-    tr_z_sp = None
+    tr_sp = 1.4
+    tr_z_sp = 2.5
     tr_sz = None
     tr_z_sz = None
 
@@ -117,17 +146,17 @@ for str_name in str_names:
         elif task=='vessel':
             labels = [0, 1]
 
-        # segment = v_seg.v_segmentor(batch_size=1,
-        #                             model=model_name,
-        #                             ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
-        #                             trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
-        #                             trgt_space_list=[tr_z_sp, tr_sp, tr_sp],  # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
-        #                             task=task)
-        #
-        # write_preds_to_disk(segment=segment,
-        #                     data_dir=mypath.ori_ct_path(phase),
-        #                     preds_dir=mypath.pred_path(phase),
-        #                     number=5, stride=0.5)
+        segment = v_seg.v_segmentor(batch_size=1,
+                                    model=model_name,
+                                    ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
+                                    trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
+                                    trgt_space_list=[tr_z_sp, tr_sp, tr_sp],  # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
+                                    task=task)
+
+        write_preds_to_disk(segment=segment,
+                            data_dir=mypath.ori_ct_path(phase),
+                            preds_dir=mypath.pred_path(phase),
+                            number=5, stride=0.5)
         #
         #
         # write_dices_to_csv (labels=labels,

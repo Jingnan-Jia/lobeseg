@@ -73,6 +73,7 @@ class Mypath(object):
                        + 'trzsp'+ str(args.trgt_z_space) \
                        + 'ptch_per_scan' + str(args.patches_per_scan) \
                        + 'tr_nb' + str(args.tr_nb) \
+                        + 'no_label_nb' + str(args.no_label_nb) \
                        + 'ptsz' + str (args.ptch_sz) \
                        + 'ptzsz' + str (args.ptch_z_sz)
 
@@ -194,52 +195,68 @@ class Mypath(object):
 
 
     @mkdir_dcrt
-    def model_fpath_best_train(self):
+    def model_fpath_best_train(self, str_name=None):
         """
         full path to save best model according to training loss.
         :return: full path
         """
         task_model_path = self.task_model_dir()
-        return task_model_path + '/' + self.str_name + 'MODEL.hdf5'
+        if str_name is None:
+            return task_model_path + '/' + self.str_name + 'MODEL.hdf5'
+        else:
+            return task_model_path + '/' + str_name + 'MODEL.hdf5'
 
     @mkdir_dcrt
-    def model_fpath_best_valid(self):
+    def model_fpath_best_valid(self, str_name=None):
         """
         full path to save best model according to training loss.
         :return: full path
         """
         task_model_path = self.task_model_dir()
-        return task_model_path + '/' + self.str_name + 'MODEL_valid.hdf5'
+        if str_name is None:
+            return task_model_path + '/' + self.str_name + 'MODEL_valid.hdf5'
+        else:
+            return task_model_path + '/' + str_name + 'MODEL_valid.hdf5'
 
 
     @mkdir_dcrt
-    def ori_ct_path(self, phase='train'):
+    def ori_ct_path(self, phase='train', sub_dir=None):
         """
         absolute directory of the original ct for training dataset
         :param phase: 'train' or 'valid'
         :return: directory name
         """
-        data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
+        if sub_dir is None:
+            data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + self.sub_dir()
+        else:
+            data_path = self.data_path + '/' + self.task + '/' + phase + '/ori_ct/' + sub_dir
         return data_path
 
     @mkdir_dcrt
-    def gdth_path(self, phase='train'):
+    def gdth_path(self, phase='train', sub_dir=None):
         """
         absolute directory of the ground truth of ct for training dataset
         :param phase: 'train' or 'valid'
         :return: directory name
         """
-        gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
+        if sub_dir is None:
+            gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + self.sub_dir()
+        else:
+            gdth_path = self.data_path + '/' + self.task + '/' + phase + '/gdth_ct/' + sub_dir
         return gdth_path
 
     @mkdir_dcrt
-    def pred_path(self, phase='train'):
+    def pred_path(self, phase='train', sub_dir=None):
         """
         absolute directory of the prediction results of ct for training dataset
         :param phase: 'train' or 'valid'
         :return: directory name
         """
-        pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir() + '/' + self.current_time
+        if sub_dir is None:
+            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir() + '/' + self.current_time
+        else:
+            pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + sub_dir + '/' + self.current_time
+
         return pred_path
 
     @mkdir_dcrt
@@ -253,13 +270,13 @@ class Mypath(object):
         return pred_path + '/dices.csv'
 
     @mkdir_dcrt
-    def all_metrics_fpath(self, phase='train'):
+    def all_metrics_fpath(self, phase='train', sub_dir=None):
         """
         full path of the saved dice
         :param phase: 'train' or 'valid'
         :return: file name to save dice
         """
-        pred_path = self.pred_path(phase)
+        pred_path = self.pred_path(phase, sub_dir=sub_dir)
         return pred_path + '/all_metrics.csv'
 
 
