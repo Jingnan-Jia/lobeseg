@@ -19,8 +19,29 @@ import time
 import glob
 import sys
 from futils.util import downsample
+from functools import wraps
 
 """"""
+def rp_dcrt(fun): # decorator to repeat a function until succeessful
+    """
+    A decorator to repeat this function until no errors raise.
+    here, the function normally is a dataloader: iterator.next()
+    sometimes, ct scans are empty or pretty smaller than patch size which can lead to errors.
+
+    :param fun: a function which might meet errors
+    :return: decorated function
+    """
+    @wraps(fun)
+    def decorated(*args, **kwargs):
+        next_fail = True
+        while (next_fail):
+            try:
+                out = fun(*args, **kwargs)
+                next_fail = False
+            except:
+                print('data load or patch failed, pass this data, load next data')
+        return out
+    return decorated
 
 class TwoScanIterator(Iterator):
     """Class to iterate A and B 3D scans (mhd or nrrd) at the same time."""
@@ -319,6 +340,7 @@ class TwoScanIterator(Iterator):
 
         return np.float64(patches)
 
+    @rp_dcrt
     def next(self):
         """Get the next pair of the sequence."""
 
@@ -477,3 +499,6 @@ class TwoScanIterator(Iterator):
 
                         else:
                             yield x, y
+
+
+

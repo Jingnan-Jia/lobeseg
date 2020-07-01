@@ -14,6 +14,8 @@ import sys
 
 def get_a2_patch(scan, origin, p_sh, a2):
     """
+    output a2_patch given a scan and the patch origin(start position) and  patch shape of the first patch,
+
 
     :param scan:  shape: (z, x, y, 1)
     :param origin: (z, x, y)
@@ -29,33 +31,32 @@ def get_a2_patch(scan, origin, p_sh, a2):
     origin_a2 = center_idx - p_sh // 2  # the patch size in a2 is still p_sh
     finish_a2 = center_idx + p_sh // 2  # (z, x, y)
 
-    if scan.shape[0] < a2.shape[0]:  # scan is downsampled from a2
+    if scan.shape[0] < a2.shape[0] or all(i >= 0 for i in origin_a2) and all(m < n for m, n in zip(finish_a2, a2.shape)):
+        # scan is downsampled from a2 or
+        # a2 is downsampled from scan, original_a2 is positive, and finish_a2 is smaller than a2.shape
         idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
         a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
+
     else:
-        # a2 is downsampled from scan, so origin_a2 might be negative, finish_a2 might be greater than a2.shape
-        if all(i >= 0 for i in origin_a2) and all(m < n for m, n in zip(finish_a2, a2.shape)):
-            idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
-            a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
-        else:
-            pad_origin = np.zeros_like(origin_a2)
-            pad_finish = np.zeros_like(finish_a2)
-            for i in range(len(origin_a2)):
-                if origin_a2[i] < 0:
-                    pad_origin[i] = abs(origin_a2[i])
-                    origin_a2[i] = 0
+        # origin_a2 is negative or finish_a2 is greater than a2.shape
+        pad_origin = np.zeros_like(origin_a2)
+        pad_finish = np.zeros_like(finish_a2)
+        for i in range(len(origin_a2)):
+            if origin_a2[i] < 0:  # patch is out of the left or top of scan
+                pad_origin[i] = abs(origin_a2[i])
+                origin_a2[i] = 0
 
-                if finish_a2[i] > a2.shape[i]:
-                    pad_finish[i] = finish_a2[i] - a2.shape[i]
-                    finish_a2[i] = a2.shape[i]
+            if finish_a2[i] > a2.shape[i]:  # patch is out of the right or bottom of scan
+                pad_finish[i] = finish_a2[i] - a2.shape[i]
+                finish_a2[i] = a2.shape[i]
 
-            idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
-            a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])] # (z, x, y, 1)
+        idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
+        a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])] # (z, x, y, 1)
 
-            a2_patch = a2_patch[..., 0] # (z, x, y, 1)
-            pad_width = tuple([(i, j) for i, j in zip(pad_origin, pad_finish)])
-            a2_patch = np.pad(a2_patch, pad_width, mode='minimum') # (z, x, y)
-            a2_patch = a2_patch[..., np.newaxis] # (z, x, y, 1)
+        a2_patch = a2_patch[..., 0] # (z, x, y, 1)
+        pad_width = tuple([(i, j) for i, j in zip(pad_origin, pad_finish)])
+        a2_patch = np.pad(a2_patch, pad_width, mode='minimum') # (z, x, y)
+        a2_patch = a2_patch[..., np.newaxis] # (z, x, y, 1)
     return a2_patch
 
 def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None, a2=None):
@@ -81,7 +82,8 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
                 pad_finish[i] = abs(range_vals[i])+1 # here +1 make the scan bigger than patch size
 
         pad_width = tuple([(0, j) for j in pad_finish])
-        scan = np.pad(scan, pad_width, mode='minimum')
+        scan = np.pad(scan[-1], pad_width, mode='minimum')
+        scan = scan[..., np.newaxis]
     # print('scan shape', sh)
     # print('patch shape', p_sh)
     # print('range values', range_vals)
@@ -106,7 +108,7 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
             # print('p_middle, select small vessels!')
 
     else:
-        origin = [random.randint(0, x) for x in range_vals] # here, x+1 can avoid lob>high
+        origin = [random.randint(0, x) for x in range_vals]
         # print('No p_middle, select all vessels')
 
 
