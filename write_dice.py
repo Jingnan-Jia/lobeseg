@@ -48,7 +48,7 @@ def calculate_dices(labels, a, b):
     return dices
     
     
-def write_dices_to_csv(labels, gdth_path, pred_path, csv_file, gdth_extension='.nrrd', pred_extension='.nrrd'):
+def write_dices_to_csv(step_nb, labels, gdth_path, pred_path, csv_file, gdth_extension='.nrrd', pred_extension='.nrrd'):
     '''
     this function is to calculate dice between the files in gdth_path and pred_mask_path. all the files must be
     '.nrrd' or '.mhd'. All the files dimensions should be 4, shape is like: (512, 512, 400, 1) or (400, 512, 512, 1)
@@ -58,8 +58,8 @@ def write_dices_to_csv(labels, gdth_path, pred_path, csv_file, gdth_extension='.
     print('start calculate dice and write dices to csv')
     gdth_names, pred_names = get_gdth_pred_names(gdth_path, pred_path)
 
-    total_dices = []
-    total_dices_names = []  # dices_names corresponding to total_dices
+    total_dices_names = ['step_nb']  # dices_names corresponding to total_dices
+    total_dices = [step_nb]
     dices_values_matrix = [] # for average computation
     for gdth_name, pred_name in zip(gdth_names, pred_names):
 
