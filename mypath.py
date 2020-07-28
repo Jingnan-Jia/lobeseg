@@ -1,4 +1,5 @@
 from set_args import args
+
 import os
 import time
 import numpy as np
@@ -57,9 +58,8 @@ class Mypath(object):
             self.current_time = str (int(time.time ())) + '_' + str(np.random.randint(1000))
         self.setting = '_lr' + str (args.lr) \
                        + 'ld' + str (args.load) \
-                        + 'mtscale' + str (args.mtscale) \
-                       + 'm6l' + str(args.model_6_levels) \
-                       + 'm7l' + str(args.model_7_levels) \
+                       + 'mtscale' + str (args.mtscale) \
+                       + 'net' + str(args.model_names) \
                        + 'pm' + str(args.p_middle) \
                        + 'no_label_dir' + str(args.no_label_dir) \
                        + 'ao' + str (args.aux_output) \
