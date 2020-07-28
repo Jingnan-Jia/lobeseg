@@ -8,6 +8,7 @@ import numpy as np
 from futils.util import downsample
 from  scipy import ndimage
 from futils.vpatch import deconstruct_patch,reconstruct_patch
+import tensorflow as tf
 from tensorflow.keras.models import model_from_json
 import tensorflow.keras.backend as K
 import time
@@ -108,18 +109,28 @@ class v_segmentor(object):
             self.patching = False
 
         if type(self.model) is str: # if model is loaded from a file
-            model_path = model.split(".hdf5")
             if model.split(".hdf5")[0][-1]=='d': # for models saved according to valid metrics
                 model_path = model.split(".hdf5")[0][:-11] + 'MODEL.json'
             else:
                 model_path = model.split(".hdf5")[0][:-5]+'MODEL.json'
-            with open(model_path, "r") as json_file:
-                json_model = json_file.read()
-                self.v = model_from_json(json_model)
 
-            self.v.load_weights((self.model))
+            self.graph1 = tf.Graph()
+            with self.graph1.as_default():
+                self.session1 = tf.Session()
+                with self.session1.as_default():
+                    with open(model_path, "r") as json_file:
+                        json_model = json_file.read()
+                        self.v = model_from_json(json_model)
+                        self.v.load_weights((self.model))
+
+
         else: # model is a tf.keras model directly in RAM
-            self.v = self.model
+            self.graph1 = tf.Graph()
+            with self.graph1.as_default():
+                self.session1 = tf.Session()
+                with self.session1.as_default():
+                    self.v = self.model
+
 
     def _normalize(self,scan):
         """returns normalized (0 mean 1 variance) scan"""
@@ -127,9 +138,14 @@ class v_segmentor(object):
         scan = (scan - np.mean(scan))/(np.std(scan))
         return scan
     
-    def clear_memory(self):
-        # K.clear_session()
-        return None
+    # def clear_memory(self):
+    #     K.clear_session()
+    #     return None
+
+    def save(self, model_fpath):
+        with self.graph1.as_default():
+            with self.session1.as_default():
+                self.v.save(model_fpath)  # output a list if aux or deep supervision
 
     def predict(self,x, ori_space_list=None, stride = 0.25):
         """
@@ -205,13 +221,22 @@ class v_segmentor(object):
             x1 = x1[..., np.newaxis]
             x2 = x_patch[..., 1]
             x2 = x2[..., np.newaxis]
-            pred = self.v.predict([x1, x2], self.batch_size, verbose=0)  # output a list if aux or deep supervision
+
+            with self.graph1.as_default():
+                with self.session1.as_default():
+                        pred = self.v.predict([x1, x2], self.batch_size, verbose=1)  # output a list if aux or deep supervision
+
+
         else:
-            pred = self.v.predict(x_patch,self.batch_size,verbose=0) #output a list if aux or deep supervision
+            with self.graph1.as_default():
+                with self.session1.as_default():
+                    pred = self.v.predict(x_patch, self.batch_size,
+                                          verbose=1)  # output a list if aux or deep supervision
         if isinstance(pred, list):
             pred = pred[0]
         x6 = time.time()
         print('time for prediction:', x6-x5)
+        # K.clear_session()
 
         #turn back to image shape
         print('pred.shape before reshape:', pred.shape)
