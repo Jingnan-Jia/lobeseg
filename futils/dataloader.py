@@ -43,7 +43,7 @@ def rp_dcrt(fun): # decorator to repeat a function until succeessful
         return out
     return decorated
 
-class TwoScanIterator(Iterator):
+class ScanIterator(Iterator):
     """Class to iterate A and B 3D scans (mhd or nrrd) at the same time."""
 
     def __init__(self,
@@ -171,7 +171,7 @@ class TwoScanIterator(Iterator):
             elif len(self.zoom_range) == 2:
                 self.zoom_range = [self.zoom_range[0], self.zoom_range[1]]
 
-        super(TwoScanIterator, self).__init__(len(self.filenames), batch_size, seed,
+        super(ScanIterator, self).__init__(len(self.filenames), batch_size, seed,
                                               shuffle)
 
     def _normal_normalize(self, scan):
