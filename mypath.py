@@ -30,6 +30,28 @@ def mkdir_dcrt(fun): # decorator to create directory if not exist
 
     return decorated
 
+def get_short_names(long_names):
+    """
+    get task list according to a list of model names. one task may corresponds to multiple models.
+    :param model_names: a list of model names
+    :return: a list of tasks
+    """
+
+    net_task_dict = {
+        "net_itgt_lobe_recon": "nilr",
+        "net_itgt_vessel_recon": "nivr",
+        "net_itgt_lung_recon": "nilr",
+        "net_itgt_airway_recon": "niar",
+
+        "net_no_label": "nnl",
+
+        "net_only_lobe": "nol",
+        "net_only_vessel": "nov",
+        "net_only_lung": "nol",
+        "net_only_airway": "noa"
+    }
+    return list (map (net_task_dict.get, long_names))
+
 
 class Mypath(object):
     """
@@ -56,28 +78,38 @@ class Mypath(object):
             self.current_time = current_time
         else:
             self.current_time = str (int(time.time ())) + '_' + str(np.random.randint(1000))
+        long_names = args.model_names.split('-')
+        long_names = [i.lstrip() for i in long_names] # remove backspace before each model name
+        short_names = get_short_names(long_names)
+        short_names = '-'.join(short_names)
+
+        if args.trgt_sz:
+            tr_sz_name = 'tsz' + str(args.trgt_sz) + 'z' + str(args.trgt_z_sz)
+        else:
+            tr_sz_name = ''
+
         self.setting = '_lr' + str (args.lr) \
                        + 'ld' + str (args.load) \
                        + 'mtscale' + str (args.mtscale) \
-                       + 'net' + str(args.model_names) \
+                       + 'net' + str(short_names) \
                        + 'pm' + str(args.p_middle) \
-                       + 'no_label_dir' + str(args.no_label_dir) \
+                       + 'nld' + str(args.no_label_dir) \
                        + 'ao' + str (args.aux_output) \
                        + 'ds' + str (args.deep_supervision) \
-                       + 'dr' + str (args.dropout) \
                        + 'bn' + str (args.batch_norm) \
                        + 'fn' + str (args.feature_number) \
-                       + 'trsz' + str(args.trgt_sz) \
-                       + 'trzsz' + str(args.trgt_z_sz)\
-                       + 'trsp'+ str(args.trgt_space) \
-                       + 'trzsp'+ str(args.trgt_z_space) \
-                       + 'ptch_per_scan' + str(args.patches_per_scan) \
-                       + 'tr_nb' + str(args.tr_nb) \
-                        + 'no_label_nb' + str(args.no_label_nb) \
+                       + tr_sz_name \
+                       + 'tsp'+ str(args.trgt_space) \
+                       + 'z'+ str(args.trgt_z_space) \
+                       + 'pps' + str(args.patches_per_scan) \
+                       + 'trnb' + str(args.tr_nb) \
+                       + 'nlnb' + str(args.no_label_nb) \
                        + 'ptsz' + str (args.ptch_sz) \
                        + 'ptzsz' + str (args.ptch_z_sz)
 
         self.str_name = self.current_time + self.setting
+        a = len(self.str_name)
+        b = a
 
     def sub_dir(self):
         """

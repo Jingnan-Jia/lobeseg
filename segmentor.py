@@ -224,14 +224,14 @@ class v_segmentor(object):
 
             with self.graph1.as_default():
                 with self.session1.as_default():
-                        pred = self.v.predict([x1, x2], self.batch_size, verbose=1)  # output a list if aux or deep supervision
+                        pred = self.v.predict([x1, x2], self.batch_size, verbose=0)  # output a list if aux or deep supervision
 
 
         else:
             with self.graph1.as_default():
                 with self.session1.as_default():
                     pred = self.v.predict(x_patch, self.batch_size,
-                                          verbose=1)  # output a list if aux or deep supervision
+                                          verbose=0)  # output a list if aux or deep supervision
         if isinstance(pred, list):
             pred = pred[0]
         x6 = time.time()

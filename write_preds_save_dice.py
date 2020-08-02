@@ -12,18 +12,32 @@ import re
 from mypath import Mypath
 import futils.util as futil
 from compute_distance_metrics_and_save import write_all_metrics
+import sys
+import nvidia_smi
+import tensorflow as tf
+from tensorflow.keras import backend as K
 
-# from train_ori_fit_rec_epoch import Mypath
-#1583105196.4919333_0.00010a_o_0.5ds2dr1bn1fs16ptsz144ptzsz80
-#1583105073.503702_0.00010a_o_0.5ds2dr1bn1fs16ptsz144ptzsz80
-#1583019947.7521048_0.00010a_o_0.5ds2dr1bn1fs16ptsz144ptzsz80
-#1579084103.1121035_0.00010a_o_0.5ds2dr1bn1fs16lobesMODEL
-#1582578489.061947_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz80
-#1584789581.1021984_1e-051a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64
-#1585046531.9177752_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64
-#1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64
-#1584924633.4853625_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64
-#1585046531.9177752_0.00011a_o_0.5ds2dr1bn1fs16ptsz144ptzsz64
+
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
+sess = tf.Session(config=config)
+K.set_session(sess)  # set this TensorFlow session as the default session for Keras
+
+
+def print_free_gpu_mem():
+    nvidia_smi.nvmlInit()
+    handle = nvidia_smi.nvmlDeviceGetHandleByIndex(0)
+    # card id 0 hardcoded here, there is also a call to get all available card ids, so we could iterate
+    info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+
+    print("Total memory:", info.total)
+    print("Free memory:", info.free)
+    print("Used memory:", info.used)
+
+    nvidia_smi.nvmlShutdown()
+
+    return None
+
 '''
 '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64',
              '1584924602.9965076_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64',
@@ -104,13 +118,42 @@ from compute_distance_metrics_and_save import write_all_metrics
         '1592867477_914_lr1e-05ld1mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96', # mtscale, 5 cts
          
     
+    for lobe:
+    '1589547509_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
+    '1589547535_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+    '1589547545_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+    '1589550315_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan10tr_nb19ptsz144ptzsz96',
+    '1589550811_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan10tr_nb5ptsz144ptzsz96',
+    '1589550817_lr0.0001ld0ao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan10tr_nb5ptsz144ptzsz96'
+    
+    for vessel:
+    ['1590413648_783_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb3ptsz144ptzsz96',
+     '1590414183_839_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb1ptsz144ptzsz96',
+     '1590413385_685_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb3ptsz144ptzsz96',
+     '1590413385_284_lr0.0001ld0m6l0m7l0pm0.5no_label_dirSScao0ds0dr1bn1fn16trszNonetrzszNonetrsp0.6trzsp0.3ptch_per_scan500tr_nb1ptsz144ptzsz96'
 
+
+    ]
+    
+    '1595875612_613_lr0.0001ld0mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+    '1595878407_302_lr0.0001ld0mtscale1netnol-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
+    '1595875648_331_lr0.0001ld0mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+    '1595878305_786_lr0.0001ld0mtscale1netnol-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
+    
+        '1595877571_251_lr0.0001ld0mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+    '1595878666_42_lr0.0001ld0mtscale0netnol-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
+    '1595876197_377_lr0.0001ld0mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+    '1595888909_592_lr0.0001ld0mtscale0netnol-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
+    
 '''
 task='lobe'
-str_names = ['1592867294_862_lr1e-05ld1mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18ptsz144ptzsz96', # mtscale, 18 cts
-        '1592867477_914_lr1e-05ld1mtscale1m6l0m7l0pm0.5no_label_dirNoneao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb5ptsz144ptzsz96' # mtscale, 5 cts
-             ]
+str_names = [
+'1596150206_327_lr1e-05ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1596148486_486_lr0.0001ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1596148055_918_lr0.0001ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1596148022_261_lr1e-05ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96'
 
+]
 print(str_names)
 
 
@@ -120,7 +163,7 @@ for str_name in str_names:
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
     # model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'
     # ptch_z_sz = int(str_name.split('ptzsz')[-1])
-    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL.hdf5'
+    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL_valid.hdf5'
 
     # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
     a = str_name.split('trsp')
@@ -138,7 +181,7 @@ for str_name in str_names:
     tr_sz = None
     tr_z_sz = None
 
-    print('patch_sz', ptch_sz, 'patch_z_size', ptch_z_sz)
+    # print('patch_sz', ptch_sz, 'patch_z_size', ptch_z_sz)
 
     for phase in ['valid']:
         if task=='lobe':
@@ -150,14 +193,15 @@ for str_name in str_names:
                                     model=model_name,
                                     ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
                                     trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
-                                    trgt_space_list=[tr_z_sp, tr_sp, tr_sp],  # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
+                                    trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
+                                    # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
                                     task=task)
 
         write_preds_to_disk(segment=segment,
                             data_dir=mypath.ori_ct_path(phase),
                             preds_dir=mypath.pred_path(phase),
-                            number=5, stride=0.5)
-        #
+                            number=5,
+                            stride=0.25)
         #
         # write_dices_to_csv (labels=labels,
         #                     gdth_path=mypath.gdth_path(phase),

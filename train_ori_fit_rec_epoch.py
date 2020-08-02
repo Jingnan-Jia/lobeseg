@@ -181,11 +181,11 @@ def train():
 
         if args.load: # load saved model
             if task=='lobe':
-                old_name = '1593000414_895_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
-            elif task=='vessel':
-                old_name = '1593000414_802_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
-            elif task=='no_label':
-                old_name = '1593000414_570_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
+                old_name = '1595878305_786_lr0.0001ld0mtscale1netnol-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96'
+            # elif task=='vessel':
+            #     old_name = '1593000414_802_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
+            # elif task=='no_label':
+            #     old_name = '1593000414_570_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
             saved_model = mypath.model_fpath_best_train(str_name=old_name)
             net.load_weights(saved_model)
             print('loaded weights successfully from: ', saved_model)
