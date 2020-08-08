@@ -89,6 +89,7 @@ class Mypath(object):
             tr_sz_name = ''
 
         self.setting = '_lr' + str (args.lr) \
+                       + 'lrvs' + str (args.lr_vs) \
                        + 'ld' + str (args.load) \
                        + 'mtscale' + str (args.mtscale) \
                        + 'net' + str(short_names) \

@@ -145,13 +145,42 @@ def print_free_gpu_mem():
     '1595876197_377_lr0.0001ld0mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
     '1595888909_592_lr0.0001ld0mtscale0netnol-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
     
-'''
-task='lobe'
-str_names = [
-'1596150206_327_lr1e-05ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+    '1595934933_835_lr0.0001ld0mtscale1netnol-novpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
+    '1595934933_727_lr0.0001ld0mtscale1netnol-nov-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
+    '1595934933_562_lr0.0001ld0mtscale1netnol-novpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
+    '1595934933_588_lr0.0001ld0mtscale1netnol-nov-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96'
+    
+    
+    
+    
 '1596148486_486_lr0.0001ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
 '1596148055_918_lr0.0001ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
-'1596148022_261_lr1e-05ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96'
+'1596282280_398_lr0.0001ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1596282736_533_lr0.0001ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+'1596282782_472_lr0.0001ld1mtscale0netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+'1596282864_156_lr0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1596282909_196_lr0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1596282954_794_lr0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+'1596282987_709_lr0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+
+'1596492575_641_lr0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96'.
+'1596492575_57_lr0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96'.
+'1596492575_540_lr0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96'.
+'1596492575_956_lr0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96'.
+
+'1596750032_237_lr0.0001ld0mtscale0netnovpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
+'1596750032_417_lr0.0001ld0mtscale0netnov-nnlpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
+'1596750032_566_lr0.0001ld0mtscale0netnovpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
+'1596750032_130_lr0.0001ld0mtscale0netnov-nnlpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
+
+    
+'''
+task='vessel'
+str_names = [
+'1596750032_237_lr0.0001ld0mtscale0netnovpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
+'1596750032_417_lr0.0001ld0mtscale0netnov-nnlpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
+'1596750032_566_lr0.0001ld0mtscale0netnovpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
+'1596750032_130_lr0.0001ld0mtscale0netnov-nnlpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96'
 
 ]
 print(str_names)
@@ -176,8 +205,11 @@ for str_name in str_names:
     # tr_sz = float(re.findall(r'\d+', str_name.split('trsz')[-1])[0])
     # tr_z_sz = float(re.findall(r'\d+', str_name.split('trzsz')[-1])[0])
 
-    tr_sp = 1.4
-    tr_z_sp = 2.5
+    if task == 'lobe':
+        tr_sp, tr_z_sp = 1.4, 2.5
+    elif task=='vessel':
+        tr_sp, tr_z_sp = 0, 0
+
     tr_sz = None
     tr_z_sz = None
 
@@ -186,8 +218,10 @@ for str_name in str_names:
     for phase in ['valid']:
         if task=='lobe':
             labels = [0, 4, 5, 6, 7, 8]
+            stride = 0.25
         elif task=='vessel':
             labels = [0, 1]
+            stride = 0.5
 
         segment = v_seg.v_segmentor(batch_size=1,
                                     model=model_name,

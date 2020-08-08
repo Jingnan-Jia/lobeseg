@@ -165,6 +165,8 @@ def train():
     net_list = cpmodels.load_cp_models(model_names,
                                            nch=1,
                                            lr=args.lr,
+                                           lr_vs=args.lr_vs,
+                                           lr_rc=args.lr_rc,
                                            nf=args.feature_number,
                                            bn=args.batch_norm,
                                            dr=args.dropout,
@@ -181,7 +183,7 @@ def train():
 
         if args.load: # load saved model
             if task=='lobe':
-                old_name = '1595878305_786_lr0.0001ld0mtscale1netnol-nnlpm0.5nldGLUCOLDao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96'
+                old_name = args.old_name
             # elif task=='vessel':
             #     old_name = '1593000414_802_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
             # elif task=='no_label':
@@ -289,6 +291,8 @@ def train():
                     save_model_best_valid(dice_file=mypath.dices_fpath(phase),
                                           segment=segment,
                                           model_fpath=mypath.model_fpath_best_valid())
+
+                    print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
 
                     # if set(model_names) != set(['net_only_lobe', 'net_only_vessel']) and set(model_names) != set(
                     #         ['net_only_lobe', 'net_only_vessel', 'net_no_label']):  # lr1

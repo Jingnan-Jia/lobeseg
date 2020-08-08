@@ -3,6 +3,10 @@ import argparse
 parser = argparse.ArgumentParser(description='End2End Semi-Supervised Lobe Segmentation')
 
 parser.add_argument('-lr','--lr',help='learning rate', type=float,default=0.0001)
+parser.add_argument('-lr_vs','--lr_vs',help='learning rate for vessel segmentation', type=float,default=0.0001)
+parser.add_argument('-lr_rc','--lr_rc',help='learning rate for reconstruction', type=float,default=0.00001)
+
+
 parser.add_argument('-load', '--load', help='load last model', type=int, default=0)
 parser.add_argument('-aux', '--aux_output', help='Value of Auxiliary Output', type=float, default=0)
 parser.add_argument('-ds', '--deep_supervision', help='Number of Deep Supervisers', type=int, default=0)
@@ -22,6 +26,10 @@ parser.add_argument('-no_label_dir', '--no_label_dir', help='sub directory of no
 parser.add_argument('-p_middle', '--p_middle', help='p_middle = 0.5 means sample in the middle parts', type=float, default=0.5)
 parser.add_argument('-model_names', '--model_names', help='model names', type=str, default='net_only_lobe-net_no_label')
 parser.add_argument('-mtscale', '--mtscale', help='get a model of multi scales  net', type=int, default=1)
-parser.add_argument('-no_label_nb', '--no_label_nb', help='number of traing data for reconstruction)', type=int, default=18)
+parser.add_argument('-no_label_nb', '--no_label_nb', help='number of traing data for reconstruction', type=int, default=18)
+parser.add_argument('-old_name', '--old_name', help='old_name of loads', type=str, default='None')
+
+
+
 
 args = parser.parse_args()
