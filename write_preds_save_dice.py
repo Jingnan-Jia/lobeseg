@@ -17,26 +17,10 @@ import nvidia_smi
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
 sess = tf.Session(config=config)
 K.set_session(sess)  # set this TensorFlow session as the default session for Keras
-
-
-def print_free_gpu_mem():
-    nvidia_smi.nvmlInit()
-    handle = nvidia_smi.nvmlDeviceGetHandleByIndex(0)
-    # card id 0 hardcoded here, there is also a call to get all available card ids, so we could iterate
-    info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
-
-    print("Total memory:", info.total)
-    print("Free memory:", info.free)
-    print("Used memory:", info.used)
-
-    nvidia_smi.nvmlShutdown()
-
-    return None
 
 '''
 '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64',
@@ -173,19 +157,47 @@ def print_free_gpu_mem():
 '1596750032_566_lr0.0001ld0mtscale0netnovpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
 '1596750032_130_lr0.0001ld0mtscale0netnov-nnlpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
 
+
+
+'1596926882_451_lr0.0001lrvs0.0001ld1mtscale1netnovpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1596926882_96_lr0.0001lrvs0.0001ld1mtscale1netnovpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1596926882_784_lr0.0001lrvs0.0001ld1mtscale1netnovpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+'1596926882_209_lr0.0001lrvs0.0001ld1mtscale1netnovpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+
+'1597066656_855_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb5nlnb0ptsz144ptzsz96',
+'1597066656_482_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb5nlnb0ptsz144ptzsz96',
+'1597066656_632_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb18nlnb0ptsz144ptzsz96',
+'1597066656_951_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb18nlnb0ptsz144ptzsz96',
+
+'1597013371_607_lr0.0001lrvs0.0001ld1mtscale1netnovpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1597013371_561_lr0.0001lrvs0.0001ld1mtscale1netnovpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1597013371_569_lr0.0001lrvs0.0001ld1mtscale1netnovpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+'1597013371_780_lr0.0001lrvs0.0001ld1mtscale1netnovpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
     
+    
+   
+'1597011428_532_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1597011428_999_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1597011428_927_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+'1597011428_590_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+
+'1597011627_773_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1597011627_868_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+'1597011627_520_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+'1597011627_353_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+
+
+
 '''
 task='vessel'
 str_names = [
-'1596750032_237_lr0.0001ld0mtscale0netnovpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
-'1596750032_417_lr0.0001ld0mtscale0netnov-nnlpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb5ptsz144ptzsz96',
-'1596750032_566_lr0.0001ld0mtscale0netnovpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96',
-'1596750032_130_lr0.0001ld0mtscale0netnov-nnlpm0.5nldSScao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb18ptsz144ptzsz96'
+'1597066656_855_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb5nlnb0ptsz144ptzsz96',
+'1597066656_482_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb5nlnb0ptsz144ptzsz96',
+'1597066656_632_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb18nlnb0ptsz144ptzsz96',
+'1597066656_951_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb18nlnb0ptsz144ptzsz96',
 
 ]
 print(str_names)
-
-
 
 for str_name in str_names:
     mypath = Mypath(task, current_time=str_name)
@@ -195,25 +207,24 @@ for str_name in str_names:
     model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL_valid.hdf5'
 
     # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
-    a = str_name.split('trsp')
-    b = str_name.split('ptsz')
+    # a = str_name.split('trsp')
+    # b = str_name.split('ptsz')
+    #
+    # ptch_z_sz = int(re.findall(r'^\d+|^None', str_name.split('ptzsz')[-1])[0])
+    # ptch_sz = int(re.findall(r'^\d+|^None', str_name.split('ptsz')[-1])[0])
+    # tr_sp = float(re.findall(r'^\d+|^None', str_name.split('tsp')[-1])[0])
+    # tr_z_sp = float(re.findall(r'^\d+|^None', str_name.split('tsp**z')[-1])[0])
+    # tr_sz = float(re.findall(r'^\d+|^None', str_name.split('trsz')[-1])[0])
+    # tr_z_sz = float(re.findall(r'^\d+|None', str_name.split('trzsz')[-1])[0])
+    # ld = re.findall(r'^\d+|^None', str_name.split('ld')[-1])[0]
 
-    ptch_z_sz = int(re.findall(r'\d+', str_name.split('ptzsz')[-1])[0])
-    ptch_sz = int(re.findall(r'\d+', str_name.split('ptsz')[-1])[0])
-    # tr_sp = float(re.findall(r'\d+', str_name.split('trsp')[-1])[0])
-    # tr_z_sp = float(re.findall(r'\d+', str_name.split('trzsp')[-1])[0])
-    # tr_sz = float(re.findall(r'\d+', str_name.split('trsz')[-1])[0])
-    # tr_z_sz = float(re.findall(r'\d+', str_name.split('trzsz')[-1])[0])
 
-    if task == 'lobe':
-        tr_sp, tr_z_sp = 1.4, 2.5
-    elif task=='vessel':
-        tr_sp, tr_z_sp = 0, 0
+    tr_sp, tr_z_sp = None, None
+    tr_sz, tr_z_sz = None, None
+    pt_sz, pt_z_sz = 144, 96
 
-    tr_sz = None
-    tr_z_sz = None
 
-    # print('patch_sz', ptch_sz, 'patch_z_size', ptch_z_sz)
+    print('patch_sz', pt_sz, 'patch_z_size', pt_z_sz)
 
     for phase in ['valid']:
         if task=='lobe':
@@ -221,21 +232,22 @@ for str_name in str_names:
             stride = 0.25
         elif task=='vessel':
             labels = [0, 1]
-            stride = 0.5
+            stride = 0.25
 
         segment = v_seg.v_segmentor(batch_size=1,
                                     model=model_name,
-                                    ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
+                                    ptch_sz=pt_sz, ptch_z_sz=pt_z_sz,
                                     trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
                                     trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
                                     # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
                                     task=task)
 
+        print('stride is', stride)
         write_preds_to_disk(segment=segment,
                             data_dir=mypath.ori_ct_path(phase),
                             preds_dir=mypath.pred_path(phase),
                             number=5,
-                            stride=0.25)
+                            stride=stride)
         #
         # write_dices_to_csv (labels=labels,
         #                     gdth_path=mypath.gdth_path(phase),

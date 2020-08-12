@@ -110,7 +110,6 @@ class Mypath(object):
 
         self.str_name = self.current_time + self.setting
         a = len(self.str_name)
-        b = a
 
     def sub_dir(self):
         """

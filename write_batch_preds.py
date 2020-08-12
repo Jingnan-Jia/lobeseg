@@ -33,37 +33,22 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
         scan_files = scan_files[number[0]:number[1]]
     print('Predicted files are:', scan_files)
 
-    # segment = v_seg.v_segmentor (batch_size=batch_size, model=model_name,
-    #                              ptch_sz=ptch_sz, ptch_z_sz=ptch_z_sz,
-    #                              trgt_sz=trgt_sz, trgt_z_sz=trgt_z_sz,
-    #                              trgt_space_list=trgt_space_list,
-    #                              task=task)
     t1 = time.time ()
     for scan_file in scan_files:
 
         # ct_scan.shape: (717,, 512, 512), spacing: 0.5, 0.741, 0.741
         ct_scan, origin, spacing = futil.load_itk (filename=scan_file)
-
         print ('Spacing: ', spacing, 'size', ct_scan.shape)
 
         # NORMALIZATION
         ct_scan = futil.normalize (ct_scan)
-
-
-
         mask = segment.predict (ct_scan[..., np.newaxis], ori_space_list=spacing, stride=stride) # shape: (717, 512, 512,1)
 
-
         # Save the segmentation
-
         if not os.path.exists (preds_dir):
             os.makedirs (preds_dir)
         futil.save_itk (preds_dir + '/' + scan_file.split ('/')[-1], mask, origin, spacing)
         print ('save ct mask at', preds_dir + '/' + scan_file.split ('/')[-1])
-
-
-    # segment.clear_memory()
-    # del segment
 
     t2 = time.time()
     print ('finishe a batch of predition, time cost: ', t2 - t1)
