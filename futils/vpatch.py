@@ -10,7 +10,22 @@ Created on  May 06 14:57:47 2020
 import numpy as np
 import random
 import sys
+from functools import wraps
+import time
 
+def calculate_time(fun):
+    @wraps(fun)
+    def decorated(*args, **kwargs):
+        time1 = time.time()
+        result = fun(*args, **kwargs)
+        time2 = time.time()
+        s = time2 - time1
+        m = s/60
+        h = m/60
+        print('the time cost by ', fun.__name__ , ' is ', m, ' mints.')
+        return result
+
+    return decorated
 
 def get_a2_patch(scan, origin, p_sh, a2):
     """
@@ -141,6 +156,81 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     else:
         return patch
 
+def get_n_patches(scan, patch_shape=(64, 128, 128), stride=0.25):
+    sh = np.array(scan.shape, dtype=int)
+    p_sh = np.array(patch_shape, dtype=int)
+
+    if isinstance(stride, float) or stride == 1:
+        stride = p_sh * stride
+    elif isinstance(stride, list):
+        stride = np.ones(3) * stride
+    else:
+        raise Exception('the stride is wrong', stride)
+
+    stride = stride.astype(int)
+    n_patches = (sh[0:3] - p_sh + 2 * stride) // stride  # number of patches to cover  the whole image
+    n_patches = n_patches[0] * n_patches[1] * n_patches[2]
+
+    return  n_patches
+@calculate_time
+def deconstruct_patch_gen(scan, patch_shape=(64, 128, 128), stride=0.25, a2=None):
+    """
+    deconstruct a ct to a batch of patches.
+
+    :param scan: a ct array which need to be deconstructed to (overlapped) patches. shape (z, x, y, 1)
+    :param patch_shape: shape (z, x, y)
+    :param stride: overlap ratio along each axil. float between 0~1 means the same overlap ratio along all axils;1 means
+     no overlap, a list means the corresponding different overlap ratio along different axils.
+    :return: a batch of patches, shape (nb_ptches, z, x, y, chn)
+    """
+    sh = np.array(scan.shape, dtype=int)
+    p_sh = np.array(patch_shape, dtype=int)
+
+    if isinstance(stride, float) or stride == 1:
+        stride = p_sh * stride
+    elif isinstance(stride, list):
+        stride = np.ones(3) * stride
+    else:
+        raise Exception('the stride is wrong', stride)
+
+    stride = stride.astype(int)
+    n_patches = (sh[0:3] - p_sh + 2 * stride) // stride  # number of patches to cover  the whole image
+    print('number of patches: ', n_patches)
+    patches = []
+
+    for z, x, y in np.ndindex(tuple(n_patches)):
+        it = np.array([z, x, y], dtype=int)
+        origin = it * stride
+        finish = it * stride + p_sh
+        for i in range(len(finish)):  # when we meet the last patch
+            if finish[i] >= sh[i]:
+                finish[i] = sh[i] - 1
+                origin[i] = finish[i] - p_sh[i]
+        idx = [np.arange(o_, f_) for o_, f_ in zip(origin, finish)]
+        patch = scan[np.ix_(idx[0], idx[1], idx[2])]  # (96, 144, 144, 1)
+        if a2 is not None:  # mtscale is 1
+            # print('patching for a2 of mtscale')
+            a2_patch = get_a2_patch(scan, origin, p_sh, a2)  # (96, 144, 144, 1)
+
+            if scan.shape[0] > a2.shape[
+                0]:
+                # scan is original resolution, a2 is downsampled, we put patch from original resolutiion at first
+                patch = np.concatenate((patch, a2_patch), axis=-1)  # concatenate along the channel axil
+            else:  # a2 is original resolution, scan is downsampled, we put patch from original resolutiion at first still
+                patch = np.concatenate((a2_patch, patch), axis=-1)  # concatenate along the channel axil
+
+        patch = np.rollaxis(patch,0,3) # 48, 144, 144, 80, 1
+        patch = patch[np.newaxis, ...]
+
+        if a2 is not None:
+            x1 = patch[..., 0]
+            x1 = x1[..., np.newaxis]
+            x2 = patch[..., 1]
+            x2 = x2[..., np.newaxis]
+            patch = [x1, x2]
+
+        yield patch
+
 def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25, a2=None):
     """
     deconstruct a ct to a batch of patches.
@@ -162,6 +252,7 @@ def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25, a2=None):
     
     stride = stride.astype(int)
     n_patches =   (sh[0:3] - p_sh + 2 * stride)  // stride # number of patches to cover  the whole image
+    print('number of patches: ', n_patches)
     patches = []
     
     for z,x,y in np.ndindex(tuple(n_patches)):
@@ -174,13 +265,14 @@ def deconstruct_patch(scan,patch_shape=(64,128,128),stride = 0.25, a2=None):
                 origin[i] = finish[i] - p_sh[i]
         idx = [np.arange(o_,f_) for o_,f_ in zip(origin,finish)]
         patch = scan[np.ix_(idx[0],idx[1],idx[2])]  #(96, 144, 144, 1)
-        if a2 is not None:  # mtscale
+        if a2 is not None:  # mtscale is 1
+            print('patching for a2 of mtscale')
             a2_patch = get_a2_patch(scan, origin, p_sh, a2) #(96, 144, 144, 1)
 
             if scan.shape[0] > a2.shape[0]:  # scan is original resolution, a2 is downsampled, we put patch from original resolutiion at first
                 patch = np.concatenate((patch, a2_patch), axis=-1)  # concatenate along the channel axil
             else:  # a2 is original resolution, scan is downsampled, we put patch from original resolutiion at first still
-                patch = np.concatenate((a2_patch, patch), axis=-1)  # concatenate along the channel axil
+                patch = np.concatenate((a2_patch, patch), axis=-1)  # concatenate along the channel axil , 96, 144, 144, 2
 
         patches.append(patch)
 
@@ -240,4 +332,67 @@ def reconstruct_patch(scan,original_shape=(128,256,256),stride = 0.25):
     result = np.divide(result,r_sum) 
     
     return result
-    
+
+
+
+
+
+@calculate_time
+def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stride=0.25, chn=6):
+    """
+    reconstruct a ct from a batch of patches.
+
+    :param scan: a batch of patches array, shape(nb, z, x, y, chn), 5 dims
+    :param original_shape: shape of original ct scan, shape (z, x, y, 1), 4 dims
+    :param stride: overlap ratio on each axil
+    :return: a ct with original shape (z, x, y)
+    """
+
+
+
+
+    p_sh = np.array(ptch_shape)  # shape (z, x, y)
+    sh = np.array(original_shape, dtype=int)[:-1]  # shape (z, x, y)
+
+    if isinstance(stride, float) or stride == 1:
+        stride = p_sh * stride
+    elif isinstance(stride, list):
+        stride = np.ones(3) * stride
+    else:
+        raise Exception('the stride is wrong', stride)
+
+    stride = stride.astype(int)
+
+    n_patches = (sh - p_sh + 2 * stride) // stride
+    print('number of patches to reconstruct: ', n_patches)
+
+    # init result
+    result = np.zeros(tuple(sh) + (chn,), dtype=float)
+    n = 0
+    for z, x, y in np.ndindex(tuple(n_patches)):
+        n += 1
+        # print('reconstruct patch number ', n)
+        it = np.array([z, x, y], dtype=int)
+        origin = it * stride
+        finish = it * stride + p_sh
+
+        for i in range(len(finish)):  # when we meet the last patch
+            if finish[i] >= sh[i]:
+                finish[i] = sh[i] - 1
+                origin[i] = finish[i] - p_sh[i]
+
+        idx = [np.arange(o_, f_) for o_, f_ in zip(origin, finish)]
+        patch = next(scan) # (125, 128, 128, 64, 6)
+        patch = np.rollaxis(patch, 3, 1)  # (125, 64, 128, 128, 6)
+        result[np.ix_(idx[0], idx[1], idx[2])] += patch[0]
+
+    # normalize (0-1) output
+    r_sum = np.sum(result, axis=-1)
+
+    r_sum[r_sum == 0] = 1  # hmm this should not be necessary - but it is :(
+    r_sum = np.repeat(r_sum[:, :, :, np.newaxis], chn, -1)
+    # repeat the sum along channel axis (to allow division)
+
+    result = np.divide(result, r_sum)
+
+    return result

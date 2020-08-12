@@ -184,8 +184,8 @@ def train():
         if args.load: # load saved model
             if task=='lobe':
                 old_name = args.old_name
-            # elif task=='vessel':
-            #     old_name = '1593000414_802_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
+            elif task=='vessel':
+                old_name = args.old_name
             # elif task=='no_label':
             #     old_name = '1593000414_570_lr0.0001ld0mtscale1m6l0m7l0pm0.0no_label_dirLUNA16ao0ds0dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan100tr_nb18no_label_nb400ptsz144ptzsz96'
             saved_model = mypath.model_fpath_best_train(str_name=old_name)
@@ -198,6 +198,8 @@ def train():
             json_file.write (model_json)
             print ('successfully write new json file of task ', task, mypath.json_fpath())
 
+        if task=='vessel' and args.mtscale==0 and args.trgt_space!=0:
+            raise Exception('trget spacing should be 0 for vessel segmentation in normal U-net')
         if task == 'vessel' or task=='no_label':
             b_extension = '.mhd'
             aux=0

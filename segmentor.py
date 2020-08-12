@@ -7,7 +7,7 @@ Created on Wed Apr 12 10:20:10 2017
 import numpy as np
 from futils.util import downsample
 from  scipy import ndimage
-from futils.vpatch import deconstruct_patch,reconstruct_patch
+from futils.vpatch import deconstruct_patch,reconstruct_patch, deconstruct_patch_gen, reconstruct_patch_gen
 import tensorflow as tf
 from tensorflow.keras.models import model_from_json
 import tensorflow.keras.backend as K
@@ -147,6 +147,13 @@ class v_segmentor(object):
             with self.session1.as_default():
                 self.v.save(model_fpath)  # output a list if aux or deep supervision
 
+    def predict_gen(self, x_patch_gen):
+        with self.graph1.as_default():
+            with self.session1.as_default():
+                for x_patch in x_patch_gen:
+                    pred = self.v.predict(x_patch, verbose=0)
+                    yield pred
+
     def predict(self,x, ori_space_list=None, stride = 0.25):
         """
 
@@ -156,20 +163,19 @@ class v_segmentor(object):
         :return:
         """
         self.ori_space_list = ori_space_list #ori_space_list: 0.5, 0.741, 0.741
-        #save shape for further upload
+        #save shape for further upsample
         original_shape = x.shape     #ct_scan.shape: (717,, 512, 512, 1),
         
         #normalize input
         x_ori = self._normalize(x)  #ct_scan.shape: (717,, 512, 512, 1)
 
         print('self.trgt_space_list', self.trgt_space_list)
-        t1 = time.time()
+
         layers = [l.name for l in self.v.layers]
         if 'input_2' in layers:
             self.mtscale=True
         else:
             self.mtscale=False
-
 
         if any(self.trgt_space_list) or any(self.trgt_sz_list):
             if not self.mtscale or self.task=='lobe':
@@ -189,67 +195,19 @@ class v_segmentor(object):
             x = x_ori
             a2 = None
 
+        if not self.patching:
+            raise Exception('patching is not valid! ')
 
-        t2 = time.time()
-        print('time for rescale:', t2 - t1)
-        t3 = time.time()
+        patch_shape = (self.z_sz, self.ptch_sz, self.ptch_sz)
+        x_patch_gen = deconstruct_patch_gen(x, patch_shape=patch_shape, stride=stride, a2=a2)
 
-        if(self.patching):
-            if self.mtscale: # mtscale
-                print ('start patching for mtscale')
-                x_patch = deconstruct_patch(x,patch_shape=(self.z_sz,self.ptch_sz,self.ptch_sz), stride = stride, a2=a2)
-            else:
-                print('start patching for not mtscale')
-                x_patch = deconstruct_patch(x, patch_shape=(self.z_sz, self.ptch_sz, self.ptch_sz), stride=stride)
-            print('x_patch.shape', x_patch.shape) #(125, 64, 128, 128,1 or 2)
-            t4 = time.time()
-            print('time for deconstruct patch:', t4-t3)
+        pre_gen = self.predict_gen(x_patch_gen)
+        if self.task=='lobe':
+            CHN=6
         else:
-            x_patch = x
-            raise Exception('exception this condition')
-
-        # x_patch = x_patch
-        #update shape to NN - > slice axis is the last in the network
-        x_patch = np.rollaxis(x_patch,1,4) # 48, 144, 144, 80, 1
-        print('shape before feeding data to model', x_patch.shape)
-        
-      
-        #run predict
-        x5 = time.time()
-        if 'input_2' in layers:
-            x1 = x_patch[..., 0]
-            x1 = x1[..., np.newaxis]
-            x2 = x_patch[..., 1]
-            x2 = x2[..., np.newaxis]
-
-            with self.graph1.as_default():
-                with self.session1.as_default():
-                        pred = self.v.predict([x1, x2], self.batch_size, verbose=0)  # output a list if aux or deep supervision
-
-
-        else:
-            with self.graph1.as_default():
-                with self.session1.as_default():
-                    pred = self.v.predict(x_patch, self.batch_size,
-                                          verbose=0)  # output a list if aux or deep supervision
-        if isinstance(pred, list):
-            pred = pred[0]
-        x6 = time.time()
-        print('time for prediction:', x6-x5)
-        # K.clear_session()
-
-        #turn back to image shape
-        print('pred.shape before reshape:', pred.shape)
-        pred = np.reshape(pred,(pred.shape[0],self.ptch_sz,self.ptch_sz,self.z_sz,-1))
-        pred = np.rollaxis(pred,3,1) # (125, 64, 128, 128, 6)
-        
-        
-        
-        if(self.patching):
-            x7 = time.time()
-            pred = reconstruct_patch(pred, original_shape=x.shape,stride = stride) #pred has 5 dims, original_shape has 4 dims
-            x8 = time.time()
-            print('time for reconstruct patch:', x8-x7)
+            CHN=2
+        pred = reconstruct_patch_gen(pre_gen, ptch_shape=patch_shape, original_shape=x.shape,stride = stride, chn=CHN)
+        #pred has 5 dims, original_shape has 4 dims
 
         #one hot decoding
         masks = []
