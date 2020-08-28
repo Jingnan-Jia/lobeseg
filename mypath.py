@@ -36,18 +36,17 @@ def get_short_names(long_names):
     :param model_names: a list of model names
     :return: a list of tasks
     """
-
     net_task_dict = {
         "net_itgt_lobe_recon": "nilr",
         "net_itgt_vessel_recon": "nivr",
-        "net_itgt_lung_recon": "nilr",
+        "net_itgt_lung_recon": "niur",
         "net_itgt_airway_recon": "niar",
 
         "net_no_label": "nnl",
 
         "net_only_lobe": "nol",
         "net_only_vessel": "nov",
-        "net_only_lung": "nol",
+        "net_only_lung": "no", # avoid repeating nol
         "net_only_airway": "noa"
     }
     return list (map (net_task_dict.get, long_names))
@@ -88,28 +87,26 @@ class Mypath(object):
         else:
             tr_sz_name = ''
 
-        self.setting = '_lr' + str (args.lr) \
+        self.setting = '_lrlb' + str (args.lr_lb) \
                        + 'lrvs' + str (args.lr_vs) \
-                       + 'ld' + str (args.load) \
                        + 'mtscale' + str (args.mtscale) \
                        + 'net' + str(short_names) \
                        + 'pm' + str(args.p_middle) \
                        + 'nld' + str(args.no_label_dir) \
                        + 'ao' + str (args.aux_output) \
                        + 'ds' + str (args.deep_supervision) \
-                       + 'bn' + str (args.batch_norm) \
-                       + 'fn' + str (args.feature_number) \
                        + tr_sz_name \
                        + 'tsp'+ str(args.trgt_space) \
                        + 'z'+ str(args.trgt_z_space) \
                        + 'pps' + str(args.patches_per_scan) \
-                       + 'trnb' + str(args.tr_nb) \
-                       + 'nlnb' + str(args.no_label_nb) \
+                       + 'lbnb' + str(args.lb_tr_nb) \
+                       + 'vsnb' + str(args.vs_tr_nb) \
+                       + 'nlnb' + str(args.rc_tr_nb) \
                        + 'ptsz' + str (args.ptch_sz) \
                        + 'ptzsz' + str (args.ptch_z_sz)
 
         self.str_name = self.current_time + self.setting
-        a = len(self.str_name)
+        a = len(self.str_name)  # name longer than 256 would be invalid to write and read
 
     def sub_dir(self):
         """
@@ -124,28 +121,16 @@ class Mypath(object):
             sub_dir = 'SSc' # todo: set different vessel dataset apart form SSc, to verify the effect of spacing
         elif self.task == 'no_label':
             sub_dir = args.no_label_dir
-
         return sub_dir
 
     @mkdir_dcrt
-    def train_dir(self):
+    def data_dir(self, phase):
         """
-        training directory.
-
-        :return: training dataset directory for a specific task
+        data directory.
+        :return: data dataset directory for a specific task
         """
-        train_dir = self.data_path + '/' + self.task + '/train'
-        return train_dir
-
-    @mkdir_dcrt
-    def valid_dir(self):
-        """
-        validation directory.
-
-        :return: validation dataset directory for a specific task
-        """
-        valid_dir = self.data_path + '/' + self.task + '/valid'
-        return valid_dir
+        data_dir = self.data_path + '/' + self.task + '/' + phase
+        return data_dir
 
     @mkdir_dcrt
     def task_log_dir(self):
@@ -166,16 +151,6 @@ class Mypath(object):
         return task_model_dir
 
     @mkdir_dcrt
-    def log_fpath(self):
-        """
-        log full path.
-
-        :return: log full path with suffix .log
-        """
-        task_log_dir = self.task_log_dir()
-        return task_log_dir + '/' + self.str_name + '.log'
-
-    @mkdir_dcrt
     def tr_va_log_fpath(self):
         """
         log full path to save training and validation measuremets during training.
@@ -186,14 +161,14 @@ class Mypath(object):
         return task_log_dir + '/' + self.str_name + 'tr_va.log'
 
     @mkdir_dcrt
-    def train_log_fpath(self):
+    def log_fpath(self, phase):
         """
         log full path to save training  measuremets during training.
 
         :return: log full path with suffix .log
         """
         task_log_dir = self.task_log_dir()
-        return task_log_dir + '/' + self.str_name + 'train.log'
+        return task_log_dir + '/' + self.str_name + phase + '.log'
 
     @mkdir_dcrt
     def model_figure_path(self):
@@ -213,46 +188,35 @@ class Mypath(object):
         :return: model json full path
         """
         task_model_path = self.task_model_dir()
-        return task_model_path + '/' + self.str_name + 'MODEL.json'
+        return task_model_path + '/' + self.str_name + '.json'
 
     @mkdir_dcrt
-    def best_va_loss_location(self):
-        """
-        full path to save best model according to validation loss.
-        :return: full path
-        """
-        task_model_path = self.task_model_dir()
-        return task_model_path + '/' + self.str_name + '_tr_best.hdf5'
-
-
-
-    @mkdir_dcrt
-    def model_fpath_best_train(self, str_name=None):
+    def model_fpath_best_patch(self, phase, str_name=None):
         """
         full path to save best model according to training loss.
         :return: full path
         """
         task_model_path = self.task_model_dir()
         if str_name is None:
-            return task_model_path + '/' + self.str_name + 'MODEL.hdf5'
+            return task_model_path + '/' + self.str_name + '_patch_' + phase + '.hdf5'
         else:
-            return task_model_path + '/' + str_name + 'MODEL.hdf5'
+            return task_model_path + '/' + str_name + '_patch_' + phase + '.hdf5'
 
     @mkdir_dcrt
-    def model_fpath_best_valid(self, str_name=None):
+    def best_model_fpath(self, phase='train', str_name=None):
         """
         full path to save best model according to training loss.
         :return: full path
         """
         task_model_path = self.task_model_dir()
         if str_name is None:
-            return task_model_path + '/' + self.str_name + 'MODEL_valid.hdf5'
+            return task_model_path + '/' + self.str_name + '_' + phase + '.hdf5'
         else:
-            return task_model_path + '/' + str_name + 'MODEL_valid.hdf5'
+            return task_model_path + '/' + str_name + '_' + phase + '.hdf5'
 
 
     @mkdir_dcrt
-    def ori_ct_path(self, phase='train', sub_dir=None):
+    def ori_ct_path(self, phase, sub_dir=None):
         """
         absolute directory of the original ct for training dataset
         :param phase: 'train' or 'valid'
@@ -265,7 +229,7 @@ class Mypath(object):
         return data_path
 
     @mkdir_dcrt
-    def gdth_path(self, phase='train', sub_dir=None):
+    def gdth_path(self, phase, sub_dir=None):
         """
         absolute directory of the ground truth of ct for training dataset
         :param phase: 'train' or 'valid'
@@ -278,7 +242,7 @@ class Mypath(object):
         return gdth_path
 
     @mkdir_dcrt
-    def pred_path(self, phase='train', sub_dir=None):
+    def pred_path(self, phase, sub_dir=None):
         """
         absolute directory of the prediction results of ct for training dataset
         :param phase: 'train' or 'valid'
@@ -292,7 +256,7 @@ class Mypath(object):
         return pred_path
 
     @mkdir_dcrt
-    def dices_fpath(self, phase='train'):
+    def dices_fpath(self, phase):
         """
         full path of the saved dice
         :param phase: 'train' or 'valid'
@@ -302,13 +266,13 @@ class Mypath(object):
         return pred_path + '/dices.csv'
 
     @mkdir_dcrt
-    def all_metrics_fpath(self, phase='train', sub_dir=None):
+    def all_metrics_fpath(self, phase):
         """
         full path of the saved dice
         :param phase: 'train' or 'valid'
         :return: file name to save dice
         """
-        pred_path = self.pred_path(phase, sub_dir=sub_dir)
+        pred_path = self.pred_path(phase)
         return pred_path + '/all_metrics.csv'
 
 
