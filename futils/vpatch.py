@@ -383,6 +383,8 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
 
         idx = [np.arange(o_, f_) for o_, f_ in zip(origin, finish)]
         patch = next(scan) # (125, 128, 128, 64, 6)
+        if type(patch) is list:
+            patch = patch[0]
         patch = np.rollaxis(patch, 3, 1)  # (125, 64, 128, 128, 6)
         result[np.ix_(idx[0], idx[1], idx[2])] += patch[0]
 
