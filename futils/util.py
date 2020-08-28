@@ -17,7 +17,7 @@ import nrrd
 import copy
 import nibabel as nib
 import glob
-
+import csv
 def get_gdth_pred_names(gdth_path, pred_path):
     gdth_files = sorted(glob.glob(gdth_path + '/*' + '.nrrd'))
     if len(gdth_files) == 0:
@@ -205,9 +205,115 @@ def recall(seg,gt):
         return intersection.sum() / ( im2.sum())    
     else:
         return 1.0    
-        
 
-def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1):
+class Upsample_smooth():
+
+    def __init__(self, trgt_sz=[]):
+        """
+        this function is to upsample a bi-value 3D mask with smooth edge which is adapted from nearest neighbor.
+
+        :param mask: shape(z,x,y)
+        :param trgt_sz: shape(z,x,y)
+        :return:
+        """
+        self.trgt_sz = np.array(trgt_sz)
+
+    def up_mask_0_pad(self, mask):
+        self.old_sz = mask.shape
+        self.ratio_array = np.array(self.trgt_sz) / np.array(self.old_sz)
+        new_pst = [list(np.ceil(np.arange(sz) * ratio).astype('int')) for sz, ratio in zip(self.old_sz, self.ratio_array)]
+        out = np.zeros(self.trgt_sz)  # out image with all zeros
+        out[np.ix_(*new_pst)] = 1 # * can parse the list to 3 sub lists
+        out2 = out[:, 200, :]
+        return out
+
+    def mask_smooth(self, mask):
+        new_mask = copy.deepcopy(mask)
+        k_sz1 = list(self.ratio_array.astype('int')+1) # +1 means that our kernel can cover two nearest voxels
+        k_sz2 = [k_sz1[0]+1, k_sz1[1], k_sz1[2]] # z axis is always float,
+        k_sz3 = [k_sz1[0], k_sz1[1]+1, k_sz1[2]+1] # x, y axis may be  float,
+        k_sz4 = [k_sz1[0]+1, k_sz1[1]+1, k_sz1[2]+1] # z, x, y axis may be float
+
+        k_list = [np.ones(k_sz) for k_sz in [k_sz1, k_sz2, k_sz3, k_sz4]]
+        for kernel in k_list:
+            sz = kernel.shape
+            for i,j,k in zip(range(self.old_sz[0]-sz[0]), range(self.old_sz[1]-sz[1]), range(self.old_sz[2]-sz[2])):
+                conved_pst = [list(m + np.arange(kernel.shape[n])) for m, n in zip([i, j, k], [0, 1, 2])]
+                conv = kernel * mask[np.ix_(*conved_pst)] # * can parse the list to 3 sub lists
+                new_conv = kernel * new_mask[np.ix_(*conved_pst)] # * can parse the list to 3 sub lists
+
+                # the following part is for plane
+                xy_plane = conv[0, :, :]
+                yz_plane = conv[:, 0, :]
+                zx_plane = conv[:, :, 0]
+
+                new_xy_plane = new_conv[0, :, :]
+                new_yz_plane = new_conv[:, 0, :]
+                new_zx_plane = new_conv[:, :, 0]
+
+                for plane, new_plane in zip([xy_plane, yz_plane, zx_plane], [new_xy_plane, new_yz_plane, new_zx_plane]):
+                    if any(plane):
+                        if plane[0,0] and plane[0,-1] and plane[-1,0] and plane[-1,-1]:
+                            new_plane[:,:]=1
+                        if plane[0,0] and plane[0,-1]:
+                            new_plane[0, :] = 1
+                        if plane[0,0] and plane[-1,0]:
+                            new_plane[:,0] = 1
+
+                        if plane[0,0] and plane[-1,-1]:
+                            a_lenth = plane.shape[0]
+                            b_lenth = plane.shape[1]
+                            a_index = np.arange(a_lenth)
+                            b_index = np.round(a_index * b_lenth/a_lenth).astype('int')  # linear function
+                            for a, b in zip(a_index, b_index):
+                                new_plane[a, b] = 1
+
+
+                # the following part is for cubic
+
+
+
+
+
+                print(conv)
+
+        return None
+
+
+    def upsample_smooth(self, mask):
+        mask_0_pad = self.up_mask_0_pad(mask)
+        up_mask = self.mask_smooth(mask_0_pad)
+
+        return up_mask
+
+
+
+
+
+
+def one_hot_decoding(img,labels,thresh=[]):
+    """
+    get the one hot decode of img.
+
+    :param img:
+    :param labels:
+    :param thresh:
+    :return:
+    """
+    new_img = np.zeros((img.shape[0],img.shape[1]))
+    r_img   = img.reshape(img.shape[0],img.shape[1],-1)
+
+    aux = np.argmax(r_img,axis=-1)
+    for i,l in enumerate(labels[1::]):
+        if(thresh==[]):
+            new_img[aux==(i+1)]=l
+        else:
+            new_img[r_img[:,:,i+1]>thresh] = l
+
+    return new_img
+
+
+def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1, labels=[0, 1], ):
     """
 
 
@@ -219,30 +325,128 @@ def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1
     :param order:
     :return:
     """
-    if len(scan.shape)==3:
-        scan=scan[..., np.newaxis]
+    if len(scan.shape)==3:  # (657, 512, 512)
+        scan=scan[..., np.newaxis] # (657, 512, 512, 1)
     if len(ori_sz)==3:
         ori_sz = list(ori_sz)
-        ori_sz.append(1)
+        ori_sz.append(1) # (657, 512, 512, 1)
     print('scan.shape, ori_space, trgt_space, ori_sz, trgt_sz',scan.shape, ori_space, trgt_space, ori_sz, trgt_sz)
     if any(trgt_space):
         print('rescaled to new spacing  ')
         zoom_seq = np.array(ori_space, dtype='float') / np.array(trgt_space, dtype='float')
         zoom_seq = np.append(zoom_seq, 1)
-        print('zoom_seq', zoom_seq)
-        x = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=1)  # 143, 271, 271, 1
-        print('size after rescale to trgt spacing:', x.shape)
     elif any(trgt_sz):
         print('rescaled to target size')
         zoom_seq = np.array(trgt_sz.append(ori_sz.shape[-1]), dtype='float') / np.array(ori_sz, dtype='float')
-        x = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=order)
-        print('size after rescale to new size:', x.shape)  # 64, 144, 144, 1
     else:
         raise Exception('please assign how to rescale')
         print('please assign how to rescale')
 
+    print('zoom_seq', zoom_seq)
+    if len(labels) <= 2 or all(zoom_seq<=1):  # [0, 1] vesel mask or original ct scans
+        x = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=order)  # 143, 271, 271, 1
+    else:  # [0, 1, 2, 3, 4, 5, 6]
+        x_onehot = one_hot_encode_3D(scan, labels) # (657, 512, 512, 6/2)
+        mask1 = []
+        for i in range(x_onehot.shape[-1]):
+            one_chn = x_onehot[..., i]# (657, 512, 512)
+            one_chn = one_chn[..., np.newaxis] # (657, 512, 512, 1)
+            x1 = ndimage.interpolation.zoom(one_chn, zoom_seq, order=order, prefilter=order)
+            mask1.append(x1)
+        mask1 = np.array(mask1)  # (6/2, 567, 512, 512)
+        mask1 = np.rollaxis(mask1, 0, start=4)
+        mask3 = []
+        for p in mask1:
+            mask3.append(one_hot_decoding(p, labels))
+        x = np.array(mask3, dtype='uint8')
+
+    print('size after rescale:', x.shape)  # 64, 144, 144, 1
+
     return x
 
+def one_hot_encode_3D( patch, labels):
+    # todo: simplify this function
+
+    # assert len(patch.shape)==5 # (5, 128, 128, 64, 1)
+    labels = np.array(labels)  # i.e. [0,4,5,6,7,8]
+    N_classes = labels.size  # 6, similiar with len(labels)
+    if len(patch.shape) == 5:  # (5, 128, 128, 64, 1)
+        patch = np.reshape(patch, (patch.shape[0], patch.shape[1], patch.shape[2], patch.shape[3]))
+    elif len(patch.shape) == 4:  # (128, 128, 64, 1)
+        patch = np.reshape(patch, (patch.shape[0], patch.shape[1], patch.shape[2]))
+    patches = []
+    # print('patch.shape', patch.shape)
+    for i, l in enumerate(labels):
+        a = np.where(patch != l, 0, 1)
+        patches.append(a)
+
+    patches = np.array(patches)
+    patches = np.rollaxis(patches, 0, len(patches.shape))  # from [6, 64, 128, 128] to [64, 128, 128, 6]?
+
+    # print('patches.shape after on hot encode 3D', patches.shape)
+
+    return np.float64(patches)
+
+def save_model_best(dice_file, segment, model_fpath):
+    with open(dice_file, 'r', newline='') as f:
+        reader = csv.DictReader(f, delimiter=',')
+        dice_list = []
+        for row in reader:
+            dice = float(row['ave_total']) # str is the default type from csv
+            dice_list.append(dice)
+
+    max_dice = max(dice_list)
+    if dice>=max_dice:
+        segment.save(model_fpath)
+        print("this 'ave_total' is the best: ", str(dice), "save valid model at: ", model_fpath)
+    else:
+        print("this 'ave_total' is not the best: ", str(dice), 'we do not save the model')
+
+    return max_dice
+
+def correct_shape(final_pred, original_shape):
+    print('after rescale, the shape is: ', final_pred.shape)
+    if final_pred.shape[0] != original_shape[0]:
+
+        nb_slice_lost = abs(original_shape[0] - final_pred.shape[0])
+
+        if original_shape[0] > final_pred.shape[0]:
+            print(
+                'there are {} slices lost along z axis, they will be repeated by the last slice'.format(nb_slice_lost))
+            for i in range(nb_slice_lost):
+                added_slice = np.expand_dims(final_pred[-1], axis=0)
+                final_pred = np.concatenate((final_pred, added_slice))
+            print('after repeating, the shape became: ', final_pred.shape)
+        else:
+            print('there are {} slices more along z axis, they will be cut'.format(nb_slice_lost))
+            final_pred = final_pred[:original_shape[0]]  # original shape: (649, 512, 512)
+            print('after cutting, the shape became: ', final_pred.shape)
+
+    if final_pred.shape[1] != original_shape[1]:
+
+        nb_slice_lost = abs(original_shape[1] - final_pred.shape[1])
+
+        if original_shape[1] > final_pred.shape[1]:
+            print('there are {} slices lost along x,y axis, they will be repeated by the last slice'.format(
+                nb_slice_lost))
+            for i in range(nb_slice_lost):
+                added_slice = final_pred[:, -1, :]
+                added_slice = np.expand_dims(added_slice, axis=1)
+                print('x axis final_pred.shape', final_pred.shape)
+                print('x axis add_slice.shape', added_slice.shape)
+                final_pred = np.concatenate((final_pred, added_slice), axis=1)
+                print('after first repeating, the shape is: ', final_pred.shape)
+
+                added_slice = np.expand_dims(final_pred[:, :, -1], axis=2)
+                print('y axis final_pred.shape', final_pred.shape)
+                print('y axis add_slice.shape', added_slice.shape)
+                final_pred = np.concatenate((final_pred, added_slice), axis=2)
+            print('after repeating, the shape became: ', final_pred.shape)
+        else:
+            print('there are {} slices more along x,y axis, they will be cut'.format(nb_slice_lost))
+            final_pred = final_pred[:, :original_shape[1], :original_shape[1]]  # original shape: (649, 512, 512)
+            print('after cutting, the shape became: ', final_pred.shape)
+    return final_pred
 
 def _one_hot_enc(patch,input_is_grayscale = False,labels=[]):
 
