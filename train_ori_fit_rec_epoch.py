@@ -45,6 +45,7 @@ from write_dice import write_dices_to_csv
 from write_batch_preds import write_preds_to_disk
 import segmentor as v_seg
 from mypath import Mypath
+import pyvista as pv
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
 # tf.keras.mixed_precision.experimental.set_policy('infer')  # mix precision training
@@ -205,13 +206,12 @@ def train():
         plot_model(net, show_shapes=True, to_file=model_figure_fpath)
         print('successfully plot model structure at: ', model_figure_fpath)
 
-        if ld_flag:
-            if ld_name:
-                saved_model = mypath.best_model_fpath(phase='valid', str_name=ld_name)
-                net.load_weights(saved_model)
-                print('loaded lobe weights successfully from: ', saved_model)
-            else:
-                raise Exception('Giving load flag but not giving load model name')
+        if ld_name is not None:
+            saved_model = mypath.best_model_fpath(phase='valid', str_name=ld_name, task=task)
+            net.load_weights(saved_model)
+            print('loaded lobe weights successfully from: ', saved_model)
+        else:
+            raise Exception('Giving load flag but not giving load model name')
 
         # save model architecture and config
         model_json = net.to_json()
@@ -288,6 +288,8 @@ def train():
                     valid_data_x_numpy.append(one_valid_data_x[0]) # output shape:(144,144,80,1)
                 else:
                     valid_data_x_numpy1.append(one_valid_data_x[0][0]) # output shape:(144,144,80,1)
+
+
                     valid_data_x_numpy2.append(one_valid_data_x[1][0]) # output shape:(144,144,80,1)
 
                 one_valid_data_y = one_valid_data[1]  # output shape:(1,144,144,80,1)

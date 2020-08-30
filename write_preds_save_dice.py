@@ -26,7 +26,7 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64',
              '1584924602.9965076_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64',
              '1584925363.1298258_0.00010a_o_0ds2dr1bn1fs16ptsz96ptzsz64'
-             1587041504.5222292_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64MODEL
+             1587041504.5222292_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64
              1587846165.2829812_0.00010a_o_0ds2dr1bn1fs16ptsz144ptzsz64
              1587858645.924413_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96
              1587858294.826981_0.00010a_o_0ds2dr1bn1fs8ptsz144ptzsz96
@@ -191,20 +191,15 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 '''
 task='vessel'
 str_names = [
-'1597066656_855_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb5nlnb0ptsz144ptzsz96',
-'1597066656_482_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb5nlnb0ptsz144ptzsz96',
-'1597066656_632_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb18nlnb0ptsz144ptzsz96',
-'1597066656_951_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb18nlnb0ptsz144ptzsz96',
-
+'1597066656_951_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb18nlnb0ptsz144ptzsz96'
 ]
 print(str_names)
 
 for str_name in str_names:
-    mypath = Mypath(task, current_time=str_name)
+    mypath = Mypath(task=task, current_time=str_name) # set task=vessel to predict the lobe masks of SSc
     # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
-    # model_name = os.path.dirname (os.path.realpath (__file__)) +'/models/' + task + '/' + str_name + 'MODEL.hdf5'
     # ptch_z_sz = int(str_name.split('ptzsz')[-1])
-    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + 'MODEL_valid.hdf5'
+    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
 
     # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
     # a = str_name.split('trsp')
@@ -232,7 +227,7 @@ for str_name in str_names:
             stride = 0.25
         elif task=='vessel':
             labels = [0, 1]
-            stride = 0.25
+            stride = 0.8
 
         segment = v_seg.v_segmentor(batch_size=1,
                                     model=model_name,
@@ -246,10 +241,11 @@ for str_name in str_names:
         write_preds_to_disk(segment=segment,
                             data_dir=mypath.ori_ct_path(phase),
                             preds_dir=mypath.pred_path(phase),
-                            number=5,
+                            number=1,
                             stride=stride)
-        #
-        # write_dices_to_csv (labels=labels,
+        # #
+        # write_dices_to_csv (step_nb=0,
+        #                     labels=labels,
         #                     gdth_path=mypath.gdth_path(phase),
         #                     pred_path=mypath.pred_path(phase),
         #                     csv_file=mypath.dices_fpath(phase))

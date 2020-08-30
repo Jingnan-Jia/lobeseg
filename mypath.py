@@ -203,16 +203,24 @@ class Mypath(object):
             return task_model_path + '/' + str_name + '_patch_' + phase + '.hdf5'
 
     @mkdir_dcrt
-    def best_model_fpath(self, phase='train', str_name=None):
+    def best_model_fpath(self, phase='train', str_name=None, task=None):
         """
         full path to save best model according to training loss.
         :return: full path
         """
         task_model_path = self.task_model_dir()
-        if str_name is None:
-            return task_model_path + '/' + self.str_name + '_' + phase + '.hdf5'
+
+        if task=="no_label":
+            if str_name is None:
+                return task_model_path + '/' + self.str_name + '_patch_' + phase + '.hdf5'
+            else:
+                return task_model_path + '/' + str_name + '_patch_' + phase + '.hdf5'
         else:
-            return task_model_path + '/' + str_name + '_' + phase + '.hdf5'
+            if str_name is None:
+                return task_model_path + '/' + self.str_name + '_' + phase + '.hdf5'
+            else:
+                return task_model_path + '/' + str_name + '_' + phase + '.hdf5'
+
 
 
     @mkdir_dcrt

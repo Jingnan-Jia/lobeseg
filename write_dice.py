@@ -11,6 +11,8 @@ import glob
 import os
 import numpy as np
 from futils.util import get_gdth_pred_names
+from futils.util import downsample, correct_shape
+from compute_distance_metrics_and_save import write_all_metrics
 
 
 def calculate_dices(labels, a, b):
@@ -123,5 +125,28 @@ def write_dices_to_csv(step_nb, labels, gdth_path, pred_path, csv_file, gdth_ext
     print('finish writing dices to csv file at ' + csv_file)
     return None
 
-        
+def main():
+    scan, origin, spacing = futil.load_itk("/data/jjia/new/tmp/gdth/GLUCOLD_patients_26.nrrd")
+    tr_sp_list = [2.5, 1.4, 1.4]
+    labels = [0, 4, 5, 6, 7, 8]
+    gdth_path = "/data/jjia/new/tmp/gdth/"
+    pred_path = "/data/jjia/new/tmp/pred/"
+    x = downsample(scan, ori_space=spacing, trgt_space=tr_sp_list, order=0)
+    x = downsample(x, ori_space=tr_sp_list, trgt_space=spacing, order=0)
+    x = correct_shape(x, scan.shape)
+    futil.save_itk("/data/jjia/new/tmp/pred/GLUCOLD_patients_26.nrrd", x, origin, spacing)
+    write_dices_to_csv(step_nb=1,
+                       labels=labels,
+                       gdth_path=gdth_path,
+                       pred_path=pred_path,
+                       csv_file="/data/jjia/new/tmp/dice_ori_resampled.csv")
+
+    write_all_metrics(labels=labels[1:],  # exclude background
+                      gdth_path=gdth_path,
+                      pred_path=pred_path,
+                      csv_file="/data/jjia/new/tmp/merics_ori_resampled.csv")
+
+
+if __name__=="__main__":
+    main()
         
