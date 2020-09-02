@@ -41,6 +41,7 @@ class v_segmentor(object):
             self.patching = True
         else:
             self.patching = False
+            raise Exception('patching is not valid! ')
 
         if type(self.model) is str:  # if model is loaded from a file
             if model.split(".hdf5")[0][-7] == 'h':  # for models saved according to patch metrics
@@ -67,13 +68,9 @@ class v_segmentor(object):
 
     def _normalize(self, scan):
         """returns normalized (0 mean 1 variance) scan"""
-
         scan = (scan - np.mean(scan)) / (np.std(scan))
         return scan
 
-    # def clear_memory(self):
-    #     K.clear_session()
-    #     return None
 
     def save(self, model_fpath):
         with self.graph1.as_default():
