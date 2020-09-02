@@ -8,7 +8,8 @@ Created on Tue Apr  4 09:35:14 2017
 
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import Input, Model
-from tensorflow.keras.layers import Activation, Lambda, Dropout, Conv3D, BatchNormalization, add, concatenate, UpSampling3D, PReLU
+from tensorflow.keras.layers import Activation, Lambda, Dropout, Conv3D, BatchNormalization, add, concatenate, \
+    UpSampling3D, PReLU
 from tensorflow import multiply
 from tensorflow.keras import backend as K
 import tensorflow as tf
@@ -17,6 +18,7 @@ import os
 # I do not know if this line should be put here or in the train.py, so I put it both
 # tf.keras.mixed_precision.experimental.set_policy('infer')
 os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
+
 
 # Ref: salehi17, "Twersky loss function for image segmentation using 3D FCDN"
 # -> the score is computed for each class separately and then summed
@@ -361,32 +363,44 @@ def up_trans(input1, nf, nconvs, bn, dr, ty='v', input2=None, name='block'):
     return net
 
 
-def load_cp_models(model_names,
-                   nch=1,
-                   lr_lb=0.0001,
-                   lr_vs=0.0001,
-                   lr_rc=0.00001,
-                   nf=16,
-                   bn=1,
-                   dr=1,
-                   ds=2,
-                   aux=0.5,
-                   net_type='v',
-                   mtscale=None):
+def get_loss_weights_optim(ao, ds, lr):
+    loss = [dice_coef_loss_weight_p]
+    loss_weights = [1]
+    if ao:
+        loss.append(dice_coef_loss_weight_p)
+        loss_weights = [0.5, 0.5]
+        if ds == 2:
+            loss.append(dice_coef_loss_weight_p)
+            loss.append(dice_coef_loss_weight_p)
+            loss_weights = [0.375, 0.375, 0.125, 0.125]
+    elif ds == 2:
+        loss.append(dice_coef_loss_weight_p)
+        loss.append(dice_coef_loss_weight_p)
+        loss_weights = [0.5, 0.25, 0.25]
+
+    loss_itgt_recon = loss + ['mse']
+    loss_itgt_recon_weights = loss_weights + [0.1]
+
+    optim_tmp = Adam(lr)
+    optim = tf.train.experimental.enable_mixed_precision_graph_rewrite(optim_tmp)
+
+
+
+    return loss, loss_weights,loss_itgt_recon,loss_itgt_recon_weights, optim
+
+
+def load_cp_models(model_names, args):
     """
     load compiled models.
-
-    :param model_names: a list of model names
-    :param nch: number of input image channel
-    :param lr: learning rate
-    :param nf: number of basic filters (or feature maps)
-    :param bn: if batch normalization
-    :param dr: if dropout
-    :param ds: number of deep supervision
-    :param aux: if auxilary task
-    :param net_type: 'v' means 'V-Net', 'u' means 'U-Net'
-    :return: a list of compiled models
     """
+
+    nch = 1
+    nf = args.feature_number
+    bn = args.batch_norm
+    dr = args.dropout
+    net_type = args.u_v
+    mtscale = args.mtscale
+
     ## start model
     input_data = Input((None, None, None, nch), name='input')  # input data
     in_tr = intro(input_data, nf, bn)
@@ -417,12 +431,12 @@ def load_cp_models(model_names,
     out_lung = Activation('softmax', name='lung_out_segmentation')(res_lung)
 
     out_lung = [out_lung]  # convert to list to append other outputs
-    if aux:
+    if args.ao_lu:
         # aux_output
         aux_res = Conv3D(2, 1, padding='same', name='lung_aux_Conv3D_last')(up_tr1_lung)
         aux_out = Activation('softmax', name='lung_aux')(aux_res)
         out_lung.append(aux_out)
-    if ds:
+    if args.ds_lu:
         out_lung = [out_lung]
         # deep supervision#1
         deep_1 = UpSampling3D((2, 2, 2), name='lung_d1_UpSampling3D_0')(up_tr2_lung)
@@ -449,12 +463,12 @@ def load_cp_models(model_names,
     out_lobe = Activation('softmax', name='lobe_out_segmentation')(res_lobe)
 
     out_lobe = [out_lobe]  # convert to list to append other outputs
-    if aux:
+    if args.ao_lb:
         # aux_output
         aux_res = Conv3D(2, 1, padding='same', name='lobe_aux_Conv3D_last')(up_tr1_lobe)
         aux_out = Activation('softmax', name='lobe_aux')(aux_res)
         out_lobe.append(aux_out)
-    if ds:
+    if args.ds_lb:
         out_lobe = [out_lobe]
         # deep supervision#1
         deep_1 = UpSampling3D((2, 2, 2), name='lobe_d1_UpSampling3D_0')(up_tr2_lobe)
@@ -482,12 +496,12 @@ def load_cp_models(model_names,
 
     out_vessel = [out_vessel]  # convert to list to append other outputs
     # vessel_aux=0
-    if aux:
+    if args.ao_vs:
         # aux_output
         aux_res = Conv3D(2, 1, padding='same', name='vessel_aux_Conv3D_last')(up_tr1_vessel)
         aux_out = Activation('softmax', name='vessel_aux')(aux_res)
         out_vessel.append(aux_out)
-    if ds:
+    if args.ds_vs:
         out_vessel = [out_vessel]
         # deep supervision#1
         deep_1 = UpSampling3D((2, 2, 2), name='vessel_d1_UpSampling3D_0')(up_tr2_vessel)
@@ -514,12 +528,12 @@ def load_cp_models(model_names,
     out_airway = Activation('softmax', name='airway_out_segmentation')(res_airway)
 
     out_airway = [out_airway]  # convert to list to append other outputs
-    if aux:
+    if args.ao_aw:
         # aux_output
         aux_res = Conv3D(2, 1, padding='same', name='airway_aux_Conv3D_last')(up_tr1_airway)
         aux_out = Activation('softmax', name='airway_aux')(aux_res)
         out_airway.append(aux_out)
-    if ds:
+    if args.ds_aw:
         out_airway = [out_airway]
         # deep supervision#1
         deep_1 = UpSampling3D((2, 2, 2), name='airway_d1_UpSampling3D_0')(up_tr2_airway)
@@ -544,30 +558,10 @@ def load_cp_models(model_names,
     out_recon = Conv3D(rec_out_chn, 1, padding='same', name='out_recon')(up_tr1_rec)
     # out_rec = Activation ('softmax', name='rec_out_segmentation') (res_rec) # no activation for reconstruction
 
-    loss = [dice_coef_loss_weight_p]
-    loss_weights = [1]
-    if aux:
-        loss.append(dice_coef_loss_weight_p)
-        loss_weights = [0.5, 0.5]
-        if ds == 2:
-            loss.append(dice_coef_loss_weight_p)
-            loss.append(dice_coef_loss_weight_p)
-            loss_weights = [0.375, 0.375, 0.125, 0.125]
-    elif ds == 2:
-        loss.append(dice_coef_loss_weight_p)
-        loss.append(dice_coef_loss_weight_p)
-        loss_weights = [0.5, 0.25, 0.25]
-
-    optim_tmp = Adam(lr=lr_lb)
-    optim = tf.train.experimental.enable_mixed_precision_graph_rewrite(optim_tmp)
-
     out_itgt_vessel_recon = out_vessel + [out_recon]
     out_itgt_airway_recon = out_airway + [out_recon]
     out_itgt_lobe_recon = out_lobe + [out_recon]
     out_itgt_lung_recon = out_lung + [out_recon]
-
-    loss_itgt_recon = loss + ['mse']
-    loss_itgt_recon_weights = loss_weights + [0.1]
 
     metrics_seg_6_classes = [dice_coef_mean, dice_0, dice_1, dice_2, dice_3, dice_4, dice_5]
     metrics_seg_2_classes = [dice_coef_mean, dice_0, dice_1]
@@ -575,15 +569,18 @@ def load_cp_models(model_names,
     ###################----------------------------------#########################################
     # compile lobe models
     metrics_lobe = {'lobe_out_segmentation': metrics_seg_6_classes}
-    if aux:
+    if args.ao_lb:
         metrics_lobe['lobe_aux'] = metrics_seg_2_classes
-    if ds == 2:
+    if args.ds_lb == 2:
         metrics_lobe['lobe_d1'] = metrics_seg_6_classes
         metrics_lobe['lobe_d2'] = metrics_seg_6_classes
 
+    loss, loss_weights, loss_itgt_recon, loss_itgt_recon_weights, optim = get_loss_weights_optim(args.ao_lb, args.ds_lb,
+                                                                                                 args.lr_lb)
     net_only_lobe = Model(input_data, out_lobe, name='net_only_lobe')
     net_only_lobe.compile(optimizer=optim,
                           loss=loss,
+                          loss_weights=loss_weights,
                           metrics=metrics_lobe)
 
     net_itgt_lobe_recon = Model(input_data, out_itgt_lobe_recon, name='net_itgt_lobe_recon')
@@ -595,18 +592,18 @@ def load_cp_models(model_names,
     ###################----------------------------------#########################################
     # compile vessel models
     metrics_vessel = {'vessel_out_segmentation': metrics_seg_2_classes}
-    if aux:
+    if args.ao_vs:
         metrics_vessel['vessel_aux'] = metrics_seg_2_classes
-    if ds == 2:
+    if args.ds_vs == 2:
         metrics_vessel['vessel_d1'] = metrics_seg_2_classes
         metrics_vessel['vessel_d2'] = metrics_seg_2_classes
 
-    optim_tmp_vs = Adam(lr=lr_vs)
-    optim_vessel = tf.train.experimental.enable_mixed_precision_graph_rewrite(optim_tmp_vs)
-
+    loss, loss_weights, loss_itgt_recon, loss_itgt_recon_weights, optim = get_loss_weights_optim(args.ao_vs, args.ds_vs,
+                                                                                                 args.lr_vs)
     net_only_vessel = Model(input_data, out_vessel, name='net_only_vessel')
-    net_only_vessel.compile(optimizer=optim_vessel,
+    net_only_vessel.compile(optimizer=optim,
                             loss=loss,
+                            loss_weights=loss_weights,
                             metrics=metrics_vessel)
 
     net_itgt_vessel_recon = Model(input_data, out_itgt_vessel_recon, name='net_itgt_vessel_recon')
@@ -618,15 +615,18 @@ def load_cp_models(model_names,
     ###################----------------------------------#########################################
     # compile airway models
     metrics_airway = {'airway_out_segmentation': metrics_seg_2_classes}
-    if aux:
+    if args.ao_aw:
         metrics_airway['airway_aux'] = metrics_seg_2_classes
-    if ds == 2:
+    if args.ds_aw == 2:
         metrics_airway['airway_d1'] = metrics_seg_2_classes
         metrics_airway['airway_d2'] = metrics_seg_2_classes
 
+    oss, loss_weights, loss_itgt_recon, loss_itgt_recon_weights, optim = get_loss_weights_optim(args.ao_aw, args.ds_aw,
+                                                                                                args.lr_aw)
     net_only_airway = Model(input_data, out_airway, name='net_only_airway')
     net_only_airway.compile(optimizer=optim,
                             loss=loss,
+                            loss_weights=loss_weights,
                             metrics=metrics_airway)
 
     net_itgt_airway_recon = Model(input_data, out_itgt_airway_recon, name='net_itgt_airway_recon')
@@ -637,15 +637,18 @@ def load_cp_models(model_names,
     ###################----------------------------------#########################################
     # compile lung models
     metrics_lung = {'lung_out_segmentation': metrics_seg_2_classes}
-    if aux:
+    if args.ao_lu:
         metrics_lung['lung_aux'] = metrics_seg_2_classes
-    if ds == 2:
+    if args.ds_lu == 2:
         metrics_lung['lung_d1'] = metrics_seg_2_classes
         metrics_lung['lung_d2'] = metrics_seg_2_classes
 
+    oss, loss_weights, loss_itgt_recon, loss_itgt_recon_weights, optim = get_loss_weights_optim(args.ao_lu, args.ds_lu,
+                                                                                                args.lr_lu)
     net_only_lung = Model(input_data, out_lung, name='net_only_lung')
     net_only_lung.compile(optimizer=optim,
                           loss=loss,
+                          loss_weights=loss_weights,
                           metrics=metrics_lung)
 
     net_itgt_lung_recon = Model(input_data, out_itgt_lung_recon, name='net_itgt_lung_recon')
@@ -656,7 +659,7 @@ def load_cp_models(model_names,
 
     # configeration and compilization for network in recon task
     net_no_label = Model(input_data, out_recon, name='net_no_label')
-    optim_tmp_rc = Adam(lr=lr_rc)
+    optim_tmp_rc = Adam(lr=args.lr_rc)
     optim_rc = tf.train.experimental.enable_mixed_precision_graph_rewrite(optim_tmp_rc)
     net_no_label.compile(optimizer=optim_rc, loss='mse', metrics=['mse'])
 
@@ -676,8 +679,10 @@ def load_cp_models(model_names,
 
     return list(map(models_dict.get, model_names))
 
+
 def main():
     print('this is main function')
+
 
 if __name__ == '__main__':
     main()
