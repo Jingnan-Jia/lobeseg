@@ -276,17 +276,6 @@ class ScanIterator(Iterator):
         self.col_index = 2
 
         self.data_argum = data_argum
-        if self.data_argum:
-            self.rotation_range = 0.05
-            self.height_shift_range = 0.05
-            self.width_shift_range = 0.05
-            self.shear_range = 0.05
-            self.fill_mode = 'constant'
-            self.zoom_range = 0.05
-            if np.isscalar(self.zoom_range):
-                self.zoom_range = [1 - self.zoom_range, 1 + self.zoom_range]
-            elif len(self.zoom_range) == 2:
-                self.zoom_range = [self.zoom_range[0], self.zoom_range[1]]
 
         super(ScanIterator, self).__init__(len(self.filenames), batch_size, seed,
                                            shuffle)

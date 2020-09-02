@@ -10,8 +10,20 @@ parser.add_argument('-lr_lu','--lr_lu',help='learning rate for lung segmentation
 parser.add_argument('-lr_aw','--lr_aw',help='learning rate for airway segmentation', type=float,default=0.0001)
 parser.add_argument('-lr_rc','--lr_rc',help='learning rate for reconstruction', type=float,default=0.00001)
 
-parser.add_argument('-aux', '--aux_output', help='Value of Auxiliary Output', type=float, default=0)
-parser.add_argument('-ds', '--deep_supervision', help='Number of Deep Supervisers', type=int, default=0)
+parser.add_argument('-ds_lb', '--ds_lb', help='Number of Deep Supervisers', type=int, default=0)
+parser.add_argument('-ds_vs', '--ds_vs', help='Number of Deep Supervisers', type=int, default=0)
+parser.add_argument('-ds_aw', '--ds_aw', help='Number of Deep Supervisers', type=int, default=0)
+parser.add_argument('-ds_lu', '--ds_lu', help='Number of Deep Supervisers', type=int, default=0)
+parser.add_argument('-ds_rc', '--ds_rc', help='Number of Deep Supervisers', type=int, default=0)
+
+parser.add_argument('-ao_lb', '--ao_lb', help='Value of Auxiliary Output', type=int, default=0)
+parser.add_argument('-ao_vs', '--ao_vs', help='Value of Auxiliary Output', type=int, default=0)
+parser.add_argument('-ao_aw', '--ao_aw', help='Value of Auxiliary Output', type=int, default=0)
+parser.add_argument('-ao_lu', '--ao_lu', help='Value of Auxiliary Output', type=int, default=0)
+parser.add_argument('-ao_rc', '--ao_rc', help='Value of Auxiliary Output', type=int, default=0)
+
+
+
 parser.add_argument('-fn', '--feature_number', help='Number of initial of conv channels', type=int, default=16)
 parser.add_argument('-bn', '--batch_norm', help='Set Batch Normalization', type=int, default=1)
 parser.add_argument('-dr', '--dropout', help='Set Dropout', type=int, default=1)
@@ -36,6 +48,7 @@ parser.add_argument('-ld_itgt_vs_rc', '--ld_itgt_vs_rc', help='ld_itgt_vs_rc', t
 parser.add_argument('-ld_itgt_lu_rc', '--ld_itgt_lu_rc', help='ld_itgt_lu_rc', type=int, default=0)
 parser.add_argument('-ld_itgt_aw_rc', '--ld_itgt_aw_rc', help='ld_itgt_aw_rc', type=int, default=0)
 
+
 parser.add_argument('-ld_itgt_lb_rc_name', '--ld_itgt_lb_rc_name', help='ld_itgt_lb_rc_name', type=str, default='None')
 parser.add_argument('-ld_itgt_vs_rc_name', '--ld_itgt_vs_rc_name', help='ld_itgt_vs_rc_name', type=str, default='None')
 parser.add_argument('-ld_itgt_lu_rc_name', '--ld_itgt_lu_rc_name', help='ld_itgt_lu_rc_name', type=str, default='None')
@@ -51,9 +64,5 @@ parser.add_argument('-lb_tr_nb', '--lb_tr_nb', help='lb_tr_nb', type=int, defaul
 parser.add_argument('-vs_tr_nb', '--vs_tr_nb', help='vs_tr_nb', type=int, default=50)
 parser.add_argument('-lu_tr_nb', '--lu_tr_nb', help='lu_tr_nb', type=int, default=0)
 parser.add_argument('-aw_tr_nb', '--aw_tr_nb', help='aw_tr_nb', type=int, default=0)
-
-
-
-
 
 args = parser.parse_args()

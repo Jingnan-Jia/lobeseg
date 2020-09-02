@@ -93,8 +93,8 @@ class Mypath(object):
                        + 'net' + str(short_names) \
                        + 'pm' + str(args.p_middle) \
                        + 'nld' + str(args.no_label_dir) \
-                       + 'ao' + str (args.aux_output) \
-                       + 'ds' + str (args.deep_supervision) \
+                       + 'ao' + str (args.ao_lb) \
+                       + 'ds' + str (args.ds_lb) \
                        + tr_sz_name \
                        + 'tsp'+ str(args.trgt_space) \
                        + 'z'+ str(args.trgt_z_space) \
