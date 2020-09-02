@@ -112,23 +112,6 @@ class Get_list():
         task_list = self.get_task_list()
         return [Mypath(x) for x in task_list]  # a list of Mypath objectives, each Mypath corresponds to a task
 
-    def get_load_flag_list(self, myargs):
-        load_flag_dict = {
-            "net_itgt_lb_rc": myargs.ld_itgt_lb_rc,
-            "net_itgt_vs_rc": myargs.ld_itgt_vs_rc,
-            "net_itgt_lu_rc": myargs.ld_itgt_lu_rc,
-            "net_itgt_aw_rc": myargs.ld_itgt_aw_rc,
-
-            "net_no_label": myargs.ld_rc,
-
-            "net_only_lobe": myargs.ld_lb,
-            "net_only_vessel": myargs.ld_vs,
-            "net_only_lung": myargs.ld_lu,
-            "net_only_airway": myargs.ld_aw
-        }
-
-        return list(map(load_flag_dict.get, self.model_names))
-
     def get_tr_nb_list(self, myargs):
         tr_nb_dict = {
             "net_itgt_lb_rc": myargs.lb_tr_nb,
@@ -145,6 +128,39 @@ class Get_list():
         }
 
         return list(map(tr_nb_dict.get, self.model_names))
+
+    def get_ao_list(self, myargs):
+        ao_dict = {
+            "net_itgt_lb_rc": myargs.ao_lb,
+            "net_itgt_vs_rc": myargs.ao_vs,
+            "net_itgt_lu_rc": myargs.ao_lu,
+            "net_itgt_aw_rc": myargs.ao_aw,
+
+            "net_no_label": myargs.ao_rc,
+
+            "net_only_lobe": myargs.ao_lb,
+            "net_only_vessel": myargs.ao_vs,
+            "net_only_lung": myargs.ao_lu,
+            "net_only_airway": myargs.ao_aw
+        }
+        return list(map(ao_dict.get, self.model_names))
+
+    def get_ds_list(self, myargs):
+        ds_dict = {
+            "net_itgt_lb_rc": myargs.ds_lb,
+            "net_itgt_vs_rc": myargs.ds_vs,
+            "net_itgt_lu_rc": myargs.ds_lu,
+            "net_itgt_aw_rc": myargs.ds_aw,
+
+            "net_no_label": myargs.ds_rc,
+
+            "net_only_lobe": myargs.ds_lb,
+            "net_only_vessel": myargs.ds_vs,
+            "net_only_lung": myargs.ds_lu,
+            "net_only_airway": myargs.ds_aw
+        }
+        return list(map(ds_dict.get, self.model_names))
+
 
     def get_load_name_list(self, myargs):
         load_name_dict = {
@@ -176,32 +192,23 @@ def train():
     model_names = [i.lstrip() for i in model_names]  # remove backspace before each model name
     print('model names: ', model_names)
 
+
     gl = Get_list(model_names)
     task_list = gl.get_task_list()  # for example, 6 model_names corresponds to 6 tasks
     label_list = gl.get_label_list() # for example, 6 model_names corresponds to 6 labels
     path_list = gl.get_path_list()
-    load_flag_list = gl.get_load_flag_list(args)
     load_name_list = gl.get_load_name_list(args)
     tr_nb_list = gl.get_tr_nb_list(args)
+    ao_list = gl.get_ao_list(args)
+    ds_list = gl.get_ds_list(args)
 
-    net_list = cpmodels.load_cp_models(model_names, # TODO: lr_airway and lr_lung
-                                       nch=1,
-                                       lr_lb=args.lr_lb,
-                                       lr_vs=args.lr_vs,
-                                       lr_rc=args.lr_rc,
-                                       nf=args.feature_number,
-                                       bn=args.batch_norm,
-                                       dr=args.dropout,
-                                       ds=args.deep_supervision,
-                                       aux=args.aux_output,
-                                       net_type=args.u_v,
-                                       mtscale=args.mtscale)
+    net_list = cpmodels.load_cp_models(model_names, args)
 
     train_data_gen_list = []
     valid_array_list = []
 
-    zip_list = zip(path_list, task_list, label_list, net_list, model_names, load_flag_list, load_name_list, tr_nb_list)
-    for mypath, task, labels, net, model_name, ld_flag, ld_name, tr_nb in zip_list:
+    zip_list = zip(path_list, task_list, label_list, net_list, model_names, load_name_list, tr_nb_list, ao_list, ds_list)
+    for mypath, task, labels, net, model_name, ld_name, tr_nb, ao, ds in zip_list:
         model_figure_fpath = mypath.model_figure_path() + '/' + model_name + '.png'
         plot_model(net, show_shapes=True, to_file=model_figure_fpath)
         print('successfully plot model structure at: ', model_figure_fpath)
@@ -221,16 +228,15 @@ def train():
 
         if task == 'vessel' and args.mtscale == 0 and args.trgt_space != 0:
             raise Exception('trget spacing should be 0 for vessel segmentation in normal U-net')
-        if args.aux_output and ('vessel' in task_list):
+        if ao and task == 'vessel' :
             print(model_names)
             raise Exception('vessel task should not have aux output')
 
         if task == 'vessel' or task == 'no_label':  # todo: suffix for other tasks need to be fixed
             b_extension = '.mhd'
-            aux = 0
-        else:
+        elif task == 'lobe' :
             b_extension = '.nrrd'
-            aux = args.aux_output
+
 
         train_it = ScanIterator(mypath.data_dir('train'), task=task,
                                 sub_dir=mypath.sub_dir(),
@@ -240,14 +246,14 @@ def train():
                                 trgt_space=args.trgt_space, trgt_z_space=args.trgt_z_space,
                                 data_argum=True,
                                 patches_per_scan=args.patches_per_scan,
-                                ds=args.deep_supervision,
+                                ds=ds,
                                 labels=labels,
                                 batch_size=args.batch_size,
                                 shuffle=False,
                                 nb=tr_nb,
                                 no_label_dir=args.no_label_dir,
                                 p_middle=args.p_middle,
-                                aux=aux,
+                                aux=ao,
                                 mtscale=args.mtscale)
 
         valid_it = ScanIterator(mypath.data_dir('valid'), task=task,
@@ -258,14 +264,14 @@ def train():
                                 trgt_space=args.trgt_space, trgt_z_space=args.trgt_z_space,
                                 data_argum=False,
                                 patches_per_scan=args.patches_per_scan,
-                                ds=args.deep_supervision,
+                                ds=ds,
                                 labels=labels,
                                 batch_size=args.batch_size,
                                 shuffle=False,
                                 nb=2,  # only use one data
                                 no_label_dir=args.no_label_dir,
                                 p_middle=args.p_middle,
-                                aux=aux,
+                                aux=ao,
                                 mtscale=args.mtscale)
 
         enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=True)
@@ -302,16 +308,16 @@ def train():
                 valid_data_numpy = ([np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)], np.array(valid_data_y_numpy))
 
         else:
-            if args.aux_output and args.deep_supervision == 2:
+            if ao and ds == 2:
                 out_nb = 4
                 valid_data_y_numpy = [[], [], [], []]
-            elif args.aux_output and args.deep_supervision == 0:
+            elif ao and ds == 0:
                 out_nb = 2
                 valid_data_y_numpy = [[], []]
-            elif args.aux_output == False and args.deep_supervision == 2:
+            elif ao == False and ds == 2:
                 out_nb = 3
                 valid_data_y_numpy = [[], [], []]
-            elif args.aux_output == False and args.deep_supervision == 0:
+            elif ao == False and ds == 0:
                 out_nb = 1
                 valid_data_y_numpy = [[]]
             else:
@@ -356,7 +362,7 @@ def train():
         "net_only_lung": 10000,
         "net_only_airway": 10000
     }
-    best_vd_loss_dic = {
+    best_vd_loss_dict = {
         "net_itgt_lb_rc": 10000,
         "net_itgt_vs_rc": 10000,
         "net_itgt_lu_rc": 10000,
@@ -409,6 +415,11 @@ def train():
                                   use_multiprocessing=True,
                                   validation_data=valid_array,
                                   callbacks=[saver_train, saver_valid, train_csvlogger, valid_csvlogger])
+                current_vd_loss = history.history['val_loss'][0]
+                old_vd_loss = np.float(best_vd_loss_dict[model_name])
+                if current_vd_loss < old_vd_loss:
+                    best_vd_loss_dict[model_name] = current_vd_loss
+
             else:
                 history = net.fit(x, y,
                                   batch_size=args.batch_size,
