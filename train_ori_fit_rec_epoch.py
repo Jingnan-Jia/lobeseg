@@ -88,7 +88,6 @@ class Get_list():
         """
         Get the label list according to given task list.
 
-        :param model_names: a list of model_names.
         :return: a list of labels' list.
         """
 
@@ -161,7 +160,6 @@ class Get_list():
         }
         return list(map(ds_dict.get, self.model_names))
 
-
     def get_load_name_list(self, myargs):
         load_name_dict = {
             "net_itgt_lb_rc": myargs.ld_itgt_lb_rc_name,
@@ -192,10 +190,9 @@ def train():
     model_names = [i.lstrip() for i in model_names]  # remove backspace before each model name
     print('model names: ', model_names)
 
-
     gl = Get_list(model_names)
     task_list = gl.get_task_list()  # for example, 6 model_names corresponds to 6 tasks
-    label_list = gl.get_label_list() # for example, 6 model_names corresponds to 6 labels
+    label_list = gl.get_label_list()  # for example, 6 model_names corresponds to 6 labels
     path_list = gl.get_path_list()
     load_name_list = gl.get_load_name_list(args)
     tr_nb_list = gl.get_tr_nb_list(args)
@@ -213,12 +210,10 @@ def train():
         plot_model(net, show_shapes=True, to_file=model_figure_fpath)
         print('successfully plot model structure at: ', model_figure_fpath)
 
-        if ld_name is not None:
+        if ld_name is not 'None': # 'None' is from arg parse as string
             saved_model = mypath.best_model_fpath(phase='valid', str_name=ld_name, task=task)
             net.load_weights(saved_model)
             print('loaded lobe weights successfully from: ', saved_model)
-        else:
-            raise Exception('Giving load flag but not giving load model name')
 
         # save model architecture and config
         model_json = net.to_json()
@@ -234,9 +229,10 @@ def train():
 
         if task == 'vessel' or task == 'no_label':  # todo: suffix for other tasks need to be fixed
             b_extension = '.mhd'
-        elif task == 'lobe' :
+        elif task == 'lobe':
             b_extension = '.nrrd'
-
+        else:
+            b_extension = '.mhd'
 
         train_it = ScanIterator(mypath.data_dir('train'), task=task,
                                 sub_dir=mypath.sub_dir(),
@@ -249,14 +245,15 @@ def train():
                                 ds=ds,
                                 labels=labels,
                                 batch_size=args.batch_size,
-                                shuffle=False,
-                                nb=tr_nb,
+                                shuffle=True,
+                                n=tr_nb,
                                 no_label_dir=args.no_label_dir,
                                 p_middle=args.p_middle,
                                 aux=ao,
-                                mtscale=args.mtscale)
+                                mtscale=args.mtscale,
+                                ptch_seed=None)
 
-        valid_it = ScanIterator(mypath.data_dir('valid'), task=task,
+        valid_it = ScanIterator(mypath.data_dir('monitor'), task=task,
                                 sub_dir=mypath.sub_dir(),
                                 b_extension=b_extension,
                                 ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
@@ -268,11 +265,12 @@ def train():
                                 labels=labels,
                                 batch_size=args.batch_size,
                                 shuffle=False,
-                                nb=2,  # only use one data
+                                n=1,  # only use one data
                                 no_label_dir=args.no_label_dir,
                                 p_middle=args.p_middle,
                                 aux=ao,
-                                mtscale=args.mtscale)
+                                mtscale=args.mtscale,
+                                ptch_seed=1)
 
         enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=True)
         train_datas = enqueuer_train.get()
@@ -287,16 +285,18 @@ def train():
             valid_data_x_numpy = []
             valid_data_x_numpy1, valid_data_x_numpy2 = [], []
             valid_data_y_numpy = []
-            for i in range(10):
+            if task=='lobe':
+                monitor_nb = 10
+            else:
+                monitor_nb = 20
+            for i in range(monitor_nb):
                 one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator() [x, y]
                 one_valid_data_x = one_valid_data[0]  # output shape:(1,144,144,80,1)
                 if type(one_valid_data_x) is np.ndarray:
-                    valid_data_x_numpy.append(one_valid_data_x[0]) # output shape:(144,144,80,1)
+                    valid_data_x_numpy.append(one_valid_data_x[0])  # output shape:(144,144,80,1)
                 else:
-                    valid_data_x_numpy1.append(one_valid_data_x[0][0]) # output shape:(144,144,80,1)
-
-
-                    valid_data_x_numpy2.append(one_valid_data_x[1][0]) # output shape:(144,144,80,1)
+                    valid_data_x_numpy1.append(one_valid_data_x[0][0])  # output shape:(144,144,80,1)
+                    valid_data_x_numpy2.append(one_valid_data_x[1][0])  # output shape:(144,144,80,1)
 
                 one_valid_data_y = one_valid_data[1]  # output shape:(1,144,144,80,1)
 
@@ -347,9 +347,7 @@ def train():
         valid_array_list.append(valid_data_numpy)
         enqueuer_valid.stop()
 
-
-
-    best_tr_loss_dic = {
+    best_tr_loss_dict = {
         "net_itgt_lb_rc": 10000,
         "net_itgt_vs_rc": 10000,
         "net_itgt_lu_rc": 10000,
@@ -375,17 +373,50 @@ def train():
         "net_only_lung": 10000,
         "net_only_airway": 10000
     }
+    lr_dict = {"net_itgt_lb_rc": 0.0001,
+        "net_itgt_vs_rc": 0.0001,
+        "net_itgt_lu_rc": 0.0001,
+        "net_itgt_aw_rc": 0.0001,
+
+        "net_no_label": 0.0001,
+
+        "net_only_lobe": 0.0001,
+        "net_only_vessel": 0.0001,
+        "net_only_lung": 0.0001,
+        "net_only_airway": 0.0001}
+
+    current_tr_loss_dict = {
+        "net_itgt_lb_rc": 10000,
+        "net_itgt_vs_rc": 10000,
+        "net_itgt_lu_rc": 10000,
+        "net_itgt_aw_rc": 10000,
+
+        "net_no_label": 10000,
+
+        "net_only_lobe": 10000,
+        "net_only_vessel": 10000,
+        "net_only_lung": 10000,
+        "net_only_airway": 10000
+    }
 
     for idx_ in range(args.step_nb):
         print('step number: ', idx_)
         zip_list2 = zip(task_list, net_list, train_data_gen_list, label_list, path_list, model_names, valid_array_list)
         for task, net, tr_data, label, mypath, model_name, valid_array in zip_list2:
+            if task!="lobe":
+                loss_ratio = current_tr_loss_dict["net_only_lobe"]/current_tr_loss_dict[model_name]
+                print('loss_ratio: ', loss_ratio, file=sys.stderr)
+                print('step number', idx_, 'old lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
+                new_lr = loss_ratio * args.lr_lb * 0.1
+                K.set_value(net.optimizer.lr, new_lr)
+                print('step number', idx_, 'new lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
+
             x, y = next(tr_data)  # tr_data is a generator or enquerer
             # callbacks
             train_csvlogger = callbacks.CSVLogger(mypath.log_fpath('train'), separator=',', append=True)
             valid_csvlogger = callbacks.CSVLogger(mypath.log_fpath('valid'), separator=',', append=True)
-            BEST_TR_LOSS = best_tr_loss_dic[model_name]  # set this value to record the best tr_loss for each task,
-            BEST_VD_LOSS = best_vd_loss_dic[model_name]
+            BEST_TR_LOSS = best_tr_loss_dict[model_name]  # set this value to record the best tr_loss for each task,
+            BEST_VD_LOSS = best_vd_loss_dict[model_name]
 
             class ModelCheckpointWrapper(callbacks.ModelCheckpoint):
                 def __init__(self, best_init=None, *arg, **kwagrs):
@@ -430,11 +461,11 @@ def train():
                 print(key, result)
 
             current_tr_loss = history.history['loss'][0]
-            old_tr_loss = np.float(best_tr_loss_dic[model_name])
+            old_tr_loss = np.float(best_tr_loss_dict[model_name])
             if current_tr_loss < old_tr_loss:
-                best_tr_loss_dic[model_name] = current_tr_loss
+                best_tr_loss_dict[model_name] = current_tr_loss
 
-
+            current_tr_loss_dict[model_name] = current_tr_loss
 
             period_valid = 5000  # every 5000 step, predict a whole ct scan from training and valid dataset
             if (idx_ % (period_valid) == 0) and (task != 'no_label'):
@@ -443,7 +474,7 @@ def train():
                 # So in order to assess the valid metrics, I use an independent function to predict the validation
                 # and training dataset. And I can also set the period_valid as the validation_freq.
                 # save predicted results and compute the dices
-                for phase in ['valid', 'train']:
+                for phase in ['valid']:
                     segment = v_seg.v_segmentor(batch_size=args.batch_size,
                                                 model=mypath.model_fpath_best_patch(phase),
                                                 ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,

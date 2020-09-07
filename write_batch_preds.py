@@ -38,6 +38,9 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
 
         # ct_scan.shape: (717,, 512, 512), spacing: 0.5, 0.741, 0.741
         ct_scan, origin, spacing = futil.load_itk (filename=scan_file)
+        pad_nb = 36
+        ct_scan = np.pad(ct_scan, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb)), mode='constant',
+                   constant_values=-3000)
         print ('Spacing: ', spacing, 'size', ct_scan.shape)
 
         # NORMALIZATION

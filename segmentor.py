@@ -146,6 +146,7 @@ class v_segmentor(object):
             masks.append(one_hot_decoding(p, self.labels))
         masks = np.array(masks, dtype='uint8')
 
+
         if any(self.trgt_space_list) or any(self.trgt_sz_list):
             if not self.mtscale or self.task == 'lobe':
                 print('rescaled to original spacing  ')
@@ -163,6 +164,9 @@ class v_segmentor(object):
 
         final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
         print('final_pred.shape: ', final_pred.shape)
+        
+        pad_nb = 36
+        final_pred = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
 
         return final_pred
 

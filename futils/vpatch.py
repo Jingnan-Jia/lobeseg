@@ -74,7 +74,7 @@ def get_a2_patch(scan, origin, p_sh, a2):
         a2_patch = a2_patch[..., np.newaxis] # (z, x, y, 1)
     return a2_patch
 
-def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None, a2=None):
+def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None, a2=None, ptch_seed=None):
     """
     get ramdom patches from the given ct.
 
@@ -104,7 +104,9 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     # print('range values', range_vals)
     if p_middle:  # set sampling specific probability on central part
         # print('p_middle, select more big vessels')
+        random.seed(ptch_seed)
         tmp_nb = random.random()
+        random.seed(ptch_seed)
         if tmp_nb < p_middle:
             range_vals_low = list(map(int, (sh[0:3]/3 - p_sh//2) ))
             range_vals_high = list(map(int,(sh[0:3] * 2 /3 - p_sh//2) ))

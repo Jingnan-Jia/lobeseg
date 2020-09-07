@@ -183,12 +183,13 @@ class ScanIterator(Iterator):
                  batch_size=1,
                  shuffle=True,
                  seed=None,
-                 nb=None,
+                 n=None,
                  no_label_dir=None,
                  p_middle=None,
                  phase='None',
                  aux=None,
-                 mtscale=None):
+                 mtscale=None,
+                 ptch_seed=None):
         """
         Iterate through two directories at the same time.
 
@@ -230,6 +231,7 @@ class ScanIterator(Iterator):
         self.ptch_z_sz = ptch_z_sz
         self.trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space]
         self.trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz]
+        self.ptch_seed = ptch_seed
 
         self.aux = aux
         if self.aux:
@@ -242,6 +244,16 @@ class ScanIterator(Iterator):
         if self.task == 'no_label':
             self.a_dir = os.path.join(directory, a_dir_name, no_label_dir)
             self.a_extension = a_extension
+            # tmp = glob.glob(self.a_dir + '/*' + self.a_extension)
+            # tmp2 = sorted(tmp)
+            # l = []
+            # for x in tmp2:
+            #     tmp4 = x.split(a_extension)
+            #     tmp5 = tmp4[0].split(self.a_dir + '/')
+            #     tmp3 = tmp5[-1]
+            #     l.append(tmp3)
+            # tmppp = set(l)
+
             files = set(x.split(a_extension)[0].split(self.a_dir + '/')[-1] for x in
                         sorted(glob.glob(self.a_dir + '/*' + self.a_extension)))
             self.filenames = sorted(list(files))
@@ -260,8 +272,8 @@ class ScanIterator(Iterator):
             # Files inside a and b should have the same name. Images without a pair
             # are discarded.
             self.filenames = sorted(list(a_files.intersection(b_files)))
-        if nb:
-            self.filenames = self.filenames[:nb]
+        if n:
+            self.filenames = self.filenames[:n]
 
         print('task:', self.task)
         print('from this directory:', self.a_dir)
@@ -299,6 +311,10 @@ class ScanIterator(Iterator):
         print('start load file: ', a_fname)
 
         a = self.load_scan(file_name=os.path.join(self.a_dir, a_fname))  # (200, 512, 512, 1)
+        pad_nb = 36
+        a = np.pad(a, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant', constant_values=-3000)
+
+
 
         # a = np.array(a)
         a = futil.normalize(a)  # threshold to [-1000,400], then rescale to [0,1]
@@ -309,6 +325,8 @@ class ScanIterator(Iterator):
         else:
             b_fname = self.filenames[idx] + self.b_extension
             b = self.load_scan(file_name=os.path.join(self.b_dir, b_fname))  # (200, 512, 512, 1)
+            b = np.pad(b, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant',
+                       constant_values=0)
             # b = np.array(b)
 
             if not self.aux:
@@ -316,6 +334,8 @@ class ScanIterator(Iterator):
             else:
                 c_fname = self.filenames[idx] + self.c_extension
                 c = self.load_scan(file_name=os.path.join(self.c_dir, c_fname))  # (200, 512, 512, 1)
+                c = np.pad(c, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant',
+                           constant_values=0)
                 # c = np.array(c, dtype='float')
 
                 return a, b, c
@@ -329,7 +349,7 @@ class ScanIterator(Iterator):
         while 1:
             """Get the next pair of the sequence."""
             try:
-                # Lock the iterator when the index is changed.
+            # Lock the iterator when the index is changed.
                 with self.lock:
                     index_array, _, current_batch_size = next(self.index_generator)
                     print('index_array: ', index_array)
@@ -378,17 +398,22 @@ class ScanIterator(Iterator):
                     print('before patching, the shape of a2 is ', a2.shape) if self.mtscale else print('')
 
                     for _ in range(self.patches_per_scan):
+                        if self.ptch_seed:
+                            ptch_seed = self.ptch_seed + _
+                        else:
+                            ptch_seed = None
+
                         if self.aux:
                             if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
                                 a_img, b_img, c_img = random_patch(a, b, c,
                                                                    patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
-                                                                   p_middle=self.p_middle, a2=a2)
+                                                                   p_middle=self.p_middle, a2=a2, ptch_seed=ptch_seed)
                             else:
                                 a_img, b_img, c_img = a, b, c
                         else:
                             if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
                                 a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
-                                                            p_middle=self.p_middle, a2=a2)
+                                                            p_middle=self.p_middle, a2=a2, ptch_seed=ptch_seed)
                             else:
                                 a_img, b_img = a, b
 
