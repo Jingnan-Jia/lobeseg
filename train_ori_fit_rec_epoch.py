@@ -160,6 +160,21 @@ class Get_list():
         }
         return list(map(ds_dict.get, self.model_names))
 
+    def get_mot_list(self, myargs):
+        mot_dict = {
+            "net_itgt_lb_rc": myargs.mot_lb,
+            "net_itgt_vs_rc": myargs.mot_vs,
+            "net_itgt_lu_rc": myargs.mot_lu,
+            "net_itgt_aw_rc": myargs.mot_aw,
+
+            "net_no_label": myargs.mot_rc,
+
+            "net_only_lobe": myargs.mot_lb,
+            "net_only_vessel": myargs.mot_vs,
+            "net_only_lung": myargs.mot_lu,
+            "net_only_airway": myargs.mot_aw
+        }
+        return list(map(mot_dict.get, self.model_names))
     def get_load_name_list(self, myargs):
         load_name_dict = {
             "net_itgt_lb_rc": myargs.ld_itgt_lb_rc_name,
@@ -181,7 +196,6 @@ class Get_list():
 def train():
     """
     Main function to train the model.
-
     :return: None
     """
     # Define the Model, use dash to separate multi model names, do not use ',' to separate it,
@@ -198,14 +212,15 @@ def train():
     tr_nb_list = gl.get_tr_nb_list(args)
     ao_list = gl.get_ao_list(args)
     ds_list = gl.get_ds_list(args)
+    mot_list = gl.get_mot_list(args)
 
     net_list = cpmodels.load_cp_models(model_names, args)
 
     train_data_gen_list = []
     valid_array_list = []
 
-    zip_list = zip(path_list, task_list, label_list, net_list, model_names, load_name_list, tr_nb_list, ao_list, ds_list)
-    for mypath, task, labels, net, model_name, ld_name, tr_nb, ao, ds in zip_list:
+    zip_list = zip(path_list, task_list, label_list, net_list, model_names, load_name_list, tr_nb_list, ao_list, ds_list, mot_list)
+    for mypath, task, labels, net, model_name, ld_name, tr_nb, ao, ds, mot in zip_list:
         model_figure_fpath = mypath.model_figure_path() + '/' + model_name + '.png'
         plot_model(net, show_shapes=True, to_file=model_figure_fpath)
         print('successfully plot model structure at: ', model_figure_fpath)
@@ -251,7 +266,8 @@ def train():
                                 p_middle=args.p_middle,
                                 aux=ao,
                                 mtscale=args.mtscale,
-                                ptch_seed=None)
+                                ptch_seed=None,
+                                mot=mot)
 
         valid_it = ScanIterator(mypath.data_dir('monitor'), task=task,
                                 sub_dir=mypath.sub_dir(),
@@ -270,79 +286,88 @@ def train():
                                 p_middle=args.p_middle,
                                 aux=ao,
                                 mtscale=args.mtscale,
-                                ptch_seed=1)
-
-        enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=True)
-        train_datas = enqueuer_train.get()
-        enqueuer_train.start()
-        train_data_gen_list.append(train_datas)
+                                ptch_seed=1,
+                                mot=mot)
 
         enqueuer_valid = GeneratorEnqueuer(valid_it.generator(), use_multiprocessing=False)
         valid_datas = enqueuer_valid.get()
         enqueuer_valid.start()
 
-        if task == 'no_label':
-            valid_data_x_numpy = []
+        enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=True)
+        train_datas = enqueuer_train.get()
+        enqueuer_train.start()
+        train_data_gen_list.append(train_datas)
+        monitor_nb = 10
+        if mot:
+            valid_data_y_numpy1, valid_data_y_numpy2 = [], []
             valid_data_x_numpy1, valid_data_x_numpy2 = [], []
-            valid_data_y_numpy = []
-            if task=='lobe':
-                monitor_nb = 10
-            else:
-                monitor_nb = 20
-            for i in range(monitor_nb):
-                one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator() [x, y]
-                one_valid_data_x = one_valid_data[0]  # output shape:(1,144,144,80,1)
-                if type(one_valid_data_x) is np.ndarray:
-                    valid_data_x_numpy.append(one_valid_data_x[0])  # output shape:(144,144,80,1)
-                else:
-                    valid_data_x_numpy1.append(one_valid_data_x[0][0])  # output shape:(144,144,80,1)
-                    valid_data_x_numpy2.append(one_valid_data_x[1][0])  # output shape:(144,144,80,1)
-
-                one_valid_data_y = one_valid_data[1]  # output shape:(1,144,144,80,1)
-
-                valid_data_y_numpy.append(one_valid_data_y[0][0])
-
-            if len(valid_data_x_numpy):
-                valid_data_numpy = (np.array(valid_data_x_numpy), np.array(valid_data_y_numpy))
-            else:
-                valid_data_numpy = ([np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)], np.array(valid_data_y_numpy))
-
-        else:
-            if ao and ds == 2:
-                out_nb = 4
-                valid_data_y_numpy = [[], [], [], []]
-            elif ao and ds == 0:
-                out_nb = 2
-                valid_data_y_numpy = [[], []]
-            elif ao == False and ds == 2:
-                out_nb = 3
-                valid_data_y_numpy = [[], [], []]
-            elif ao == False and ds == 0:
-                out_nb = 1
-                valid_data_y_numpy = [[]]
-            else:
-                raise Exception('Please set the correct aux and ds!!!')
-
-            valid_data_x_numpy = []
-            valid_data_x_numpy1, valid_data_x_numpy2 = [], []
-            for i in range(10):  # use 10 valid patches to save best valid model
+            for i in range(monitor_nb):  # use 10 valid patches to save best valid model
                 one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
-                one_valid_data_x = one_valid_data[0]  # output shape:(1,144,144,80,1) or a list with two arrays
-                if type(one_valid_data_x) is np.ndarray:
-                    valid_data_x_numpy.append(one_valid_data_x[0])
-                else:
-                    valid_data_x_numpy1.append(one_valid_data_x[0][0])
-                    valid_data_x_numpy2.append(one_valid_data_x[1][0])
+                one_valid_data_x, one_valid_data_y = one_valid_data  # output shape:(1,144,144,80,1) or a list with two arrays
+                valid_data_x_numpy1.append(one_valid_data_x[0][0])
+                valid_data_x_numpy2.append(one_valid_data_x[1][0])
+                valid_data_y_numpy1.append(one_valid_data_y[0][0])
+                valid_data_y_numpy2.append(one_valid_data_y[1][0])
+            valid_data_numpy = ([np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)],
+                                [np.array(valid_data_y_numpy1), np.array(valid_data_y_numpy2)])
+        else:
+            if task == 'no_label':
+                valid_data_x_numpy = []
+                valid_data_x_numpy1, valid_data_x_numpy2 = [], []
+                valid_data_y_numpy = []
 
-                one_valid_data_y = one_valid_data[1]  # output 4 lists, each list has shape:(1,144,144,80,1)
-                for j in range(out_nb):
-                    valid_data_y_numpy[j].append(one_valid_data_y[j][0])
-            for _ in range(out_nb):
-                valid_data_y_numpy[_] = np.asarray(valid_data_y_numpy[_])
-            if len(valid_data_x_numpy):
-                valid_data_numpy = (np.array(valid_data_x_numpy), valid_data_y_numpy)
+                for i in range(monitor_nb):
+                    one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator() [x, y]
+                    one_valid_data_x = one_valid_data[0]  # output shape:(1,144,144,80,1)
+                    if type(one_valid_data_x) is np.ndarray:
+                        valid_data_x_numpy.append(one_valid_data_x[0])  # output shape:(144,144,80,1)
+                    else:
+                        valid_data_x_numpy1.append(one_valid_data_x[0][0])  # output shape:(144,144,80,1)
+                        valid_data_x_numpy2.append(one_valid_data_x[1][0])  # output shape:(144,144,80,1)
+
+                    one_valid_data_y = one_valid_data[1]  # output shape:(1,144,144,80,1)
+                    valid_data_y_numpy.append(one_valid_data_y[0][0])
+
+                if len(valid_data_x_numpy):
+                    valid_data_numpy = (np.array(valid_data_x_numpy), np.array(valid_data_y_numpy))
+                else:
+                    valid_data_numpy = ([np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)], np.array(valid_data_y_numpy))
             else:
-                valid_data_numpy = ([np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)], valid_data_y_numpy)
+                    if ao and ds == 2:
+                        out_nb = 4
+                        valid_data_y_numpy = [[], [], [], []]
+                    elif ao and ds == 0:
+                        out_nb = 2
+                        valid_data_y_numpy = [[], []]
+                    elif ao == False and ds == 2:
+                        out_nb = 3
+                        valid_data_y_numpy = [[], [], []]
+                    elif ao == False and ds == 0:
+                        out_nb = 1
+                        valid_data_y_numpy = [[]]
+                    else:
+                        raise Exception('Please set the correct aux and ds!!!')
+
+                    valid_data_x_numpy = []
+                    valid_data_x_numpy1, valid_data_x_numpy2 = [], []
+                    for i in range(10):  # use 10 valid patches to save best valid model
+                        one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
+                        one_valid_data_x = one_valid_data[0]  # output shape:(1,144,144,80,1) or a list with two arrays
+                        if type(one_valid_data_x) is np.ndarray:
+                            valid_data_x_numpy.append(one_valid_data_x[0])
+                        else:
+                            valid_data_x_numpy1.append(one_valid_data_x[0][0])
+                            valid_data_x_numpy2.append(one_valid_data_x[1][0])
+
+                        one_valid_data_y = one_valid_data[1]  # output 4 lists, each list has shape:(1,144,144,80,1)
+                        for j in range(out_nb):
+                            valid_data_y_numpy[j].append(one_valid_data_y[j][0])
+                    for _ in range(out_nb):
+                        valid_data_y_numpy[_] = np.asarray(valid_data_y_numpy[_])
+                    if len(valid_data_x_numpy):
+                        valid_data_numpy = (np.array(valid_data_x_numpy), valid_data_y_numpy)
+                    else:
+                        valid_data_numpy = ([np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)], valid_data_y_numpy)
 
         valid_array_list.append(valid_data_numpy)
         enqueuer_valid.stop()
@@ -403,6 +428,12 @@ def train():
         print('step number: ', idx_)
         zip_list2 = zip(task_list, net_list, train_data_gen_list, label_list, path_list, model_names, valid_array_list)
         for task, net, tr_data, label, mypath, model_name, valid_array in zip_list2:
+            if len(net_list)==3:
+                if (idx_ % 2 == 0) and task=="no_label":
+                    pass
+                elif (idx_ % 2 == 1) and task=="vessel":
+                    pass
+
             if task!="lobe":
                 loss_ratio = current_tr_loss_dict["net_only_lobe"]/current_tr_loss_dict[model_name]
                 print('loss_ratio: ', loss_ratio, file=sys.stderr)

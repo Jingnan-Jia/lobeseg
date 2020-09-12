@@ -189,7 +189,8 @@ class ScanIterator(Iterator):
                  phase='None',
                  aux=None,
                  mtscale=None,
-                 ptch_seed=None):
+                 ptch_seed=None,
+                 mot=False):
         """
         Iterate through two directories at the same time.
 
@@ -232,6 +233,7 @@ class ScanIterator(Iterator):
         self.trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space]
         self.trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz]
         self.ptch_seed = ptch_seed
+        self.mot = mot
 
         self.aux = aux
         if self.aux:
@@ -244,16 +246,6 @@ class ScanIterator(Iterator):
         if self.task == 'no_label':
             self.a_dir = os.path.join(directory, a_dir_name, no_label_dir)
             self.a_extension = a_extension
-            # tmp = glob.glob(self.a_dir + '/*' + self.a_extension)
-            # tmp2 = sorted(tmp)
-            # l = []
-            # for x in tmp2:
-            #     tmp4 = x.split(a_extension)
-            #     tmp5 = tmp4[0].split(self.a_dir + '/')
-            #     tmp3 = tmp5[-1]
-            #     l.append(tmp3)
-            # tmppp = set(l)
-
             files = set(x.split(a_extension)[0].split(self.a_dir + '/')[-1] for x in
                         sorted(glob.glob(self.a_dir + '/*' + self.a_extension)))
             self.filenames = sorted(list(files))
@@ -311,10 +303,8 @@ class ScanIterator(Iterator):
         print('start load file: ', a_fname)
 
         a = self.load_scan(file_name=os.path.join(self.a_dir, a_fname))  # (200, 512, 512, 1)
-        pad_nb = 36
+        pad_nb = 48
         a = np.pad(a, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant', constant_values=-3000)
-
-
 
         # a = np.array(a)
         a = futil.normalize(a)  # threshold to [-1000,400], then rescale to [0,1]
@@ -357,18 +347,18 @@ class ScanIterator(Iterator):
                 for i, j in enumerate(index_array):
 
                     if self.aux:
-                        a_ori, b, c = self._load_img_pair(j)
+                        a_ori, b_ori, c_ori = self._load_img_pair(j)
                     else:
-                        a_ori, b = self._load_img_pair(j)
+                        a_ori, b_ori = self._load_img_pair(j)
                     if self.task != 'no_label':
-                        b = one_hot_encode_3D(b, self.labels)
-                        c = one_hot_encode_3D(c, [0, 1]) if self.aux else None
+                        b_ori = one_hot_encode_3D(b_ori, self.labels)
+                        c_ori = one_hot_encode_3D(c_ori, [0, 1]) if self.aux else None
 
                     if self.data_argum:
                         if self.aux:
-                            a_ori, b, c = random_transform(a_ori, b, c)
+                            a_ori, b_ori, c_ori = random_transform(a_ori, b_ori, c_ori)
                         else:
-                            a_ori, b = random_transform(a_ori, b)
+                            a_ori, b_ori = random_transform(a_ori, b_ori)
 
                     if any(self.trgt_sp_list) or any(self.trgt_sz_list):
                         if not self.mtscale or self.task == 'lobe':
@@ -376,26 +366,36 @@ class ScanIterator(Iterator):
                                            ori_space=self.spacing, trgt_space=self.trgt_sp_list,
                                            ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
                                            order=1)
-                            b = downsample(b,
+                            b = downsample(b_ori,
                                            ori_space=self.spacing, trgt_space=self.trgt_sp_list,
-                                           ori_sz=b.shape, trgt_sz=self.trgt_sz_list,
+                                           ori_sz=b_ori.shape, trgt_sz=self.trgt_sz_list,
                                            order=0)
-                            c = downsample(c,
+                            c = downsample(c_ori,
                                            ori_space=self.spacing, trgt_space=self.trgt_sp_list,
-                                           ori_sz=c.shape, trgt_sz=self.trgt_sz_list,
+                                           ori_sz=c_ori.shape, trgt_sz=self.trgt_sz_list,
                                            order=0) if self.aux else None
                             a2 = a_ori if self.mtscale else None
+                            b2 = b_ori if self.mot else None
                         else:
                             a = a_ori
                             a2 = downsample(a_ori,
                                             ori_space=self.spacing, trgt_space=self.trgt_sp_list,
                                             ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
                                             order=1) if self.mtscale else None
+                            b = b_ori
+                            b2 = downsample(b_ori,
+                                            ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                                            ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
+                                            order=0) if self.mot else None
                     else:
                         a = a_ori
                         a2 = None  # if trgt_sp or trgt_sz is not assigned, it means that mtscale is False
+                        b = b_ori
+                        b2 = None
+
                     print('before patching, the shape of a is ', a.shape)
                     print('before patching, the shape of a2 is ', a2.shape) if self.mtscale else print('')
+                    print('before patching, the shape of b2 is ', b2.shape) if self.mot else print('')
 
                     for _ in range(self.patches_per_scan):
                         if self.ptch_seed:
@@ -407,21 +407,32 @@ class ScanIterator(Iterator):
                             if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
                                 a_img, b_img, c_img = random_patch(a, b, c,
                                                                    patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
-                                                                   p_middle=self.p_middle, a2=a2, ptch_seed=ptch_seed)
+                                                                   p_middle=self.p_middle, a2=a2, b2=b2, ptch_seed=ptch_seed)
                             else:
                                 a_img, b_img, c_img = a, b, c
                         else:
                             if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
                                 a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
-                                                            p_middle=self.p_middle, a2=a2, ptch_seed=ptch_seed)
+                                                            p_middle=self.p_middle, a2=a2, b2=b2, ptch_seed=ptch_seed)
                             else:
                                 a_img, b_img = a, b
 
-                        a_img, b_img = np.rollaxis(a_img, 0, 3), np.rollaxis(b_img, 0, 3)
-                        c_img = np.rollaxis(c_img, 0, 3) if self.aux else None
+                        if self.mot:
+                            b1_ = b_img[0]
+                            b2_ = b_img[1]
+                            b1_ = np.rollaxis(b1_, 0, 3)
+                            b1_ = b1_[np.newaxis, ...]
+                            b2_ = np.rollaxis(b2_, 0, 3)
+                            b2_ = b2_[np.newaxis, ...]
 
-                        a_img, b_img = a_img[np.newaxis, ...], b_img[np.newaxis, ...]
+                        else:
+                            b_img = np.rollaxis(b_img, 0, 3)
+                            b_img = b_img[np.newaxis, ...]
+                        a_img = np.rollaxis(a_img, 0, 3)
+                        c_img = np.rollaxis(c_img, 0, 3) if self.aux else None
+                        a_img = a_img[np.newaxis, ...]
                         c_img = c_img[np.newaxis, ...] if self.aux else None
+
 
                         if self.aux:
                             if self.mtscale:
@@ -448,7 +459,10 @@ class ScanIterator(Iterator):
                                     yield [x1, x2], [b_img, b_img, b_img]
 
                                 else:
-                                    yield [x1, x2], [b_img]
+                                    if self.mot:
+                                        yield [x1, x2], [b1_, b2_]
+                                    else:
+                                        yield [x1, x2], [b_img]
                             else:
 
                                 if self.ds == 2:
@@ -458,9 +472,6 @@ class ScanIterator(Iterator):
                                     yield a_img, [b_img]
             except:
                 print("This ct is weird, fail to patch it, pass it")
-
-
-
 
             # if self.aux:
             #     x, y, y_aux = self.next()

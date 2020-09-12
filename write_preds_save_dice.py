@@ -189,32 +189,17 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 
 
 '''
-task='vessel'
+task='lobe'
 str_names = [
-'1597066656_951_lr0.0001lrvs0.0001ld1mtscale0netnovpm0.5nldNoneao0ds0bn1fn16tsp0.0z0.0pps100trnb18nlnb0ptsz144ptzsz96'
+'1599170848_168_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
 ]
 print(str_names)
 
 for str_name in str_names:
-    mypath = Mypath(task=task, current_time=str_name) # set task=vessel to predict the lobe masks of SSc
-    # str_name = '1585000573.7211952_0.00011a_o_0ds2dr1bn1fs16ptsz144ptzsz64'
-    # ptch_z_sz = int(str_name.split('ptzsz')[-1])
+    mypath = Mypath(task='vessel', current_time=str_name) # set task=vessel to predict the lobe masks of SSc
     model_name =  '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
 
-    # ptch_sz = int(str_name.split('ptsz')[-1].split('ptzsz')[0])
-    # a = str_name.split('trsp')
-    # b = str_name.split('ptsz')
-    #
-    # ptch_z_sz = int(re.findall(r'^\d+|^None', str_name.split('ptzsz')[-1])[0])
-    # ptch_sz = int(re.findall(r'^\d+|^None', str_name.split('ptsz')[-1])[0])
-    # tr_sp = float(re.findall(r'^\d+|^None', str_name.split('tsp')[-1])[0])
-    # tr_z_sp = float(re.findall(r'^\d+|^None', str_name.split('tsp**z')[-1])[0])
-    # tr_sz = float(re.findall(r'^\d+|^None', str_name.split('trsz')[-1])[0])
-    # tr_z_sz = float(re.findall(r'^\d+|None', str_name.split('trzsz')[-1])[0])
-    # ld = re.findall(r'^\d+|^None', str_name.split('ld')[-1])[0]
-
-
-    tr_sp, tr_z_sp = None, None
+    tr_sp, tr_z_sp = 1.4, 2.5
     tr_sz, tr_z_sz = None, None
     pt_sz, pt_z_sz = 144, 96
 
@@ -227,7 +212,7 @@ for str_name in str_names:
             stride = 0.25
         elif task=='vessel':
             labels = [0, 1]
-            stride = 0.8
+            stride = 0.25
 
         segment = v_seg.v_segmentor(batch_size=1,
                                     model=model_name,
@@ -241,7 +226,7 @@ for str_name in str_names:
         write_preds_to_disk(segment=segment,
                             data_dir=mypath.ori_ct_path(phase),
                             preds_dir=mypath.pred_path(phase),
-                            number=1,
+                            number=3,
                             stride=stride)
         # #
         # write_dices_to_csv (step_nb=0,

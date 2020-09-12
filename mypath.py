@@ -37,10 +37,10 @@ def get_short_names(long_names):
     :return: a list of tasks
     """
     net_task_dict = {
-        "net_itgt_lobe_recon": "nilr",
-        "net_itgt_vessel_recon": "nivr",
-        "net_itgt_lung_recon": "niur",
-        "net_itgt_airway_recon": "niar",
+        "net_itgt_lb_rc": "nilr",
+        "net_itgt_vs_rc": "nivr",
+        "net_itgt_lu_rc": "niur",
+        "net_itgt_aw_rc": "niar",
 
         "net_no_label": "nnl",
 

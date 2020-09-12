@@ -13,6 +13,7 @@ import tensorflow.keras.backend as K
 import time
 import sys
 from futils.util import one_hot_decoding
+import re
 
 
 class v_segmentor(object):
@@ -30,7 +31,6 @@ class v_segmentor(object):
         self.trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz]
         self.task = task
         if task == 'lobe':
-
             self.labels = [0, 4, 5, 6, 7, 8]
         elif task == 'vessel':
             self.labels = [0, 1]
@@ -58,7 +58,6 @@ class v_segmentor(object):
                         self.v = model_from_json(json_model)
                         self.v.load_weights((self.model))
 
-
         else:  # model is a tf.keras model directly in RAM
             self.graph1 = tf.Graph()
             with self.graph1.as_default():
@@ -70,7 +69,6 @@ class v_segmentor(object):
         """returns normalized (0 mean 1 variance) scan"""
         scan = (scan - np.mean(scan)) / (np.std(scan))
         return scan
-
 
     def save(self, model_fpath):
         with self.graph1.as_default():
@@ -105,6 +103,12 @@ class v_segmentor(object):
         else:
             self.mtscale = False
 
+        self.mot = False
+        for layer in layers:
+            match = re.match('out_.*?2$', layer)
+            if bool(match):
+                self.mot = True
+
         if any(self.trgt_space_list) or any(self.trgt_sz_list):
             if not self.mtscale or self.task == 'lobe':
                 x = downsample(x_ori,
@@ -137,37 +141,63 @@ class v_segmentor(object):
         else:
             CHN = 2
 
-        pred = reconstruct_patch_gen(pre_gen, ptch_shape=patch_shape, original_shape=x.shape, stride=stride, chn=CHN)
+        pred = reconstruct_patch_gen(pre_gen, ptch_shape=patch_shape, original_shape=x.shape, stride=stride, chn=CHN,
+                                     mot=self.mot, original_shape2=a2.shape)
         # pred has 5 dims, original_shape has 4 dims
 
         # one hot decoding
-        masks = []
-        for p in pred:
-            masks.append(one_hot_decoding(p, self.labels))
-        masks = np.array(masks, dtype='uint8')
+        if self.mot:
+            masks1 = []
+            for p1 in pred[0]:
+                masks1.append(one_hot_decoding(p1, self.labels))
+            masks1 = np.array(masks1, dtype='uint8')
 
+            masks2 = []
+            for p2 in pred[1]:
+                masks2.append(one_hot_decoding(p2, self.labels))
+            masks2 = np.array(masks1, dtype='uint8')
+            if sum(masks1.shape) < sum(masks2.shape):  # masks1 is of original resolution
+                masks1 = masks2  # keep masks1 high/original resolution
+                masks2 = masks1
+            masks2 = downsample(masks2,
+                                ori_space=self.trgt_space_list,
+                                trgt_space=self.ori_space_list,
+                                ori_sz=masks2.shape,
+                                trgt_sz=original_shape,
+                                order=1,
+                                labels=self.labels)
+            masks2 = correct_shape(masks2, original_shape)  # correct the shape mistakes made by sampling
+            print('final_pred.shape: ', masks2.shape)
+            pad_nb = 48
+            masks1 = masks1[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
+            masks2 = masks2[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
+            return masks1, masks2
 
-        if any(self.trgt_space_list) or any(self.trgt_sz_list):
-            if not self.mtscale or self.task == 'lobe':
-                print('rescaled to original spacing  ')
-                final_pred = downsample(masks,
-                                        ori_space=self.trgt_space_list,
-                                        trgt_space=self.ori_space_list,
-                                        ori_sz=masks.shape,
-                                        trgt_sz=original_shape,
-                                        order=1,
-                                        labels=self.labels)
+        else:
+            masks = []
+            for p in pred:
+                masks.append(one_hot_decoding(p, self.labels))
+            masks = np.array(masks, dtype='uint8')
+            if any(self.trgt_space_list) or any(self.trgt_sz_list):
+                if not self.mtscale or self.task == 'lobe':
+                    print('rescaled to original spacing')
+                    final_pred = downsample(masks,
+                                            ori_space=self.trgt_space_list,
+                                            trgt_space=self.ori_space_list,
+                                            ori_sz=masks.shape,
+                                            trgt_sz=original_shape,
+                                            order=1,
+                                            labels=self.labels)
+                else:
+                    final_pred = masks
             else:
                 final_pred = masks
-        else:
-            final_pred = masks
 
-        final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
-        print('final_pred.shape: ', final_pred.shape)
-        
-        pad_nb = 36
-        final_pred = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
+            final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
+            print('final_pred.shape: ', final_pred.shape)
+            pad_nb = 48
+            final_pred = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
 
-        return final_pred
+            return final_pred
 
 #

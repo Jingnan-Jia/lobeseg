@@ -27,10 +27,9 @@ def calculate_time(fun):
 
     return decorated
 
-def get_a2_patch(scan, origin, p_sh, a2):
+def get_a2_patch(scan, origin, p_sh, a2, b2=None):
     """
     output a2_patch given a scan and the patch origin(start position) and  patch shape of the first patch,
-
 
     :param scan:  shape: (z, x, y, 1)
     :param origin: (z, x, y)
@@ -47,10 +46,10 @@ def get_a2_patch(scan, origin, p_sh, a2):
     finish_a2 = center_idx + p_sh // 2  # (z, x, y)
 
     if scan.shape[0] < a2.shape[0] or all(i >= 0 for i in origin_a2) and all(m < n for m, n in zip(finish_a2, a2.shape)):
-        # scan is downsampled from a2 or
-        # a2 is downsampled from scan, original_a2 is positive, and finish_a2 is smaller than a2.shape
+        # original_a2 is positive, and finish_a2 is smaller than a2.shape
         idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
         a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])]
+        b2_patch1 = b2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])] if (b2 is not None) else None
 
     else:
         # origin_a2 is negative or finish_a2 is greater than a2.shape
@@ -67,14 +66,32 @@ def get_a2_patch(scan, origin, p_sh, a2):
 
         idx_a2 = [np.arange(o_, f_) for o_, f_ in zip(origin_a2, finish_a2)]
         a2_patch = a2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])] # (z, x, y, 1)
+        b2_patch = b2[np.ix_(idx_a2[0], idx_a2[1], idx_a2[2])] if (b2 is not None) else None
 
         a2_patch = a2_patch[..., 0] # (z, x, y, 1)
         pad_width = tuple([(i, j) for i, j in zip(pad_origin, pad_finish)])
         a2_patch = np.pad(a2_patch, pad_width, mode='minimum') # (z, x, y)
         a2_patch = a2_patch[..., np.newaxis] # (z, x, y, 1)
-    return a2_patch
 
-def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None, a2=None, ptch_seed=None):
+        if b2 is not None:
+
+            b2_patch1 = b2_patch[..., 0]  # (z, x, y, 1)
+            b2_patch1 = np.pad(b2_patch1, pad_width, mode='minimum')  # (z, x, y)
+            b2_patch1 = b2_patch1[..., np.newaxis]  # (z, x, y, 1)
+
+            if b2_patch.shape[-1] == 2:
+                b2_patch2 = b2_patch[..., 0]  # (z, x, y, 1)
+                b2_patch2 = np.pad(b2_patch2, pad_width, mode='minimum')  # (z, x, y)
+                b2_patch2 = b2_patch2[..., np.newaxis]  # (z, x, y, 1)
+                b2_patch1 = np.concatenate((b2_patch1, b2_patch2), axis=-1)
+
+    if b2 is not None:
+        return a2_patch, b2_patch1
+    else:
+        return a2_patch
+
+def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),p_middle=None,
+                 a2=None, b2=None, ptch_seed=None):
     """
     get ramdom patches from the given ct.
 
@@ -102,6 +119,7 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     # print('scan shape', sh)
     # print('patch shape', p_sh)
     # print('range values', range_vals)
+    origin = []
     if p_middle:  # set sampling specific probability on central part
         # print('p_middle, select more big vessels')
         random.seed(ptch_seed)
@@ -112,24 +130,11 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
             range_vals_high = list(map(int,(sh[0:3] * 2 /3 - p_sh//2) ))
             # assert range_vals_low > 0 and range_vals_high > 0
             if all(i>0 for i in range_vals_low) and all(j>0 for j in range_vals_high):
-                origin = []
                 for low, high in zip(range_vals_low, range_vals_high):
                     origin.append(random.randint(low, high))
                 # print('p_middle, select more big vessels!')
-            else:
-                origin = [random.randint(0, x) for x in range_vals]
-                # print('p_middle, but range value is negtive')
-
-        else:  #patch from other parts
-            origin = [random.randint(0, x) for x in range_vals]
-            # print('p_middle, select small vessels!')
-
-    else:
+    if len(origin)==0:
         origin = [random.randint(0, x) for x in range_vals]
-        # print('No p_middle, select all vessels')
-
-
-
 
     finish  = origin + p_sh
     for finish_voxel, scan_size in zip(finish, sh):
@@ -139,17 +144,25 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     idx = [np.arange(o_,f_) for o_,f_ in zip(origin,finish)]
     patch = scan[np.ix_(idx[0], idx[1], idx[2])]
 
-
     if a2 is not None:
-        a2_patch = get_a2_patch( scan, origin, p_sh, a2)
+        if b2 is not None:
+            a2_patch, b2_patch = get_a2_patch(scan, origin, p_sh, a2, b2)
+        else:
+            a2_patch = get_a2_patch(scan, origin, p_sh, a2)
         if scan.shape[0]>a2.shape[0]:  # scan is original resolution, a2 is downsampled, we put patch from original resolutiion at first
             patch = np.concatenate((patch, a2_patch), axis=-1) # concatenate along the channel axil
         else: # a2 is original resolution, scan is downsampled, we put patch from original resolutiion at first still
             patch = np.concatenate((a2_patch, patch), axis=-1)  # concatenate along the channel axil
+        if (gt_scan is not None):
+            gt_patch = gt_scan[np.ix_(idx[0], idx[1], idx[2])]
+            if b2 is not None:
+                if scan.shape[0] > a2.shape[0]:
+                    gt_patch = [gt_patch, b2_patch]  # concatenate along the channel axil
+                else:  # a2 is original resolution, scan is downsampled,
+                    # we put patch from original resolutiion at first still
+                    gt_patch = [b2_patch, gt_patch]  # concatenate along the channel axil
 
     if(gt_scan is not None):
-
-        gt_patch = gt_scan[np.ix_(idx[0],idx[1],idx[2])]
         if (aux_scan is not None):
             aux_patch = aux_scan[np.ix_(idx[0], idx[1], idx[2])]
             return patch, gt_patch, aux_patch
@@ -340,7 +353,8 @@ def reconstruct_patch(scan,original_shape=(128,256,256),stride = 0.25):
 
 
 @calculate_time
-def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stride=0.25, chn=6):
+def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stride=0.25, chn=6, mot=False,
+                          original_shape2=None):
     """
     reconstruct a ct from a batch of patches.
 
@@ -349,12 +363,9 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
     :param stride: overlap ratio on each axil
     :return: a ct with original shape (z, x, y)
     """
-
-
-
-
     p_sh = np.array(ptch_shape)  # shape (z, x, y)
     sh = np.array(original_shape, dtype=int)[:-1]  # shape (z, x, y)
+    sh2 = np.array(original_shape2, dtype=int)[:-1] if mot else None  # shape (z, x, y)
 
     if isinstance(stride, float) or stride == 1:
         stride = p_sh * stride
@@ -366,10 +377,16 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
     stride = stride.astype(int)
 
     n_patches = (sh - p_sh + 2 * stride) // stride
+    n_patches2 = (sh2 - p_sh + 2 * stride) // stride if mot else None
+
     print('number of patches to reconstruct: ', n_patches)
+    print('number of patches to reconstruct: ', n_patches2) if mot else None
+
 
     # init result
     result = np.zeros(tuple(sh) + (chn,), dtype=float)
+    result2 = np.zeros(tuple(sh2) + (chn,), dtype=float) if mot else None
+
     n = 0
     for z, x, y in np.ndindex(tuple(n_patches)):
         n += 1
@@ -389,14 +406,40 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
             patch = patch[0]
         patch = np.rollaxis(patch, 3, 1)  # (125, 64, 128, 128, 6)
         result[np.ix_(idx[0], idx[1], idx[2])] += patch[0]
-
     # normalize (0-1) output
     r_sum = np.sum(result, axis=-1)
-
     r_sum[r_sum == 0] = 1  # hmm this should not be necessary - but it is :(
     r_sum = np.repeat(r_sum[:, :, :, np.newaxis], chn, -1)
     # repeat the sum along channel axis (to allow division)
-
     result = np.divide(result, r_sum)
 
-    return result
+    if mot:
+        n = 0
+        for z, x, y in np.ndindex(tuple(n_patches2)):
+            n += 1
+            # print('reconstruct patch number ', n)
+            it = np.array([z, x, y], dtype=int)
+            origin = it * stride
+            finish = it * stride + p_sh
+
+            for i in range(len(finish)):  # when we meet the last patch
+                if finish[i] >= sh2[i]:
+                    finish[i] = sh2[i] - 1
+                    origin[i] = finish[i] - p_sh[i]
+
+            idx = [np.arange(o_, f_) for o_, f_ in zip(origin, finish)]
+            patch = next(scan)  # (125, 128, 128, 64, 6)
+            if type(patch) is list:
+                patch = patch[1]
+            patch = np.rollaxis(patch, 3, 1)  # (125, 64, 128, 128, 6)
+            result2[np.ix_(idx[0], idx[1], idx[2])] += patch[0]
+        # normalize (0-1) output
+        r_sum2 = np.sum(result2, axis=-1)
+        r_sum2[r_sum == 0] = 1  # hmm this should not be necessary - but it is :(
+        r_sum2 = np.repeat(r_sum2[:, :, :, np.newaxis], chn, -1)
+        # repeat the sum along channel axis (to allow division)
+        result2 = np.divide(result2, r_sum2)
+    if not mot:
+        return result
+    else:
+        return result, result2
