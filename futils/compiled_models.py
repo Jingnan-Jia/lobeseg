@@ -401,6 +401,7 @@ def load_cp_models(model_names, args):
     dr = args.dropout
     net_type = args.u_v
     mtscale = args.mtscale
+    attention = args.attention
 
     ## start model
     input_data = Input((None, None, None, nch), name='input')  # input data
@@ -419,7 +420,45 @@ def load_cp_models(model_names, args):
     dwn_tr3 = down_trans(dwn_tr2, nf * 8, 2, bn, dr, ty=net_type, name='block3')
     dwn_tr4 = down_trans(dwn_tr3, nf * 16, 2, bn, dr, ty=net_type, name='block4')
 
+
+
     #######################################################-----------------------#####################################
+    # decoder for lobe segmentation. up_path for segmentation V-Net, with shot connections
+    up_tr4_lobe = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='lobe_block5')
+    up_tr3_lobe = up_trans(up_tr4_lobe, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='lobe_block6')
+    up_tr2_lobe = up_trans(up_tr3_lobe, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='lobe_block7')
+    up_tr1_lobe = up_trans(up_tr2_lobe, nf * 1, 1, bn, dr, ty=net_type, input2=in_tr, name='lobe_block8')
+    # classification
+    lobe_out_chn = 6
+    res_lobe = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_Conv3D_last')(up_tr1_lobe)
+    out_lobe = Activation('softmax', name='lobe_out_segmentation')(res_lobe)
+
+    out_lobe = [out_lobe]  # convert to list to append other outputs
+    if args.mot_lb:
+        res_lobe2 = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_Conv3D_last2')(up_tr1_lobe)
+        out_lobe2 = Activation('softmax', name='lobe_out_segmentation2')(res_lobe2)
+        out_lobe.append(out_lobe2)
+    if args.ao_lb:
+        # aux_output
+        aux_res = Conv3D(2, 1, padding='same', name='lobe_aux_Conv3D_last')(up_tr1_lobe)
+        aux_out = Activation('softmax', name='lobe_aux')(aux_res)
+        out_lobe.append(aux_out)
+    if args.ds_lb:
+        out_lobe = [out_lobe]
+        # deep supervision#1
+        deep_1 = UpSampling3D((2, 2, 2), name='lobe_d1_UpSampling3D_0')(up_tr2_lobe)
+        res = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_d1_Conv3D_last')(deep_1)
+        d_out_1 = Activation('softmax', name='lobe_d1')(res)
+        out_lobe.append(d_out_1)
+
+        # deep supervision#2
+        deep_2 = UpSampling3D((2, 2, 2), name='lobe_d2_UpSampling3D_0')(up_tr3_lobe)
+        deep_2 = UpSampling3D((2, 2, 2), name='lobe_d2_UpSampling3D_1')(deep_2)
+        res = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_d2_Conv3D_last')(deep_2)
+        d_out_2 = Activation('softmax', name='lobe_d2')(res)
+        out_lobe.append(d_out_2)
+
+        #######################################################-----------------------#####################################
     # decoder for lung segmentation. up_path for segmentation V-Net, with shot connections
     up_tr4_lung = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='lung_block5')
     up_tr3_lung = up_trans(up_tr4_lung, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='lung_block6')
@@ -428,8 +467,12 @@ def load_cp_models(model_names, args):
                            name='lung_block8')  # note filters number
     # classification
     lung_out_chn = 2
-    res_lung = Conv3D(lung_out_chn, 1, padding='same', name='lung_Conv3D_last')(up_tr1_lung)
-    out_lung = Activation('softmax', name='lung_out_segmentation')(res_lung)
+    if attention:
+        res_lung = Conv3D(lobe_out_chn, 1, padding='same', name='lung_Conv3D_last')(up_tr1_lung)
+        out_lung = Activation('softmax', name='lung_out_segmentation')(res_lung)
+    else:
+        res_lung = Conv3D(lung_out_chn, 1, padding='same', name='lung_Conv3D_last')(up_tr1_lung)
+        out_lung = Activation('softmax', name='lung_out_segmentation')(res_lung)
 
     out_lung = [out_lung]  # convert to list to append other outputs
     if args.mot_lu:
@@ -457,43 +500,6 @@ def load_cp_models(model_names, args):
         out_lung.append(d_out_2)
 
     #######################################################-----------------------#####################################
-    # decoder for lobe segmentation. up_path for segmentation V-Net, with shot connections
-    up_tr4_lobe = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='lobe_block5')
-    up_tr3_lobe = up_trans(up_tr4_lobe, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='lobe_block6')
-    up_tr2_lobe = up_trans(up_tr3_lobe, nf * 2, 2, bn, dr, ty=net_type, input2=dwn_tr1, name='lobe_block7')
-    up_tr1_lobe = up_trans(up_tr2_lobe, nf * 1, 1, bn, dr, ty=net_type, input2=in_tr, name='lobe_block8')
-    # classification
-    lobe_out_chn = 6
-    res_lobe = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_Conv3D_last')(up_tr1_lobe)
-    out_lobe = Activation('softmax', name='lobe_out_segmentation')(res_lobe)
-
-    out_lobe = [out_lobe]  # convert to list to append other outputs
-    if args.mot_lb:
-        res_lobe2 = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_Conv3D_last2')(up_tr1_lobe)
-        out_lobe2 = Activation('softmax', name='lobe_out_segmentation2')(res_lobe2)
-        out_lobe.append(out_lobe2)
-
-    if args.ao_lb:
-        # aux_output
-        aux_res = Conv3D(2, 1, padding='same', name='lobe_aux_Conv3D_last')(up_tr1_lobe)
-        aux_out = Activation('softmax', name='lobe_aux')(aux_res)
-        out_lobe.append(aux_out)
-    if args.ds_lb:
-        out_lobe = [out_lobe]
-        # deep supervision#1
-        deep_1 = UpSampling3D((2, 2, 2), name='lobe_d1_UpSampling3D_0')(up_tr2_lobe)
-        res = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_d1_Conv3D_last')(deep_1)
-        d_out_1 = Activation('softmax', name='lobe_d1')(res)
-        out_lobe.append(d_out_1)
-
-        # deep supervision#2
-        deep_2 = UpSampling3D((2, 2, 2), name='lobe_d2_UpSampling3D_0')(up_tr3_lobe)
-        deep_2 = UpSampling3D((2, 2, 2), name='lobe_d2_UpSampling3D_1')(deep_2)
-        res = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_d2_Conv3D_last')(deep_2)
-        d_out_2 = Activation('softmax', name='lobe_d2')(res)
-        out_lobe.append(d_out_2)
-
-    #######################################################-----------------------#####################################
     # decoder for vessel segmentation. up_path for segmentation V-Net, with shot connections
     up_tr4_vessel = up_trans(dwn_tr4, nf * 8, 2, bn, dr, ty=net_type, input2=dwn_tr3, name='vessel_block5')
     up_tr3_vessel = up_trans(up_tr4_vessel, nf * 4, 2, bn, dr, ty=net_type, input2=dwn_tr2, name='vessel_block6')
@@ -501,8 +507,13 @@ def load_cp_models(model_names, args):
     up_tr1_vessel = up_trans(up_tr2_vessel, nf * 1, 1, bn, dr, ty=net_type, input2=in_tr, name='vessel_block8')
     # classification
     vessel_out_chn = 2
-    res_vessel = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_Conv3D_last')(up_tr1_vessel)
-    out_vessel = Activation('softmax', name='vessel_out_segmentation')(res_vessel)
+    # out_vessel_attention = out_vessel_tmp[1] * out_lobe_tmp
+    if attention:
+        res_vessel = Conv3D(lobe_out_chn, 1, padding='same', name='vessel_Conv3D_last')(up_tr1_vessel)
+        out_vessel = Activation('softmax', name='vessel_out_segmentation')(res_vessel)
+    else:
+        res_vessel = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_Conv3D_last')(up_tr1_vessel)
+        out_vessel = Activation('softmax', name='vessel_out_segmentation')(res_vessel)
 
     out_vessel = [out_vessel]  # convert to list to append other outputs
     # vessel_aux=0
@@ -538,8 +549,13 @@ def load_cp_models(model_names, args):
     up_tr1_airway = up_trans(up_tr2_airway, nf * 1, 1, bn, dr, ty=net_type, input2=in_tr, name='airway_block8')
     # classification
     airway_out_chn = 2
-    res_airway = Conv3D(airway_out_chn, 1, padding='same', name='airway_Conv3D_last')(up_tr1_airway)
-    out_airway = Activation('softmax', name='airway_out_segmentation')(res_airway)
+    if attention:
+        res_airway = Conv3D(lobe_out_chn, 1, padding='same', name='airway_Conv3D_last')(up_tr1_airway)
+        out_airway = Activation('softmax', name='airway_out_segmentation')(res_airway)
+    else:
+        res_airway = Conv3D(airway_out_chn, 1, padding='same', name='airway_Conv3D_last')(up_tr1_airway)
+        out_airway = Activation('softmax', name='airway_out_segmentation')(res_airway)
+
 
     out_airway = [out_airway]  # convert to list to append other outputs
     if args.mot_aw:
@@ -573,7 +589,11 @@ def load_cp_models(model_names, args):
     up_tr1_rec = up_trans(up_tr2_rec, nf * 1, 1, bn, dr, ty=net_type, name='rec_block8')
     # classification
     rec_out_chn = 1
-    out_recon = Conv3D(rec_out_chn, 1, padding='same', name='out_recon')(up_tr1_rec)
+    if attention:
+        out_recon = Conv3D(lobe_out_chn, 1, padding='same', name='out_recon')(up_tr1_rec)
+    else:
+        out_recon = Conv3D(rec_out_chn, 1, padding='same', name='out_recon')(up_tr1_rec)
+
     if args.mot_rc:
         out_recon2 = Conv3D(rec_out_chn, 1, padding='same', name='out_recon2')(up_tr1_rec)
         out_recon = [out_recon, out_recon2]
@@ -609,14 +629,17 @@ def load_cp_models(model_names, args):
                           metrics=metrics_lobe)
 
     net_itgt_lobe_recon = Model(input_data, out_itgt_lobe_recon, name='net_itgt_lobe_recon')
-    # net_itgt_lobe_recon.compile(optimizer=optim,
-    #                             loss=loss_itgt_recon,
-    #                             loss_weights=loss_itgt_recon_weights,
-    #                             metrics=metrics_lobe.update({'out_recon': 'mse'}))
+    net_itgt_lobe_recon.compile(optimizer=optim,
+                                loss=loss_itgt_recon,
+                                loss_weights=loss_itgt_recon_weights,
+                                metrics=metrics_lobe.update({'out_recon': 'mse'}))
 
     ###################----------------------------------#########################################
     # compile vessel models
-    metrics_vessel = {'vessel_out_segmentation': metrics_seg_2_classes}
+    if attention:
+        metrics_vessel = {'vessel_out_segmentation': metrics_seg_6_classes}
+    else:
+        metrics_vessel = {'vessel_out_segmentation': metrics_seg_2_classes}
     if args.mot_vs:
         metrics_vessel['vessel_out_segmentation2'] = metrics_seg_2_classes
     if args.ao_vs:
@@ -635,14 +658,18 @@ def load_cp_models(model_names, args):
                             metrics=metrics_vessel)
 
     net_itgt_vessel_recon = Model(input_data, out_itgt_vessel_recon, name='net_itgt_vessel_recon')
-    # net_itgt_vessel_recon.compile(optimizer=optim,
-    #                               loss=loss_itgt_recon,
-    #                               loss_weights=loss_itgt_recon_weights,
-    #                               metrics=metrics_vessel.update({'out_recon': 'mse'}))
+    net_itgt_vessel_recon.compile(optimizer=optim,
+                                  loss=loss_itgt_recon,
+                                  loss_weights=loss_itgt_recon_weights,
+                                  metrics=metrics_vessel.update({'out_recon': 'mse'}))
 
     ###################----------------------------------#########################################
     # compile airway models
-    metrics_airway = {'airway_out_segmentation': metrics_seg_2_classes}
+    if attention:
+        metrics_airway = {'airway_out_segmentation': metrics_seg_2_classes}
+    else:
+        metrics_airway = {'airway_out_segmentation': metrics_seg_2_classes}
+
     if args.mot_aw:
         metrics_airway['airway_out_segmentation2'] = metrics_seg_2_classes
     if args.ao_aw:
@@ -661,13 +688,16 @@ def load_cp_models(model_names, args):
                             metrics=metrics_airway)
 
     net_itgt_airway_recon = Model(input_data, out_itgt_airway_recon, name='net_itgt_airway_recon')
-    # net_itgt_airway_recon.compile(optimizer=optim,
-    #                               loss=loss_itgt_recon,
-    #                               loss_weights=loss_itgt_recon_weights,
-    #                               metrics=metrics_airway.update({'out_recon': 'mse'}))
+    net_itgt_airway_recon.compile(optimizer=optim,
+                                  loss=loss_itgt_recon,
+                                  loss_weights=loss_itgt_recon_weights,
+                                  metrics=metrics_airway.update({'out_recon': 'mse'}))
     ###################----------------------------------#########################################
     # compile lung models
-    metrics_lung = {'lung_out_segmentation': metrics_seg_2_classes}
+    if attention:
+        metrics_lung = {'lung_out_segmentation': metrics_seg_6_classes}
+    else:
+        metrics_lung = {'lung_out_segmentation': metrics_seg_2_classes}
     if args.mot_lu:
         metrics_lung['lung_out_segmentation2'] = metrics_seg_2_classes
     if args.ao_lu:
@@ -686,10 +716,10 @@ def load_cp_models(model_names, args):
                           metrics=metrics_lung)
 
     net_itgt_lung_recon = Model(input_data, out_itgt_lung_recon, name='net_itgt_lung_recon')
-    # net_itgt_lung_recon.compile(optimizer=optim,
-    #                             loss=loss_itgt_recon,
-    #                             loss_weights=loss_itgt_recon_weights,
-    #                             metrics=metrics_lung.update({'out_recon': 'mse'}))
+    net_itgt_lung_recon.compile(optimizer=optim,
+                                loss=loss_itgt_recon,
+                                loss_weights=loss_itgt_recon_weights,
+                                metrics=metrics_lung.update({'out_recon': 'mse'}))
 
     # configeration and compilization for network in recon task
     optim, loss_weights, _, __, optim = get_loss_weights_optim(args.ao_rc, args.ds_rc, args.lr_rc, args.mot_rc,

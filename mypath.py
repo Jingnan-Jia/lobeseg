@@ -96,8 +96,6 @@ class Mypath(object):
                        + 'ao' + str (args.ao_lb) \
                        + 'ds' + str (args.ds_lb) \
                        + tr_sz_name \
-                       + 'tsp'+ str(args.trgt_space) \
-                       + 'z'+ str(args.trgt_z_space) \
                        + 'pps' + str(args.patches_per_scan) \
                        + 'lbnb' + str(args.lb_tr_nb) \
                        + 'vsnb' + str(args.vs_tr_nb) \

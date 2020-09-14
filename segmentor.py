@@ -6,20 +6,16 @@ Created on Wed Apr 12 10:20:10 2017
 
 import numpy as np
 from futils.util import downsample, correct_shape
-from futils.vpatch import deconstruct_patch, reconstruct_patch, deconstruct_patch_gen, reconstruct_patch_gen
+from futils.vpatch import deconstruct_patch_gen, reconstruct_patch_gen
 import tensorflow as tf
 from tensorflow.keras.models import model_from_json
-import tensorflow.keras.backend as K
-import time
-import sys
 from futils.util import one_hot_decoding
 import re
 
 
 class v_segmentor(object):
     def __init__(self, batch_size=1, model='.hdf5', ptch_sz=128, ptch_z_sz=64, trgt_sz=None, trgt_z_sz=None,
-                 patching=True,
-                 trgt_space_list=[], task='lobe', sr=False):
+                 patching=True, trgt_space_list=[], task='lobe', sr=False, low_msk=False, attention=False):
         self.sr = sr
         self.batch_size = batch_size
         self.model = model
@@ -30,6 +26,8 @@ class v_segmentor(object):
         self.trgt_space_list = trgt_space_list  # 2.5, 1.4, 1.4
         self.trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz]
         self.task = task
+        self.low_msk = low_msk
+        self.attention = attention
         if task == 'lobe':
             self.labels = [0, 4, 5, 6, 7, 8]
         elif task == 'vessel':
@@ -82,7 +80,7 @@ class v_segmentor(object):
                     pred = self.v.predict(x_patch, verbose=0)
                     yield pred
 
-    def predict(self, x, ori_space_list=None, stride=0.25):
+    def predict(self, x, ori_space_list=None, stride=0.25, pad_nb=0):
         """
 
         :param x:  shape (z, x, y, 1)
@@ -110,23 +108,16 @@ class v_segmentor(object):
                 self.mot = True
 
         if any(self.trgt_space_list) or any(self.trgt_sz_list):
-            if not self.mtscale or self.task == 'lobe':
-                x = downsample(x_ori,
-                               ori_space=self.ori_space_list, trgt_space=self.trgt_space_list,
-                               ori_sz=x_ori.shape, trgt_sz=self.trgt_sz_list,
-                               order=1)
-                a2 = x_ori if self.mtscale else None
-            else:
-                x = x_ori
-                a2 = downsample(x_ori,
-                                ori_space=self.ori_space_list, trgt_space=self.trgt_space_list,
-                                ori_sz=x_ori.shape, trgt_sz=self.trgt_sz_list,
-                                order=1) if self.mtscale else None
+            x = downsample(x_ori,
+                           ori_space=self.ori_space_list, trgt_space=self.trgt_space_list,
+                           ori_sz=x_ori.shape, trgt_sz=self.trgt_sz_list,
+                           order=1)
+            a2 = x_ori if self.mtscale else None
 
         else:
             x = x_ori
             a2 = None
-
+        original_shape2 = a2.shape if a2 is not None else None
         if not self.patching:
             raise Exception('patching is not valid! ')
 
@@ -134,15 +125,18 @@ class v_segmentor(object):
         x_patch_gen = deconstruct_patch_gen(x, patch_shape=patch_shape, stride=stride, a2=a2)
 
         pre_gen = self.predict_gen(x_patch_gen)
-        if self.task == 'lobe':
-            CHN = 6
-        elif self.task == 'no_label':
-            CHN = 1
+        if self.attention:
+            CHN=6
         else:
-            CHN = 2
+            if self.task == 'lobe':
+                CHN = 6
+            elif self.task == 'no_label':
+                CHN = 1
+            else:
+                CHN = 2
 
         pred = reconstruct_patch_gen(pre_gen, ptch_shape=patch_shape, original_shape=x.shape, stride=stride, chn=CHN,
-                                     mot=self.mot, original_shape2=a2.shape)
+                                     mot=self.mot, original_shape2=original_shape2)
         # pred has 5 dims, original_shape has 4 dims
 
         # one hot decoding
@@ -168,7 +162,6 @@ class v_segmentor(object):
                                 labels=self.labels)
             masks2 = correct_shape(masks2, original_shape)  # correct the shape mistakes made by sampling
             print('final_pred.shape: ', masks2.shape)
-            pad_nb = 48
             masks1 = masks1[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
             masks2 = masks2[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
             return masks1, masks2
@@ -179,7 +172,7 @@ class v_segmentor(object):
                 masks.append(one_hot_decoding(p, self.labels))
             masks = np.array(masks, dtype='uint8')
             if any(self.trgt_space_list) or any(self.trgt_sz_list):
-                if not self.mtscale or self.task == 'lobe':
+                if self.low_msk:
                     print('rescaled to original spacing')
                     final_pred = downsample(masks,
                                             ori_space=self.trgt_space_list,
@@ -195,7 +188,6 @@ class v_segmentor(object):
 
             final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
             print('final_pred.shape: ', final_pred.shape)
-            pad_nb = 48
             final_pred = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
 
             return final_pred

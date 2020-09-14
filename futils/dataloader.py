@@ -172,7 +172,7 @@ class ScanIterator(Iterator):
                  task=None,
                  a_dir_name='ori_ct', b_dir_name='gdth_ct',
                  sub_dir=None,
-                 a_extension='.mhd', b_extension='.nrrd', c_extension='.nrrd',
+                 a_extension='.mhd', c_extension='.nrrd',
                  ptch_sz=None, ptch_z_sz=None,
                  trgt_sz=None, trgt_z_sz=None,
                  trgt_space=None, trgt_z_space=None,
@@ -190,7 +190,8 @@ class ScanIterator(Iterator):
                  aux=None,
                  mtscale=None,
                  ptch_seed=None,
-                 mot=False):
+                 mot=False,
+                 low_msk=0):
         """
         Iterate through two directories at the same time.
 
@@ -215,6 +216,11 @@ class ScanIterator(Iterator):
         """
         self.mtscale = mtscale
         self.task = task
+        if task == 'lobe':
+            self.b_extension = '.nrrd'
+        else:
+            self.b_extension = '.mhd'
+
         if self.mtscale or self.task == 'vessel':  # I hope to used p_middle for mtscale
             self.p_middle = p_middle
         else:
@@ -254,11 +260,10 @@ class ScanIterator(Iterator):
             self.b_dir = os.path.join(directory, b_dir_name, sub_dir)
 
             self.a_extension = a_extension
-            self.b_extension = b_extension
 
             a_files = set(x.split(a_extension)[0].split(self.a_dir + '/')[-1] for x in
                           sorted(glob.glob(self.a_dir + '/*' + self.a_extension)))
-            b_files = set(x.split(b_extension)[0].split(self.b_dir + '/')[-1] for x in
+            b_files = set(x.split(self.b_extension)[0].split(self.b_dir + '/')[-1] for x in
                           sorted(glob.glob(self.b_dir + '/*' + self.b_extension)))
 
             # Files inside a and b should have the same name. Images without a pair
@@ -273,14 +278,8 @@ class ScanIterator(Iterator):
         if self.filenames is []:
             raise Exception('empty dataset')
 
-        # ----next part is the common parameters for segmentation tasks and reconstruction task
-        # axis order should be like this
-        self.channel_index = 3
-        self.row_index = 1
-        self.col_index = 2
-
         self.data_argum = data_argum
-
+        self.low_msk = low_msk
         super(ScanIterator, self).__init__(len(self.filenames), batch_size, seed,
                                            shuffle)
 
@@ -291,14 +290,11 @@ class ScanIterator(Iterator):
 
     def load_scan(self, file_name):
         """Load mhd or nrrd 3d scan"""
-
         scan, origin, self.spacing = futil.load_itk(file_name)
-
         return np.expand_dims(scan, axis=-1)  # size=(z,x,y,1)
 
     def _load_img_pair(self, idx):
         """Get a pair of images with index idx."""
-
         a_fname = self.filenames[idx] + self.a_extension
         print('start load file: ', a_fname)
 
@@ -317,7 +313,6 @@ class ScanIterator(Iterator):
             b = self.load_scan(file_name=os.path.join(self.b_dir, b_fname))  # (200, 512, 512, 1)
             b = np.pad(b, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant',
                        constant_values=0)
-            # b = np.array(b)
 
             if not self.aux:
                 return a, b
@@ -326,8 +321,6 @@ class ScanIterator(Iterator):
                 c = self.load_scan(file_name=os.path.join(self.c_dir, c_fname))  # (200, 512, 512, 1)
                 c = np.pad(c, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant',
                            constant_values=0)
-                # c = np.array(c, dtype='float')
-
                 return a, b, c
 
     @rp_dcrt
@@ -339,7 +332,7 @@ class ScanIterator(Iterator):
         while 1:
             """Get the next pair of the sequence."""
             try:
-            # Lock the iterator when the index is changed.
+            # # Lock the iterator when the index is changed.
                 with self.lock:
                     index_array, _, current_batch_size = next(self.index_generator)
                     print('index_array: ', index_array)
@@ -361,38 +354,28 @@ class ScanIterator(Iterator):
                             a_ori, b_ori = random_transform(a_ori, b_ori)
 
                     if any(self.trgt_sp_list) or any(self.trgt_sz_list):
-                        if not self.mtscale or self.task == 'lobe':
-                            a = downsample(a_ori,
-                                           ori_space=self.spacing, trgt_space=self.trgt_sp_list,
-                                           ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
-                                           order=1)
-                            b = downsample(b_ori,
-                                           ori_space=self.spacing, trgt_space=self.trgt_sp_list,
-                                           ori_sz=b_ori.shape, trgt_sz=self.trgt_sz_list,
-                                           order=0)
+                        a = downsample(a_ori,
+                                       ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                                       ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
+                                       order=1)
+                        a2 = a_ori if self.mtscale else None
+
+                        b = downsample(b_ori,
+                                       ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                                       ori_sz=b_ori.shape, trgt_sz=self.trgt_sz_list,
+                                       order=0) if self.low_msk else b_ori
+                        b2 = b_ori if self.mot else None
+
+                        if self.aux:
                             c = downsample(c_ori,
                                            ori_space=self.spacing, trgt_space=self.trgt_sp_list,
                                            ori_sz=c_ori.shape, trgt_sz=self.trgt_sz_list,
-                                           order=0) if self.aux else None
-                            a2 = a_ori if self.mtscale else None
-                            b2 = b_ori if self.mot else None
+                                           order=0) if self.low_msk else c_ori
                         else:
-                            a = a_ori
-                            a2 = downsample(a_ori,
-                                            ori_space=self.spacing, trgt_space=self.trgt_sp_list,
-                                            ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
-                                            order=1) if self.mtscale else None
-                            b = b_ori
-                            b2 = downsample(b_ori,
-                                            ori_space=self.spacing, trgt_space=self.trgt_sp_list,
-                                            ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
-                                            order=0) if self.mot else None
+                            c = None
                     else:
-                        a = a_ori
-                        a2 = None  # if trgt_sp or trgt_sz is not assigned, it means that mtscale is False
-                        b = b_ori
-                        b2 = None
-
+                        a, a2 = a_ori, None # if trgt_sp or trgt_sz is not assigned, it means that mtscale is False
+                        b, b2 = b_ori, None
                     print('before patching, the shape of a is ', a.shape)
                     print('before patching, the shape of a2 is ', a2.shape) if self.mtscale else print('')
                     print('before patching, the shape of b2 is ', b2.shape) if self.mot else print('')
@@ -432,7 +415,6 @@ class ScanIterator(Iterator):
                         c_img = np.rollaxis(c_img, 0, 3) if self.aux else None
                         a_img = a_img[np.newaxis, ...]
                         c_img = c_img[np.newaxis, ...] if self.aux else None
-
 
                         if self.aux:
                             if self.mtscale:

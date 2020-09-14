@@ -41,7 +41,7 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25):
         # NORMALIZATION
         ct_scan = futil.normalize(ct_scan)
         mask = segment.predict(ct_scan[..., np.newaxis], ori_space_list=spacing,
-                               stride=stride)  # shape: (717, 512, 512,1)
+                               stride=stride, pad_nb=pad_nb)  # shape: (717, 512, 512,1)
 
         # Save the segmentation
         if not os.path.exists(preds_dir):

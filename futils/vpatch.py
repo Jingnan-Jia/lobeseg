@@ -136,7 +136,7 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
     if len(origin)==0:
         origin = [random.randint(0, x) for x in range_vals]
 
-    finish  = origin + p_sh
+    finish = origin + p_sh
     for finish_voxel, scan_size in zip(finish, sh):
         if finish_voxel > scan_size:
             print('warning!:patch size is bigger than scan size', file=sys.stderr)
@@ -149,25 +149,26 @@ def random_patch(scan,gt_scan = None, aux_scan = None, patch_shape=(64,128,128),
             a2_patch, b2_patch = get_a2_patch(scan, origin, p_sh, a2, b2)
         else:
             a2_patch = get_a2_patch(scan, origin, p_sh, a2)
+
         if scan.shape[0]>a2.shape[0]:  # scan is original resolution, a2 is downsampled, we put patch from original resolutiion at first
-            patch = np.concatenate((patch, a2_patch), axis=-1) # concatenate along the channel axil
+            patch = np.concatenate((a2_patch, patch), axis=-1) # concatenate along the channel axil
         else: # a2 is original resolution, scan is downsampled, we put patch from original resolutiion at first still
-            patch = np.concatenate((a2_patch, patch), axis=-1)  # concatenate along the channel axil
-        if (gt_scan is not None):
-            gt_patch = gt_scan[np.ix_(idx[0], idx[1], idx[2])]
-            if b2 is not None:
-                if scan.shape[0] > a2.shape[0]:
-                    gt_patch = [gt_patch, b2_patch]  # concatenate along the channel axil
-                else:  # a2 is original resolution, scan is downsampled,
-                    # we put patch from original resolutiion at first still
-                    gt_patch = [b2_patch, gt_patch]  # concatenate along the channel axil
+            patch = np.concatenate((patch, a2_patch), axis=-1)  # concatenate along the channel axil
+    if gt_scan is not None:
+        gt_patch = gt_scan[np.ix_(idx[0], idx[1], idx[2])]
+        if b2 is not None:
+            if scan.shape[0] > a2.shape[0]:
+                gt_patch = [gt_patch, b2_patch]  # concatenate along the channel axil
+            else:  # a2 is original resolution, scan is downsampled,
+                # we put patch from original resolutiion at first still
+                gt_patch = [b2_patch, gt_patch]  # concatenate along the channel axil
 
     if(gt_scan is not None):
         if (aux_scan is not None):
             aux_patch = aux_scan[np.ix_(idx[0], idx[1], idx[2])]
             return patch, gt_patch, aux_patch
         else:
-            return patch,gt_patch
+            return patch, gt_patch
     else:
         return patch
 
@@ -230,9 +231,9 @@ def deconstruct_patch_gen(scan, patch_shape=(64, 128, 128), stride=0.25, a2=None
             if scan.shape[0] > a2.shape[
                 0]:
                 # scan is original resolution, a2 is downsampled, we put patch from original resolutiion at first
-                patch = np.concatenate((patch, a2_patch), axis=-1)  # concatenate along the channel axil
-            else:  # a2 is original resolution, scan is downsampled, we put patch from original resolutiion at first still
                 patch = np.concatenate((a2_patch, patch), axis=-1)  # concatenate along the channel axil
+            else:  # a2 is original resolution, scan is downsampled, we put patch from original resolutiion at first still
+                patch = np.concatenate((patch, a2_patch), axis=-1)  # concatenate along the channel axil
 
         patch = np.rollaxis(patch,0,3) # 48, 144, 144, 80, 1
         patch = patch[np.newaxis, ...]
@@ -365,7 +366,7 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
     """
     p_sh = np.array(ptch_shape)  # shape (z, x, y)
     sh = np.array(original_shape, dtype=int)[:-1]  # shape (z, x, y)
-    sh2 = np.array(original_shape2, dtype=int)[:-1] if mot else None  # shape (z, x, y)
+    sh2 = np.array(original_shape2, dtype=int)[:-1] if (mot and original_shape2 is not None) else None  # shape (z, x, y)
 
     if isinstance(stride, float) or stride == 1:
         stride = p_sh * stride
