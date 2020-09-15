@@ -248,7 +248,7 @@ class Mypath(object):
         return gdth_path
 
     @mkdir_dcrt
-    def pred_path(self, phase, sub_dir=None):
+    def pred_path(self, phase, sub_dir=None, fissure=False):
         """
         absolute directory of the prediction results of ct for training dataset
         :param phase: 'train' or 'valid'
@@ -272,14 +272,17 @@ class Mypath(object):
         return pred_path + '/dices.csv'
 
     @mkdir_dcrt
-    def all_metrics_fpath(self, phase):
+    def all_metrics_fpath(self, phase, fissure=False):
         """
         full path of the saved dice
         :param phase: 'train' or 'valid'
         :return: file name to save dice
         """
         pred_path = self.pred_path(phase)
-        return pred_path + '/all_metrics.csv'
+        if fissure:
+            return pred_path + '/all_metrics_fissure.csv'
+        else:
+            return pred_path + '/all_metrics.csv'
 
 
 

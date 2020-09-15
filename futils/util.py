@@ -18,19 +18,33 @@ import copy
 import nibabel as nib
 import glob
 import csv
-def get_gdth_pred_names(gdth_path, pred_path):
-    gdth_files = sorted(glob.glob(gdth_path + '/*' + '.nrrd'))
-    if len(gdth_files) == 0:
-        gdth_files = sorted(glob.glob(gdth_path + '/*' + '.mhd'))
+def get_gdth_pred_names(gdth_path, pred_path, fissure=False):
+    if fissure:
+        gdth_files = sorted(glob.glob(gdth_path + '/fissure*' + '.nrrd'))
+        if len(gdth_files) == 0:
+            gdth_files = sorted(glob.glob(gdth_path + '/fissure*' + '.mhd'))
 
-    pred_files = sorted(glob.glob(pred_path + '/*' + '.nrrd'))
-    if len(pred_files) == 0:
-        pred_files = sorted(glob.glob(pred_path + '/*' + '.mhd'))
+        pred_files = sorted(glob.glob(pred_path + '/fissure*' + '.nrrd'))
+        if len(pred_files) == 0:
+            pred_files = sorted(glob.glob(pred_path + '/fissure*' + '.mhd'))
 
-    if len(gdth_files) == 0:
-        raise Exception('ground truth files  are None, Please check the directories', gdth_path)
-    if len(pred_files) == 0:
-        raise Exception(' predicted files are None, Please check the directories', pred_path)
+        if len(gdth_files) == 0:
+            raise Exception('ground truth files  are None, Please check the directories', gdth_path)
+        if len(pred_files) == 0:
+            raise Exception(' predicted files are None, Please check the directories', pred_path)
+    else:
+        gdth_files = sorted(glob.glob(gdth_path + '/*' + '.nrrd'))
+        if len(gdth_files) == 0:
+            gdth_files = sorted(glob.glob(gdth_path + '/*' + '.mhd'))
+
+        pred_files = sorted(glob.glob(pred_path + '/*' + '.nrrd'))
+        if len(pred_files) == 0:
+            pred_files = sorted(glob.glob(pred_path + '/*' + '.mhd'))
+
+        if len(gdth_files) == 0:
+            raise Exception('ground truth files  are None, Please check the directories', gdth_path)
+        if len(pred_files) == 0:
+            raise Exception(' predicted files are None, Please check the directories', pred_path)
 
     if len(pred_files) < len(gdth_files):  # only predict several ct
         gdth_files = gdth_files[:len(pred_files)]

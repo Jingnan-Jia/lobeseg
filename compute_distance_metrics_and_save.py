@@ -221,7 +221,7 @@ gdth_file_name = '/data/jjia/mt/data/lobe/valid/gdth_ct/GLUCOLD/GLUCOLD_patients
 '''
 
 
-def write_all_metrics(labels, gdth_path, pred_path, csv_file):
+def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False):
     """
 
     :param labels:  exclude background
@@ -231,13 +231,12 @@ def write_all_metrics(labels, gdth_path, pred_path, csv_file):
     :return:
     """
     print('start calculate all metrics (volume and distance) and write them to csv')
-    gdth_names, pred_names = get_gdth_pred_names(gdth_path, pred_path)
+    gdth_names, pred_names = get_gdth_pred_names(gdth_path, pred_path, fissure=fissure)
 
     for gdth_name, pred_name in zip(gdth_names, pred_names):
 
         gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_name)
         pred, pred_origin, pred_spacing = futil.load_itk(pred_name)
-
 
         gdth = one_hot_encode_3D(gdth, labels=labels)
         pred = one_hot_encode_3D(pred, labels=labels)
@@ -248,7 +247,6 @@ def write_all_metrics(labels, gdth_path, pred_path, csv_file):
         data_frame.to_csv(csv_file, mode='a', header=not os.path.exists(csv_file), index=False)
 
     return None
-
 
 def main():
 

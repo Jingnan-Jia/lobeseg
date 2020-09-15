@@ -16,6 +16,7 @@ import sys
 import nvidia_smi
 import tensorflow as tf
 from tensorflow.keras import backend as K
+from generate_fissure_from_masks import gntFissure
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -186,17 +187,26 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 '1597011627_520_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
 '1597011627_353_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
 
+'1599428838_623_lrlb0.0001lrvs1e-05mtscale0netnolpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
+             '1599475109_771_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
+             '1599475109_302_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
 
 
 '''
 task='lobe'
-str_names = [
-'1599170848_168_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
-]
+fissure = 1
+str_names = ['1597011428_927_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+             '1597011428_590_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+             '1597011428_532_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+
+            '1597011627_520_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+             '1597011627_353_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+             '1597011428_999_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+             ]
 print(str_names)
 
 for str_name in str_names:
-    mypath = Mypath(task='vessel', current_time=str_name) # set task=vessel to predict the lobe masks of SSc
+    mypath = Mypath(task=task, current_time=str_name) # set task=vessel to predict the lobe masks of SSc
     model_name =  '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
 
     tr_sp, tr_z_sp = 1.4, 2.5
@@ -207,27 +217,34 @@ for str_name in str_names:
     print('patch_sz', pt_sz, 'patch_z_size', pt_z_sz)
 
     for phase in ['valid']:
-        if task=='lobe':
-            labels = [0, 4, 5, 6, 7, 8]
-            stride = 0.25
-        elif task=='vessel':
+        if fissure:
             labels = [0, 1]
             stride = 0.25
+        else:
+            if task=='lobe':
+                labels = [0, 4, 5, 6, 7, 8]
+                stride = 0.25
+            elif task=='vessel':
+                labels = [0, 1]
+                stride = 0.25
+        if fissure:
+            Absdir = '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + str_name
+            gntFissure(Absdir)
+        else:
+            segment = v_seg.v_segmentor(batch_size=1,
+                                        model=model_name,
+                                        ptch_sz=pt_sz, ptch_z_sz=pt_z_sz,
+                                        trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
+                                        trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
+                                        # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
+                                        task=task)
 
-        segment = v_seg.v_segmentor(batch_size=1,
-                                    model=model_name,
-                                    ptch_sz=pt_sz, ptch_z_sz=pt_z_sz,
-                                    trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
-                                    trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
-                                    # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
-                                    task=task)
-
-        print('stride is', stride)
-        write_preds_to_disk(segment=segment,
-                            data_dir=mypath.ori_ct_path(phase),
-                            preds_dir=mypath.pred_path(phase),
-                            number=3,
-                            stride=stride)
+            print('stride is', stride)
+            write_preds_to_disk(segment=segment,
+                                data_dir=mypath.ori_ct_path(phase),
+                                preds_dir=mypath.pred_path(phase),
+                                number=5,
+                                stride=stride)
         # #
         # write_dices_to_csv (step_nb=0,
         #                     labels=labels,
@@ -238,5 +255,6 @@ for str_name in str_names:
         write_all_metrics(labels=labels[1:], # exclude background
                             gdth_path=mypath.gdth_path(phase),
                             pred_path=mypath.pred_path(phase),
-                            csv_file=mypath.all_metrics_fpath(phase))
+                            csv_file=mypath.all_metrics_fpath(phase, fissure=True),
+                          fissure=fissure)
 
