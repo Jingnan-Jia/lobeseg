@@ -46,6 +46,9 @@ from write_batch_preds import write_preds_to_disk
 import segmentor as v_seg
 from mypath import Mypath
 import pyvista as pv
+from compute_distance_metrics_and_save import write_all_metrics
+
+
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU
 # tf.keras.mixed_precision.experimental.set_policy('infer')  # mix precision training
@@ -453,13 +456,8 @@ def train():
                                 mot=mot,
                                 low_msk=low_msk)
 
-        enqueuer_valid = GeneratorEnqueuer(valid_it.generator(), use_multiprocessing=False)
-        valid_datas = enqueuer_valid.get()
-        enqueuer_valid.start()
-
-        enqueuer_train = GeneratorEnqueuer(train_it.generator(), use_multiprocessing=True)
-        train_datas = enqueuer_train.get()
-        enqueuer_train.start()
+        train_datas = train_it.generator(workers=2, qsize=4)
+        valid_datas = valid_it.generator(workers=1, qsize=1)
 
         train_data_gen_list.append(train_datas)
         valid_data_numpy = get_monitor_data(monitor_nb=10, mot=mot, valid_datas=valid_datas, task=task, ao=ao, ds=ds)
@@ -498,7 +496,6 @@ def train():
             valid_data_numpy[1] = monitor_y_tmp * lobe_pred
 
         valid_array_list.append(valid_data_numpy)
-        enqueuer_valid.stop()
 
     del net_trained_lobe
     gc.collect()
@@ -606,7 +603,7 @@ def train():
             current_tr_loss_dict[model_name] = current_tr_loss
 
             period_valid = 5000  # every 5000 step, predict a whole ct scan from training and valid dataset
-            if (idx_ % (period_valid) == 0) and (task == 'lobe'):
+            if (idx_ % (period_valid) == 4999) and (task == 'lobe'):
                 # In my multi-task model (co-training, or alternative training), I can not use validation_data and
                 # validation_freq in net.fit() function. Because there are only one step (patch) at each fit().
                 # So in order to assess the valid metrics, I use an independent function to predict the validation
@@ -620,20 +617,34 @@ def train():
                                                 trgt_space_list=[tsp[1], tsp[0], tsp[0]],
                                                 task=task, low_msk=low_msk, attention=args.attention)
 
+                    if idx_ == args.step_nb - 1:
+                        test_nb = 5
+                        stride = 0.25
+                    else:
+                        test_nb = 1
+                        stride = 0.8
+
                     write_preds_to_disk(segment=segment,
                                         data_dir=mypath.ori_ct_path(phase),
                                         preds_dir=mypath.pred_path(phase),
-                                        number=1, stride=0.8)  # set stride 0.8 to save time
+                                        number=test_nb, stride=stride)  # set stride 0.8 to save time
 
-                    write_dices_to_csv(step_nb=idx_,
-                                       labels=label,
-                                       gdth_path=mypath.gdth_path(phase),
-                                       pred_path=mypath.pred_path(phase),
-                                       csv_file=mypath.dices_fpath(phase))
 
-                    save_model_best(dice_file=mypath.dices_fpath(phase),
-                                    segment=segment,
-                                    model_fpath=mypath.best_model_fpath(phase))
+                    if idx_ == args.step_nb - 1:
+                        write_all_metrics(labels=label[1:],  # exclude background
+                                          gdth_path=mypath.gdth_path(phase),
+                                          pred_path=mypath.pred_path(phase),
+                                          csv_file=mypath.all_metrics_fpath(phase))
+                    else:
+                        write_dices_to_csv(step_nb=idx_,
+                                           labels=label,
+                                           gdth_path=mypath.gdth_path(phase),
+                                           pred_path=mypath.pred_path(phase),
+                                           csv_file=mypath.dices_fpath(phase))
+
+                        save_model_best(dice_file=mypath.dices_fpath(phase),
+                                        segment=segment,
+                                        model_fpath=mypath.best_model_fpath(phase))
 
                     print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
 

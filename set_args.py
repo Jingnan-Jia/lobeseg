@@ -3,7 +3,7 @@ import argparse
 parser = argparse.ArgumentParser(description='End2End Semi-Supervised Lobe Segmentation')
 
 parser.add_argument('-model_names', '--model_names', help='model names', type=str,
-                    default='net_only_vessel-net_no_label-net_only_lobe')
+                    default='net_only_lobe')
 
 parser.add_argument('-lr_lb', '--lr_lb', help='learning rate for lobe segmentation', type=float, default=0.0001)
 parser.add_argument('-lr_vs', '--lr_vs', help='learning rate for vessel segmentation', type=float, default=0.00001)
