@@ -51,10 +51,10 @@ parser.add_argument('-tsp_lu', '--tsp_lu', help='spacing along x, y and z ', typ
 parser.add_argument('-tsp_rc', '--tsp_rc', help='spacing along x, y and z ', type=str, default='1.4_2.5')
 
 parser.add_argument('-low_msk_lb', '--low_msk_lb', help='spacing along x, y and z ', type=int, default=1)
-parser.add_argument('-low_msk_vs', '--low_msk_vs', help='spacing along x, y and z ', type=int, default=1)
-parser.add_argument('-low_msk_aw', '--low_msk_aw', help='spacing along x, y and z ', type=int, default=1)
-parser.add_argument('-low_msk_lu', '--low_msk_lu', help='spacing along x, y and z ', type=int, default=1)
-parser.add_argument('-low_msk_rc', '--low_msk_rc', help='spacing along x, y and z ', type=int, default=1)
+parser.add_argument('-low_msk_vs', '--low_msk_vs', help='spacing along x, y and z ', type=int, default=0)
+parser.add_argument('-low_msk_aw', '--low_msk_aw', help='spacing along x, y and z ', type=int, default=0)
+parser.add_argument('-low_msk_lu', '--low_msk_lu', help='spacing along x, y and z ', type=int, default=0)
+parser.add_argument('-low_msk_rc', '--low_msk_rc', help='spacing along x, y and z ', type=int, default=0)
 
 parser.add_argument('-mot_lb', '--mot_lb', help='multi outpt', type=int, default=0)
 parser.add_argument('-mot_vs', '--mot_vs', help='multi outpt', type=int, default=0)
