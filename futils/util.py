@@ -46,7 +46,7 @@ def get_gdth_pred_names(gdth_path, pred_path, fissure=False):
         if len(pred_files) == 0:
             raise Exception(' predicted files are None, Please check the directories', pred_path)
 
-    if len(pred_files) < len(gdth_files):  # only predict several ct
+    if len(pred_files) < len(gdth_files):  # only predict several ct todo: need to get the same name !!!
         gdth_files = gdth_files[:len(pred_files)]
 
     return gdth_files, pred_files

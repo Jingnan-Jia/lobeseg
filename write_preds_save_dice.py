@@ -195,13 +195,15 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 '''
 task='lobe'
 fissure = 1
-str_names = ['1597011428_927_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
-             '1597011428_590_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
-             '1597011428_532_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
-
-            '1597011627_520_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
-             '1597011627_353_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
-             '1597011428_999_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+str_names = [
+    # '1597011428_927_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+    #          '1597011428_590_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+    #          '1597011428_532_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+    '1599479049_663_lrlb0.0001lrvs1e-05mtscale0netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
+    #         '1597011627_520_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+    #          '1597011627_353_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
+    #          '1597011428_999_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
+    #          '1599169291_62_lrlb0.0001lrvs1e-05mtscale0netnolpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96'
              ]
 print(str_names)
 
@@ -229,7 +231,7 @@ for str_name in str_names:
                 stride = 0.25
         if fissure:
             Absdir = '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + str_name
-            gntFissure(Absdir)
+            gntFissure(Absdir, radiusValue=5)
         else:
             segment = v_seg.v_segmentor(batch_size=1,
                                         model=model_name,
@@ -237,7 +239,7 @@ for str_name in str_names:
                                         trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
                                         trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
                                         # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
-                                        task=task)
+                                        task=task, low_msk=True, attention=False)
 
             print('stride is', stride)
             write_preds_to_disk(segment=segment,
@@ -255,6 +257,6 @@ for str_name in str_names:
         write_all_metrics(labels=labels[1:], # exclude background
                             gdth_path=mypath.gdth_path(phase),
                             pred_path=mypath.pred_path(phase),
-                            csv_file=mypath.all_metrics_fpath(phase, fissure=True),
+                            csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
                           fissure=fissure)
 

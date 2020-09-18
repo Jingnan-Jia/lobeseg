@@ -93,7 +93,7 @@ def writeFissure(ctFpath, fissureFpath, radiusValue=3, Absdir=None):
 
 
 
-def gntFissure(Absdir):
+def gntFissure(Absdir, radiusValue=3):
     files = sorted(glob.glob(Absdir + '/*' + '.nrrd'))
     if len(files) == 0:
         files = sorted(glob.glob(Absdir + '/*' + '.mhd'))
@@ -101,8 +101,8 @@ def gntFissure(Absdir):
         raise Exception(' predicted files are None, Please check the directories', Absdir)
 
     for ctFpath in files:
-        fissureFpath = Absdir + '/fissure_' + ctFpath.split('/')[-1]
-        writeFissure(ctFpath, fissureFpath, 3, Absdir)
+        fissureFpath = Absdir + '/fissure_' + str(radiusValue) + '_' + ctFpath.split('/')[-1]
+        writeFissure(ctFpath, fissureFpath, radiusValue, Absdir)
 
 '''
 '1599475109_302_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
@@ -113,12 +113,11 @@ def gntFissure(Absdir):
                 '1599475109_302_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
                 '''
 def main():
-    # strnames = ['1591466333_71_lr0.0001ld0m6l0m7l0pm0no_label_dirGLUCOLDao1ds2dr1bn1fn16trszNonetrzszNonetrsp1.4trzsp2.5ptch_per_scan50tr_nb18ptsz144ptzsz96'
-    #
-    #             ]
-    # for strname in strnames:
-    Absdir = '/data/jjia/new/data/lobe/valid/gdth_ct/GLUCOLD'
-    gntFissure(Absdir)
+    strnames = ['1599169291_810_lrlb0.0001lrvs1e-05mtscale1netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96']
+    for strname in strnames:
+        Absdir = '/data/jjia/new/data/lobe/valid/gdth_ct/GLUCOLD'
+        # Absdir = '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + strname
+        gntFissure(Absdir, radiusValue=5)
 
 if __name__=="__main__":
     main()

@@ -47,6 +47,8 @@ import segmentor as v_seg
 from mypath import Mypath
 import pyvista as pv
 from compute_distance_metrics_and_save import write_all_metrics
+from generate_fissure_from_masks import gntFissure
+
 
 
 
@@ -73,7 +75,6 @@ class Get_list():
         :param model_names: a list of model names
         :return: a list of tasks
         """
-
         net_task_dict = {
             "net_itgt_lb_rc": "lobe",
             "net_itgt_vs_rc": "vessel",
@@ -378,6 +379,19 @@ def get_dict():
     return best_tr_loss_dict, best_vd_loss_dict, current_tr_loss_dict, lr_dict
 
 
+def get_attentioned_y(y, lobe_pred):
+    while type(y) is list:  # multi outputs
+        y = y[0]
+
+    if y.shape[-1] == 2:  # 2 channels, for vessel or airway or other binary segmentation task
+        monitor_y_tmp = y[..., 1][..., np.newaxis]
+    elif y.shape[-1] == 1:  # 1 channel, reconstruction task
+        monitor_y_tmp = y
+    else:
+        raise Exception('ground truth has a channel number: ', str(y.shape[-1]), ' which should be 1 or 2:')
+
+    return monitor_y_tmp * lobe_pred
+
 def train():
     """
     Main function to train the model.
@@ -398,8 +412,6 @@ def train():
     tr_nb_list, ao_list, ds_list, mot_list, tsp_list, low_msk_list)
 
     net_trained_lobe = None
-
-
 
     for net, mypath, task, labels, model_name, ld_name, tr_nb, ao, ds, mot, tsp, low_msk in zip_list:
         model_figure_fpath = mypath.model_figure_path() + '/' + model_name + '.png'
@@ -456,7 +468,7 @@ def train():
                                 mot=mot,
                                 low_msk=low_msk)
 
-        train_datas = train_it.generator(workers=2, qsize=4)
+        train_datas = train_it.generator(workers=5, qsize=4)
         valid_datas = valid_it.generator(workers=1, qsize=1)
 
         train_data_gen_list.append(train_datas)
@@ -479,27 +491,15 @@ def train():
             with graph1.as_default():
                 with session1.as_default():
                     lobe_pred = net_trained_lobe.predict(valid_data_numpy[0], batch_size=1)
-                    if type(lobe_pred) is list: # multi outputs
+                    while type(lobe_pred) is list: # multi outputs
                         lobe_pred = lobe_pred[0]
 
-            y = valid_data_numpy[1]
-            if type(y) is list:
-                y = y[0]
-                if type(y) is list:
-                    y = y[0]
-            if y.shape[-1] == 2:
-                monitor_y_tmp = y[..., 1][..., np.newaxis]
-            elif y.shape[-1] == 1:
-                monitor_y_tmp = y[..., 0][..., np.newaxis]
-            else:
-                raise Exception('')
-            valid_data_numpy[1] = monitor_y_tmp * lobe_pred
+            valid_data_numpy[1] = get_attentioned_y(valid_data_numpy[1], lobe_pred)
 
         valid_array_list.append(valid_data_numpy)
 
     del net_trained_lobe
     gc.collect()
-
 
     best_tr_loss_dict, best_vd_loss_dict, current_tr_loss_dict, lr_dict = get_dict()
     for idx_ in range(args.step_nb):
@@ -513,10 +513,10 @@ def train():
 
         for task, net, tr_data, label, mypath, model_name, valid_array, tsp in zip_list2:
             if len(net_list) == 3:
-                if (idx_ % 2 == 0) and task == "no_label":
-                    pass
+                if (idx_ % 2 == 0) and task == "lobe":
+                    continue
                 elif (idx_ % 2 == 1) and task == "vessel":
-                    pass
+                    continue
 
             if task != "lobe":
                 if args.adaptive_lr:
@@ -557,40 +557,20 @@ def train():
             small_period_valid = 100
             if args.attention and task!='lobe':
                 lobe_pred = net_lobe.predict(x)
-
                 if type(lobe_pred) is list:  # multi outputs
                     lobe_pred = lobe_pred[0]
-                if type(y) is list:
-                    y = y[0]
-                    if type(y) is list:
-                        y = y[0]
-
-                if y.shape[-1] == 2:
-                    monitor_y_tmp = y[..., 1][..., np.newaxis]
-                elif y.shape[-1] == 1:
-                    monitor_y_tmp = y[..., 0][..., np.newaxis]
-                else:
-                    raise Exception('')
-                y_tmp = monitor_y_tmp * lobe_pred
-                y = y_tmp
+                y = get_attentioned_y(y, lobe_pred)
 
             if idx_ % small_period_valid == 0:  # every 100 steps, valid once, save time, keep best valid model
                 # print(x.shape, y.shape)
-                history = net.fit(x, y,
-                                  batch_size=args.batch_size,
-                                  use_multiprocessing=True,
-                                  validation_data=tuple(valid_array),
+                history = net.fit(x, y, batch_size=args.batch_size, validation_data=tuple(valid_array),
                                   callbacks=[saver_train, saver_valid, train_csvlogger, valid_csvlogger])
                 current_vd_loss = history.history['val_loss'][0]
                 old_vd_loss = np.float(best_vd_loss_dict[model_name])
                 if current_vd_loss < old_vd_loss:
                     best_vd_loss_dict[model_name] = current_vd_loss
-
             else:
-                history = net.fit(x, y,
-                                  batch_size=args.batch_size,
-                                  use_multiprocessing=True,
-                                  callbacks=[saver_train, train_csvlogger])
+                history = net.fit(x, y, batch_size=args.batch_size, callbacks=[saver_train, train_csvlogger])
 
             for key, result in history.history.items():
                 print(key, result)
@@ -599,11 +579,10 @@ def train():
             old_tr_loss = np.float(best_tr_loss_dict[model_name])
             if current_tr_loss < old_tr_loss:
                 best_tr_loss_dict[model_name] = current_tr_loss
-
             current_tr_loss_dict[model_name] = current_tr_loss
 
             period_valid = 5000  # every 5000 step, predict a whole ct scan from training and valid dataset
-            if (idx_ % (period_valid) == 4999) and (task == 'lobe'):
+            if (idx_ % (period_valid) == 0) and (task == 'lobe'):
                 # In my multi-task model (co-training, or alternative training), I can not use validation_data and
                 # validation_freq in net.fit() function. Because there are only one step (patch) at each fit().
                 # So in order to assess the valid metrics, I use an independent function to predict the validation
@@ -617,7 +596,7 @@ def train():
                                                 trgt_space_list=[tsp[1], tsp[0], tsp[0]],
                                                 task=task, low_msk=low_msk, attention=args.attention)
 
-                    if idx_ == args.step_nb - 1:
+                    if idx_ == args.step_nb - 1:  # last step
                         test_nb = 5
                         stride = 0.25
                     else:
@@ -629,12 +608,14 @@ def train():
                                         preds_dir=mypath.pred_path(phase),
                                         number=test_nb, stride=stride)  # set stride 0.8 to save time
 
-
                     if idx_ == args.step_nb - 1:
-                        write_all_metrics(labels=label[1:],  # exclude background
-                                          gdth_path=mypath.gdth_path(phase),
-                                          pred_path=mypath.pred_path(phase),
-                                          csv_file=mypath.all_metrics_fpath(phase))
+                        gntFissure(mypath.pred_path(phase), radiusValue=3)
+                        for fissure in [False, True]:  # write metrics for lobe and fissure
+                            write_all_metrics(labels=labels[1:],  # exclude background
+                                              gdth_path=mypath.gdth_path(phase),
+                                              pred_path=mypath.pred_path(phase),
+                                              csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
+                                              fissure=fissure)
                     else:
                         write_dices_to_csv(step_nb=idx_,
                                            labels=label,
@@ -642,9 +623,9 @@ def train():
                                            pred_path=mypath.pred_path(phase),
                                            csv_file=mypath.dices_fpath(phase))
 
-                        save_model_best(dice_file=mypath.dices_fpath(phase),
-                                        segment=segment,
-                                        model_fpath=mypath.best_model_fpath(phase))
+                    save_model_best(dice_file=mypath.dices_fpath(phase),
+                                    segment=segment,
+                                    model_fpath=mypath.best_model_fpath(phase))
 
                     print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
 

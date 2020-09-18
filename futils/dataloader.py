@@ -168,13 +168,13 @@ def rp_dcrt(fun):  # decorator to repeat a function until succeessful
 
 
 class QueueWithIndex(queue.Queue):
-    def __init__(self, qsize, index_list):
+    def __init__(self, qsize, index_list,name):
         self.index_list = index_list
+        self.name = name
         super(QueueWithIndex, self).__init__(qsize)
 
 class ScanIterator(Iterator):
     """Class to iterate A and B 3D scans (mhd or nrrd) at the same time."""
-
     def __init__(self,
                  directory,
                  task=None,
@@ -248,7 +248,6 @@ class ScanIterator(Iterator):
         self.trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz]
         self.ptch_seed = ptch_seed
         self.mot = mot
-
         self.aux = aux
         if self.aux:
             self.c_dir_name = 'aux_gdth'
@@ -304,15 +303,19 @@ class ScanIterator(Iterator):
 
     def load_scan(self, file_name):
         """Load mhd or nrrd 3d scan"""
-        scan, origin, self.spacing = futil.load_itk(file_name)
-        return np.expand_dims(scan, axis=-1)  # size=(z,x,y,1)
+        with self.lock:
+            print(threading.current_thread().name+" get the lock, thread id: "+str(threading.get_ident())+
+                  " prepare to load data")
+            scan, origin, spacing = futil.load_itk(file_name)
+            print(threading.current_thread().name + "release the lock")
+        return np.expand_dims(scan, axis=-1), spacing  # size=(z,x,y,1)
 
     def _load_img_pair(self, idx):
         """Get a pair of images with index idx."""
         a_fname = self.filenames[idx] + self.a_extension
         print('start load file: ', a_fname)
 
-        a = self.load_scan(file_name=os.path.join(self.a_dir, a_fname))  # (200, 512, 512, 1)
+        a, spacing = self.load_scan(file_name=os.path.join(self.a_dir, a_fname))  # (200, 512, 512, 1)
         pad_nb = 48
         a = np.pad(a, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant', constant_values=-3000)
 
@@ -321,30 +324,30 @@ class ScanIterator(Iterator):
         a = self._normal_normalize(a)
 
         if self.task == 'no_label':
-            return a, a
+            return a, a, spacing
         else:
             b_fname = self.filenames[idx] + self.b_extension
-            b = self.load_scan(file_name=os.path.join(self.b_dir, b_fname))  # (200, 512, 512, 1)
+            b, _ = self.load_scan(file_name=os.path.join(self.b_dir, b_fname))  # (200, 512, 512, 1)
             b = np.pad(b, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant',
                        constant_values=0)
 
             if not self.aux:
-                return a, b
+                return a, b, spacing
             else:
                 c_fname = self.filenames[idx] + self.c_extension
-                c = self.load_scan(file_name=os.path.join(self.c_dir, c_fname))  # (200, 512, 512, 1)
+                c, _ = self.load_scan(file_name=os.path.join(self.c_dir, c_fname))  # (200, 512, 512, 1)
                 c = np.pad(c, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant',
                            constant_values=0)
-                return a, b, c
+                return a, b, c, spacing
 
     @rp_dcrt
     def next(self):
         return None
     def get_ct_for_patching(self, j):
         if self.aux:
-            a_ori, b_ori, c_ori = self._load_img_pair(j)
+            a_ori, b_ori, c_ori, spacing = self._load_img_pair(j)
         else:
-            a_ori, b_ori = self._load_img_pair(j)
+            a_ori, b_ori, spacing = self._load_img_pair(j)
         if self.task != 'no_label':
             b_ori = one_hot_encode_3D(b_ori, self.labels)
             c_ori = one_hot_encode_3D(c_ori, [0, 1]) if self.aux else None
@@ -357,20 +360,20 @@ class ScanIterator(Iterator):
 
         if any(self.trgt_sp_list) or any(self.trgt_sz_list):
             a = downsample(a_ori,
-                           ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                           ori_space=spacing, trgt_space=self.trgt_sp_list,
                            ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
                            order=1)
             a2 = a_ori if self.mtscale else None
 
             b = downsample(b_ori,
-                           ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                           ori_space=spacing, trgt_space=self.trgt_sp_list,
                            ori_sz=b_ori.shape, trgt_sz=self.trgt_sz_list,
                            order=0) if self.low_msk else b_ori
             b2 = b_ori if self.mot else None
 
             if self.aux:
                 c = downsample(c_ori,
-                               ori_space=self.spacing, trgt_space=self.trgt_sp_list,
+                               ori_space=spacing, trgt_space=self.trgt_sp_list,
                                ori_sz=c_ori.shape, trgt_sz=self.trgt_sz_list,
                                order=0) if self.low_msk else c_ori
             else:
@@ -384,49 +387,50 @@ class ScanIterator(Iterator):
         return (a, a2, b, b2, c)
 
     def queue_data(self, q1, q2, i):
-        if len(q1.index_list):
-            index = q1.index_list.pop()
-            print("task: ", self.task, " state: ", self.state, "worker_", i, " start to put data of ", index,
-                  " into queue 1 for patching")
-            print("size of the queue: ", self.qmaxsize, "occupied size: ", q1.qsize())
-
-            ct_for_patching = self.get_ct_for_patching(index)
-            if not q1.full():
-                q1.put(ct_for_patching)
-            print("task: ", self.task, " state: ", self.state, "worker_", i, " successfully put data of ", index,
-                  " into queue 1 for patching")
-            print("size of the queue: ", self.qmaxsize, "occupied size: ", q1.qsize())
-
-        else:  # index_list1 is empty, data in this epoch is all loaded
-
-            if len(q2.index_list):
-                index = q2.index_list.pop()
-                print("task: ", self.task, " state: ", self.state, "worker_", i, " start to put data of ", index,
-                      " into queue 2 for patching")
-                print("size of the queue: ", self.qmaxsize, "occupied size: ", q2.qsize())
-                ct_for_patching = self.get_ct_for_patching(index)
-                if not q2.full():
-                    q2.put(ct_for_patching)
-                print("task: ", self.task, " state: ", self.state, "worker_", i, " successfully put data of ", index,
-                      " into queue 2 for patching")
-                print("size of the queue: ", self.qmaxsize, "occupied size: ", q2.qsize())
-
-            else:
-                print("task: ", self.task, " state: ", self.state, "worker_", i, " prepare put data but ")
+        with self.lock:
+            print(threading.current_thread().name + " get the lock, thread id: " + str(threading.get_ident())+
+                  " prepare to get the index of data and load data latter")
+            if self.state=="monitor" and (not len(q1.index_list) and not len(q2.index_list)):
+                print("task: "+ self.task + " state: " + self.state + "worker_" + str(i) + " prepare put data but ")
                 print("index_list 1 and 2 are all empty! the thread has finished its job! kill this thread by return True as the exit flag")
                 return True
+            else:
+                if not len(q1.index_list) and not len(q2.index_list):
+                    pass  # all data have been sent, nothing to do now
+                else:
+                    if len(q1.index_list):
+                        index = q1.index_list.pop()
+                        current_q = q1
+                    elif len(q2.index_list):
+                        index = q2.index_list.pop()
+                        current_q = q2
+                    print("task: "+ self.task + " state: " + self.state + "worker_" + str(i) +
+                          " start to put data of " + str(index)+" into queue" + current_q.name +" for patching")
+                    print("size of the queue: " + str(self.qmaxsize)+"occupied size: "+str(current_q.qsize())+
+                          "remaining index: "+str(current_q.index_list))
+            print(threading.current_thread().name + "release the lock")
+
+        ct_for_patching = self.get_ct_for_patching(index)
+
+        with self.lock:
+            print(threading.current_thread().name+ " get the lock, thread id: "+str(threading.get_ident())+
+                  " prepare to put data to queue")
+            current_q.put(ct_for_patching, timeout=60000 )  # timeout should be greater than the cost time of one epoch
+            print("task: "+self.task+ " state: "+self.state+"worker_"+str(i)+ " successfully put data of "+str(index)+
+                  " into queue"+ current_q.name +" for patching")
+            print("these index of data are waiting for loading: " +str(current_q.index_list))
+            print("size of the queue: ", self.qmaxsize, "occupied size: ", current_q.qsize())
+            print(threading.current_thread().name + "release the lock")
 
     def productor(self, i, q1, q2):
         # product ct scans for patching
-        threading.current_thread().name = str(i)
         while True:
-            with self.lock:
-                if self.epoch_nb % 2 == 0:  # even epoch number, q1 first
-                    exit_flag = self.queue_data(q1, q2, i)
-                else:
-                    exit_flag = self.queue_data(q2, q1, i)
-                if exit_flag:
-                    return exit_flag
+            if self.epoch_nb % 2 == 0:  # even epoch number, q1 first
+                exit_flag = self.queue_data(q1, q2, i)
+            else:
+                exit_flag = self.queue_data(q2, q1, i)
+            if exit_flag:
+                return exit_flag
 
 
     def generator(self, workers=5, qsize=5):
@@ -438,19 +442,28 @@ class ScanIterator(Iterator):
             index_list1 = list(range(self.n))
             index_list2 = list(range(self.n))
         self.qmaxsize = qsize
-        q1 = QueueWithIndex(qsize, index_list1)
-        q2 = QueueWithIndex(qsize, index_list2)
+        q1 = QueueWithIndex(qsize, index_list1, name="q1")
+        q2 = QueueWithIndex(qsize, index_list2, name="q2")
         # self.thread_list = []
         for i in range(workers):
-            t = threading.Thread(target=self.productor, args=(i, q1, q2,))
-            t.start()
+            thd = threading.Thread(target=self.productor, args=(i, q1, q2,))
+            thd.name = self.task + str(i)
+            thd.start()
             # self.thread_list.append(t)
         while True:
-            # try:
-            q = q1 if self.epoch_nb % 2 == 0 else q2
-            a, a2, b, b2, c = q.get(timeout=600) # wait for several minitues for loading data
-            # try:
+# try:
             for _step in range(self.n):
+                # try:
+                q = q1 if self.epoch_nb % 2 == 0 else q2
+                print("before q.get, qsize:", q.qsize(), q.index_list)
+                time1 = time.time()
+
+                print(threading.current_thread().name+" prepare to get data from queue")
+                a, a2, b, b2, c = q.get(timeout=6000)  # wait for several minitues for loading data
+                time2 = time.time()
+                print("it costs me this seconds to get the data: ", time2-time1)
+                print("after q.get, qsize:", q.qsize(), q.index_list)
+
                 for _ in range(self.patches_per_scan):
                     if self.ptch_seed:
                         ptch_seed = self.ptch_seed + _
@@ -526,19 +539,19 @@ class ScanIterator(Iterator):
 
             self.epoch_nb += 1
             if self.shuffle:
-                if q1.empty():
+                if not len(q1.index_list):
                     q1.index_list = random.sample(list(range(self.n)), len(list(range(self.n))))   # regenerate the nex shuffle index
-                elif q2.empty():
+                elif not len(q2.index_list):
                     q2.index_list = random.sample(list(range(self.n)), len(list(range(self.n))))   # regenerate the nex shuffle index
-                else:
-                    raise Exception("two queues are all not empty at the end of the epoch")
+                # else:
+                #     raise Exception("two queues are all not empty at the end of the epoch")
             else:
-                if q1.empty():
+                if not len(q1.index_list):
                     q1.index_list = list(range(self.n))
-                elif q2.empty():
+                elif not len(q2.index_list):
                     q2.index_list = list(range(self.n))
-                else:
-                    raise Exception("two queues are all not empty at the end of the epoch")
+                # else:
+                #     raise Exception("two queues are all not empty at the end of the epoch")
             # except:
             #     print("This ct is weird, fail to patch it, pass it")
 

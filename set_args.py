@@ -3,7 +3,7 @@ import argparse
 parser = argparse.ArgumentParser(description='End2End Semi-Supervised Lobe Segmentation')
 
 parser.add_argument('-model_names', '--model_names', help='model names', type=str,
-                    default='net_only_lobe')
+                    default='net_only_lobe-net_only_vessel-net_no_label')
 
 parser.add_argument('-lr_lb', '--lr_lb', help='learning rate for lobe segmentation', type=float, default=0.0001)
 parser.add_argument('-lr_vs', '--lr_vs', help='learning rate for vessel segmentation', type=float, default=0.00001)
@@ -11,8 +11,8 @@ parser.add_argument('-lr_lu', '--lr_lu', help='learning rate for lung segmentati
 parser.add_argument('-lr_aw', '--lr_aw', help='learning rate for airway segmentation', type=float, default=0.00001)
 parser.add_argument('-lr_rc', '--lr_rc', help='learning rate for reconstruction', type=float, default=0.00001)
 
-parser.add_argument('-adaptive_lr', '--adaptive_lr', help='adaptive learning rate', type=int, default=1)
-parser.add_argument('-attention', '--attention', help='attention loss', type=int, default=1)
+parser.add_argument('-adaptive_lr', '--adaptive_lr', help='adaptive learning rate', type=int, default=0)
+parser.add_argument('-attention', '--attention', help='attention loss', type=int, default=0)
 
 parser.add_argument('-ds_lb', '--ds_lb', help='Number of Deep Supervisers', type=int, default=0)
 parser.add_argument('-ds_vs', '--ds_vs', help='Number of Deep Supervisers', type=int, default=0)
@@ -37,11 +37,11 @@ parser.add_argument('-ptch_sz', '--ptch_sz', help='patch size', type=int, defaul
 parser.add_argument('-ptch_z_sz', '--ptch_z_sz', help='patch size', type=int, default=96)
 
 parser.add_argument('-batch_size', '--batch_size', help='batch_size', type=int, default=1)
-parser.add_argument('-patches_per_scan', '--patches_per_scan', help='patches_per_scan', type=int, default=100)
+parser.add_argument('-patches_per_scan', '--patches_per_scan', help='patches_per_scan', type=int, default=50)
 parser.add_argument('-no_label_dir', '--no_label_dir', help='dir no_label data', type=str, default='LUNA16')
 parser.add_argument('-p_middle', '--p_middle', help='sample in the middle parts', type=float, default=0.5)
 parser.add_argument('-mtscale', '--mtscale', help='get a model of multi scales  net', type=int, default=0)
-parser.add_argument('-step_nb', '--step_nb', help='training step', type=int, default=100001)
+parser.add_argument('-step_nb', '--step_nb', help='training step', type=int, default=50001)
 parser.add_argument('-u_v', '--u_v', help='u_v', type=str, default='v')
 
 parser.add_argument('-tsp_lb', '--tsp_lb', help='spacing along x, y and z ', type=str, default='1.4_2.5')
