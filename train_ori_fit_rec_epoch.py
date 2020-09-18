@@ -513,7 +513,7 @@ def train():
 
         for task, net, tr_data, label, mypath, model_name, valid_array, tsp in zip_list2:
             if len(net_list) == 3:
-                if (idx_ % 2 == 0) and task == "lobe":
+                if (idx_ % 2 == 0) and task == "no_label":
                     continue
                 elif (idx_ % 2 == 1) and task == "vessel":
                     continue

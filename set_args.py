@@ -11,7 +11,7 @@ parser.add_argument('-lr_lu', '--lr_lu', help='learning rate for lung segmentati
 parser.add_argument('-lr_aw', '--lr_aw', help='learning rate for airway segmentation', type=float, default=0.00001)
 parser.add_argument('-lr_rc', '--lr_rc', help='learning rate for reconstruction', type=float, default=0.00001)
 
-parser.add_argument('-adaptive_lr', '--adaptive_lr', help='adaptive learning rate', type=int, default=0)
+parser.add_argument('-adaptive_lr', '--adaptive_lr', help='adaptive learning rate', type=int, default=1)
 parser.add_argument('-attention', '--attention', help='attention loss', type=int, default=0)
 
 parser.add_argument('-ds_lb', '--ds_lb', help='Number of Deep Supervisers', type=int, default=0)
