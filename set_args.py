@@ -37,10 +37,10 @@ parser.add_argument('-ptch_sz', '--ptch_sz', help='patch size', type=int, defaul
 parser.add_argument('-ptch_z_sz', '--ptch_z_sz', help='patch size', type=int, default=96)
 
 parser.add_argument('-batch_size', '--batch_size', help='batch_size', type=int, default=1)
-parser.add_argument('-patches_per_scan', '--patches_per_scan', help='patches_per_scan', type=int, default=50)
+parser.add_argument('-patches_per_scan', '--patches_per_scan', help='patches_per_scan', type=int, default=100)
 parser.add_argument('-no_label_dir', '--no_label_dir', help='dir no_label data', type=str, default='LUNA16')
-parser.add_argument('-p_middle', '--p_middle', help='sample in the middle parts', type=float, default=0.5)
-parser.add_argument('-mtscale', '--mtscale', help='get a model of multi scales  net', type=int, default=1)
+parser.add_argument('-p_middle', '--p_middle', help='sample in the middle parts', type=float, default=0)
+parser.add_argument('-mtscale', '--mtscale', help='get a model of multi scales  net', type=int, default=0)
 parser.add_argument('-step_nb', '--step_nb', help='training step', type=int, default=50001)
 parser.add_argument('-u_v', '--u_v', help='u_v', type=str, default='v')
 
@@ -51,21 +51,16 @@ parser.add_argument('-tsp_lu', '--tsp_lu', help='spacing along x, y and z ', typ
 parser.add_argument('-tsp_rc', '--tsp_rc', help='spacing along x, y and z ', type=str, default='1.4_2.5')
 
 parser.add_argument('-low_msk_lb', '--low_msk_lb', help='spacing along x, y and z ', type=int, default=1)
-parser.add_argument('-low_msk_vs', '--low_msk_vs', help='spacing along x, y and z ', type=int, default=0)
-parser.add_argument('-low_msk_aw', '--low_msk_aw', help='spacing along x, y and z ', type=int, default=0)
-parser.add_argument('-low_msk_lu', '--low_msk_lu', help='spacing along x, y and z ', type=int, default=0)
-parser.add_argument('-low_msk_rc', '--low_msk_rc', help='spacing along x, y and z ', type=int, default=0)
+parser.add_argument('-low_msk_vs', '--low_msk_vs', help='spacing along x, y and z ', type=int, default=1)
+parser.add_argument('-low_msk_aw', '--low_msk_aw', help='spacing along x, y and z ', type=int, default=1)
+parser.add_argument('-low_msk_lu', '--low_msk_lu', help='spacing along x, y and z ', type=int, default=1)
+parser.add_argument('-low_msk_rc', '--low_msk_rc', help='spacing along x, y and z ', type=int, default=1)
 
 parser.add_argument('-mot_lb', '--mot_lb', help='multi outpt', type=int, default=0)
 parser.add_argument('-mot_vs', '--mot_vs', help='multi outpt', type=int, default=0)
 parser.add_argument('-mot_lu', '--mot_lu', help='multi outpt', type=int, default=0)
 parser.add_argument('-mot_aw', '--mot_aw', help='multi outpt', type=int, default=0)
 parser.add_argument('-mot_rc', '--mot_rc', help='multi outpt', type=int, default=0)
-
-parser.add_argument('-ld_itgt_lb_rc', '--ld_itgt_lb_rc', help='ld_itgt_lb_rc', type=int, default=0)
-parser.add_argument('-ld_itgt_vs_rc', '--ld_itgt_vs_rc', help='ld_itgt_vs_rc', type=int, default=0)
-parser.add_argument('-ld_itgt_lu_rc', '--ld_itgt_lu_rc', help='ld_itgt_lu_rc', type=int, default=0)
-parser.add_argument('-ld_itgt_aw_rc', '--ld_itgt_aw_rc', help='ld_itgt_aw_rc', type=int, default=0)
 
 parser.add_argument('-ld_itgt_lb_rc_name', '--ld_itgt_lb_rc_name', help='ld_itgt_lb_rc_name', type=str, default='None')
 parser.add_argument('-ld_itgt_vs_rc_name', '--ld_itgt_vs_rc_name', help='ld_itgt_vs_rc_name', type=str, default='None')

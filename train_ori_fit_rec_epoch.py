@@ -468,7 +468,7 @@ def train():
                                 mot=mot,
                                 low_msk=low_msk)
 
-        train_datas = train_it.generator(workers=5, qsize=4)
+        train_datas = train_it.generator(workers=2, qsize=2)
         valid_datas = valid_it.generator(workers=1, qsize=1)
 
         train_data_gen_list.append(train_datas)

@@ -138,7 +138,7 @@ def random_transform(a, b, c=None, is_batch=True,
             B.append(b_)
 
         a = np.array(A)
-        b = np.array(B)
+        b = np.array(B).astype(np.uint8)
 
         return a, b
 
@@ -390,9 +390,9 @@ class ScanIterator(Iterator):
         with self.lock:
             print(threading.current_thread().name + " get the lock, thread id: " + str(threading.get_ident())+
                   " prepare to get the index of data and load data latter")
-            if self.state=="monitor" and (not len(q1.index_list) and not len(q2.index_list)):
+            if self.state=="monitor" and not len(q1.index_list):
                 print("task: "+ self.task + " state: " + self.state + "worker_" + str(i) + " prepare put data but ")
-                print("index_list 1 and 2 are all empty! the thread has finished its job! kill this thread by return True as the exit flag")
+                print("index_list 1 is empty! the monitor thread has finished its job! kill this thread by return True as the exit flag")
                 return True
             else:
                 if not len(q1.index_list) and not len(q2.index_list):
@@ -461,8 +461,8 @@ class ScanIterator(Iterator):
                 print(threading.current_thread().name+" prepare to get data from queue")
                 a, a2, b, b2, c = q.get(timeout=6000)  # wait for several minitues for loading data
                 time2 = time.time()
-                print("it costs me this seconds to get the data: ", time2-time1)
-                print("after q.get, qsize:", q.qsize(), q.index_list)
+                print("it costs me this seconds to get the data: " + str(time2-time1))
+                print("after q.get, qsize:"+ str(q.qsize())+str(q.index_list))
 
                 for _ in range(self.patches_per_scan):
                     if self.ptch_seed:
