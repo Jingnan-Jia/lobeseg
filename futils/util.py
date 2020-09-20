@@ -406,9 +406,9 @@ def save_model_best(dice_file, segment, model_fpath):
         reader = csv.DictReader(f, delimiter=',')
         dice_list = []
         for row in reader:
+            print(row)
             dice = float(row['ave_total']) # str is the default type from csv
             dice_list.append(dice)
-
     max_dice = max(dice_list)
     if dice>=max_dice:
         segment.save(model_fpath)

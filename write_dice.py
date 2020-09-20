@@ -11,8 +11,6 @@ import glob
 import os
 import numpy as np
 from futils.util import get_gdth_pred_names
-from futils.util import downsample, correct_shape
-from compute_distance_metrics_and_save import write_all_metrics
 
 
 def calculate_dices(labels, a, b):
@@ -30,7 +28,7 @@ def calculate_dices(labels, a, b):
     aa, bb = copy.deepcopy(a), copy.deepcopy(b)
     
     dices = []
-    for l in labels[1:]: # only keep the valid labels
+    for l in labels: # only keep the valid labels
         a_ = np.where(aa != l, 0, 1)
         b_ = np.where(bb != l, 0, 1)
 
@@ -64,26 +62,17 @@ def write_dices_to_csv(step_nb, labels, gdth_path, pred_path, csv_file, gdth_ext
     total_dices = [step_nb]
     dices_values_matrix = [] # for average computation
     for gdth_name, pred_name in zip(gdth_names, pred_names):
-
         gdth_name = gdth_name
         pred_name = pred_name
-
-
         gdth_file, _, _ = futil.load_itk(gdth_name)
         pred_file, _, _ = futil.load_itk(pred_name)
-        gdth = np.expand_dims(gdth_file, axis=-1)
-        pred = np.expand_dims(pred_file, axis=-1)
-
         dices_values = calculate_dices(labels, gdth_file, pred_file)  # calculated dices exclude background
-
         dices_values_matrix.append(dices_values)
 
         dices_names = [gdth_name]
-        for l in labels[1:]:  # calculated dices exclude background
+        for l in labels:  # calculated dices exclude background
             dices_names.append('dice_'+str(l)) # dice_names is a list corresponding to the specific dices_values
         total_dices_names.extend(dices_names) # extend a list by another small list
-
-
 
         total_dices.append(True) # place a fixed number under the file name
         total_dices.extend(dices_values)
@@ -96,7 +85,7 @@ def write_dices_to_csv(step_nb, labels, gdth_path, pred_path, csv_file, gdth_ext
     ave_dice_of_class = np.average(dices_values_matrix, axis=0)
     total_dices.extend(ave_dice_of_class)
 
-    names_ave_of_dice = ['ave_dice_class_'+ str(i+1) for i in range(len(labels)-1)]  # calculated ave dices exclude background
+    names_ave_of_dice = ['ave_dice_class_'+ str(l) for l in labels]  # calculated ave dices exclude background
     total_dices_names.extend(names_ave_of_dice)
 
     # average dice of each image and their names
@@ -113,7 +102,6 @@ def write_dices_to_csv(step_nb, labels, gdth_path, pred_path, csv_file, gdth_ext
     name_ave_total = 'ave_total'
     total_dices_names.append (name_ave_total)
 
-
     if not os.path.exists(csv_file):
         with open(csv_file, 'a+', newline='') as f:
             writer = csv.writer(f)
@@ -126,25 +114,7 @@ def write_dices_to_csv(step_nb, labels, gdth_path, pred_path, csv_file, gdth_ext
     return None
 
 def main():
-    scan, origin, spacing = futil.load_itk("/data/jjia/new/tmp/gdth/GLUCOLD_patients_26.nrrd")
-    tr_sp_list = [2.5, 1.4, 1.4]
-    labels = [0, 4, 5, 6, 7, 8]
-    gdth_path = "/data/jjia/new/tmp/gdth/"
-    pred_path = "/data/jjia/new/tmp/pred/"
-    x = downsample(scan, ori_space=spacing, trgt_space=tr_sp_list, order=0)
-    x = downsample(x, ori_space=tr_sp_list, trgt_space=spacing, order=0)
-    x = correct_shape(x, scan.shape)
-    futil.save_itk("/data/jjia/new/tmp/pred/GLUCOLD_patients_26.nrrd", x, origin, spacing)
-    write_dices_to_csv(step_nb=1,
-                       labels=labels,
-                       gdth_path=gdth_path,
-                       pred_path=pred_path,
-                       csv_file="/data/jjia/new/tmp/dice_ori_resampled.csv")
-
-    write_all_metrics(labels=labels[1:],  # exclude background
-                      gdth_path=gdth_path,
-                      pred_path=pred_path,
-                      csv_file="/data/jjia/new/tmp/merics_ori_resampled.csv")
+    pass
 
 
 if __name__=="__main__":

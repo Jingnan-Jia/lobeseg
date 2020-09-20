@@ -3,7 +3,7 @@ import argparse
 parser = argparse.ArgumentParser(description='End2End Semi-Supervised Lobe Segmentation')
 
 parser.add_argument('-model_names', '--model_names', help='model names', type=str,
-                    default='net_only_lobe-net_only_vessel-net_no_label')
+                    default='net_only_lobe')
 
 parser.add_argument('-lr_lb', '--lr_lb', help='learning rate for lobe segmentation', type=float, default=0.0001)
 parser.add_argument('-lr_vs', '--lr_vs', help='learning rate for vessel segmentation', type=float, default=0.00001)
@@ -62,6 +62,12 @@ parser.add_argument('-mot_lu', '--mot_lu', help='multi outpt', type=int, default
 parser.add_argument('-mot_aw', '--mot_aw', help='multi outpt', type=int, default=0)
 parser.add_argument('-mot_rc', '--mot_rc', help='multi outpt', type=int, default=0)
 
+parser.add_argument('-rc_tr_nb', '--rc_tr_nb', help='rc_tr_nb', type=int, default=400)
+parser.add_argument('-lb_tr_nb', '--lb_tr_nb', help='lb_tr_nb', type=int, default=17)
+parser.add_argument('-vs_tr_nb', '--vs_tr_nb', help='vs_tr_nb', type=int, default=50)
+parser.add_argument('-lu_tr_nb', '--lu_tr_nb', help='lu_tr_nb', type=int, default=0)
+parser.add_argument('-aw_tr_nb', '--aw_tr_nb', help='aw_tr_nb', type=int, default=0)
+
 parser.add_argument('-ld_itgt_lb_rc_name', '--ld_itgt_lb_rc_name', help='ld_itgt_lb_rc_name', type=str, default='None')
 parser.add_argument('-ld_itgt_vs_rc_name', '--ld_itgt_vs_rc_name', help='ld_itgt_vs_rc_name', type=str, default='None')
 parser.add_argument('-ld_itgt_lu_rc_name', '--ld_itgt_lu_rc_name', help='ld_itgt_lu_rc_name', type=str, default='None')
@@ -73,10 +79,13 @@ parser.add_argument('-ld_vs_name', '--ld_vs_name', help='ld_vs_name', type=str, 
 parser.add_argument('-ld_lu_name', '--ld_lu_name', help='ld_lu_name', type=str, default='None')
 parser.add_argument('-ld_aw_name', '--ld_aw_name', help='ld_aw_name', type=str, default='None')
 
-parser.add_argument('-rc_tr_nb', '--rc_tr_nb', help='rc_tr_nb', type=int, default=400)
-parser.add_argument('-lb_tr_nb', '--lb_tr_nb', help='lb_tr_nb', type=int, default=17)
-parser.add_argument('-vs_tr_nb', '--vs_tr_nb', help='vs_tr_nb', type=int, default=50)
-parser.add_argument('-lu_tr_nb', '--lu_tr_nb', help='lu_tr_nb', type=int, default=0)
-parser.add_argument('-aw_tr_nb', '--aw_tr_nb', help='aw_tr_nb', type=int, default=0)
+
+
+# the following code is unusable
+parser.add_argument('-low_ipt_lb', '--low_ipt_lb', help='spacing along x, y and z ', type=int, default=0)
+parser.add_argument('-low_ipt_vs', '--low_ipt_vs', help='spacing along x, y and z ', type=int, default=0)
+parser.add_argument('-low_ipt_aw', '--low_ipt_aw', help='spacing along x, y and z ', type=int, default=0)
+parser.add_argument('-low_ipt_lu', '--low_ipt_lu', help='spacing along x, y and z ', type=int, default=0)
+parser.add_argument('-low_ipt_rc', '--low_ipt_rc', help='spacing along x, y and z ', type=int, default=0)
 
 args = parser.parse_args()

@@ -186,10 +186,11 @@ class v_segmentor(object):
             else:
                 final_pred = masks
 
-            final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
+            if final_pred.shape!=masks.shape:  #55  226  226
+                final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
             print('final_pred.shape: ', final_pred.shape)
             final_pred = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
 
             return final_pred
 
-#
+

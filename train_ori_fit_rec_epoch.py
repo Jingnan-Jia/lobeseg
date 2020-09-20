@@ -90,14 +90,14 @@ class Get_list():
         }
         return list(map(net_task_dict.get, self.model_names))
 
-    def get_label_list(self):
+    def get_labels_list(self):
         """
-        Get the label list according to given task list.
+        Get the labels list according to given task list.
 
         :return: a list of labels' list.
         """
 
-        task_label_dict = {
+        task_labels_dict = {
             "net_itgt_lb_rc": [0, 4, 5, 6, 7, 8],
             "net_itgt_vs_rc": [0, 1],
             "net_itgt_lu_rc": [0, 1],
@@ -111,11 +111,27 @@ class Get_list():
             "net_only_airway": [0, 1]
         }
 
-        return list(map(task_label_dict.get, self.model_names))
+        return list(map(task_labels_dict.get, self.model_names))
 
     def get_path_list(self):
         task_list = self.get_task_list()
         return [Mypath(x) for x in task_list]  # a list of Mypath objectives, each Mypath corresponds to a task
+
+    def get_low_ipt_list(self, myargs):
+        low_ipt_dict = {
+            "net_itgt_lb_rc": myargs.low_ipt_lb,
+            "net_itgt_vs_rc": myargs.low_ipt_vs,
+            "net_itgt_lu_rc": myargs.low_ipt_lu,
+            "net_itgt_aw_rc": myargs.low_ipt_aw,
+
+            "net_no_label": myargs.low_ipt_rc,
+
+            "net_only_lobe": myargs.low_ipt_lb,
+            "net_only_vessel": myargs.low_ipt_vs,
+            "net_only_lung": myargs.low_ipt_lu,
+            "net_only_airway": myargs.low_ipt_aw
+        }
+        return list(map(low_ipt_dict.get, self.model_names))
 
     def get_tr_nb_list(self, myargs):
         tr_nb_dict = {
@@ -235,7 +251,7 @@ class Get_list():
 def get_zip_list(model_names, args):
     gl = Get_list(model_names)
     task_list = gl.get_task_list()  # for example, 6 model_names corresponds to 6 tasks
-    label_list = gl.get_label_list()  # for example, 6 model_names corresponds to 6 labels
+    labels_list = gl.get_labels_list()  # for example, 6 model_names corresponds to 6 labels
     path_list = gl.get_path_list()
     load_name_list = gl.get_load_name_list(args)
     tr_nb_list = gl.get_tr_nb_list(args)
@@ -244,11 +260,12 @@ def get_zip_list(model_names, args):
     mot_list = gl.get_mot_list(args)
     tsp_list = gl.get_tsp_list(args)
     low_msk_list = gl.get_low_msk_list(args)
+    low_ipt_list = gl.get_low_ipt_list(args)
 
     net_list = cpmodels.load_cp_models(model_names, args)
 
-    return net_list, path_list, task_list, label_list, model_names, load_name_list,\
-           tr_nb_list, ao_list, ds_list, mot_list, tsp_list, low_msk_list
+    return net_list, path_list, task_list, labels_list, model_names, load_name_list,\
+           tr_nb_list, ao_list, ds_list, mot_list, tsp_list, low_msk_list, low_ipt_list
 
 
 def get_monitor_data(mot, valid_datas, task, ao, ds, monitor_nb=10):
@@ -405,21 +422,30 @@ def train():
 
     train_data_gen_list = []
     valid_array_list = []
-    net_list, path_list, task_list, label_list, model_names, load_name_list,\
-    tr_nb_list, ao_list, ds_list, mot_list, tsp_list, low_msk_list = get_zip_list(model_names, args)
+    net_list, path_list, task_list, labels_list, model_names, load_name_list,\
+    tr_nb_list, ao_list, ds_list, mot_list, tsp_list, low_msk_list, low_ipt_list = get_zip_list(model_names, args)
 
-    zip_list = zip(net_list, path_list, task_list, label_list, model_names, load_name_list,\
-    tr_nb_list, ao_list, ds_list, mot_list, tsp_list, low_msk_list)
+    zip_list = zip(net_list, path_list, task_list, labels_list, model_names, load_name_list,\
+    tr_nb_list, ao_list, ds_list, mot_list, tsp_list, low_msk_list, low_ipt_list)
 
     net_trained_lobe = None
 
-    for net, mypath, task, labels, model_name, ld_name, tr_nb, ao, ds, mot, tsp, low_msk in zip_list:
+    for net, mypath, task, labels, model_name, ld_name, tr_nb, ao, ds, mot, tsp, low_msk, low_ipt in zip_list:
         model_figure_fpath = mypath.model_figure_path() + '/' + model_name + '.png'
         plot_model(net, show_shapes=True, to_file=model_figure_fpath)
         print('successfully plot model structure at: ', model_figure_fpath)
         if ld_name is not 'None':  # 'None' is from arg parse as string
-            saved_model = mypath.best_model_fpath(phase='valid', str_name=ld_name, task=task)
-            net.load_weights(saved_model)
+            try:
+                saved_model = mypath.best_model_fpath(phase='valid', str_name=ld_name, task=task)
+                net.load_weights(saved_model)
+            except OSError:
+                try:
+                    saved_model = mypath.model_fpath_best_patch(phase='valid', str_name=ld_name)  # for vessel
+                    net.load_weights(saved_model)
+                except OSError:
+                    saved_model = mypath.model_fpath_best_patch(phase='train', str_name=ld_name)  # for no_label
+                    net.load_weights(saved_model)
+
             print('loaded lobe weights successfully from: ', saved_model)
 
         # save model architecture and config
@@ -446,7 +472,8 @@ def train():
                                 mtscale=args.mtscale,
                                 ptch_seed=None,
                                 mot=mot,
-                                low_msk=low_msk)
+                                low_msk=low_msk,
+                                low_ipt=low_ipt)
 
         valid_it = ScanIterator(mypath.data_dir('monitor'), task=task,
                                 sub_dir=mypath.sub_dir(),
@@ -466,9 +493,10 @@ def train():
                                 mtscale=args.mtscale,
                                 ptch_seed=1,
                                 mot=mot,
-                                low_msk=low_msk)
+                                low_msk=low_msk,
+                                low_ipt=low_ipt)
 
-        train_datas = train_it.generator(workers=2, qsize=2)
+        train_datas = train_it.generator(workers=2, qsize=1)
         valid_datas = valid_it.generator(workers=1, qsize=1)
 
         train_data_gen_list.append(train_datas)
@@ -502,17 +530,18 @@ def train():
     gc.collect()
 
     best_tr_loss_dict, best_vd_loss_dict, current_tr_loss_dict, lr_dict = get_dict()
+    small_period_valid = 100
     for idx_ in range(args.step_nb):
         print('step number: ', idx_)
-        zip_list2 = zip(task_list, net_list, train_data_gen_list, label_list, path_list, model_names, valid_array_list,
-                        tsp_list)
+        zip_list2 = zip(task_list, net_list, train_data_gen_list, labels_list, path_list, model_names, valid_array_list,
+                        tsp_list, low_msk_list)
 
         for net, task in zip(net_list, task_list):
             if task == 'lobe':
                 net_lobe = net
 
-        for task, net, tr_data, label, mypath, model_name, valid_array, tsp in zip_list2:
-            if len(net_list) == 3:
+        for task, net, tr_data, labels, mypath, model_name, valid_array, tsp, low_msk in zip_list2:
+            if len(net_list) == 3 and (idx_%small_period_valid)!=0:
                 if (idx_ % 2 == 0) and task == "no_label":
                     continue
                 elif (idx_ % 2 == 1) and task == "vessel":
@@ -554,7 +583,6 @@ def train():
                                                  monitor='val_loss',  # do not add valid_data here, save time!
                                                  save_weights_only=True)
 
-            small_period_valid = 100
             if args.attention and task!='lobe':
                 lobe_pred = net_lobe.predict(x)
                 if type(lobe_pred) is list:  # multi outputs
@@ -611,6 +639,8 @@ def train():
                     if idx_ == args.step_nb - 1:
                         gntFissure(mypath.pred_path(phase), radiusValue=3)
                         for fissure in [False, True]:  # write metrics for lobe and fissure
+                            if fissure:
+                                labels = [0, 1]
                             write_all_metrics(labels=labels[1:],  # exclude background
                                               gdth_path=mypath.gdth_path(phase),
                                               pred_path=mypath.pred_path(phase),
@@ -618,7 +648,7 @@ def train():
                                               fissure=fissure)
                     else:
                         write_dices_to_csv(step_nb=idx_,
-                                           labels=label,
+                                           labels=labels[1:],
                                            gdth_path=mypath.gdth_path(phase),
                                            pred_path=mypath.pred_path(phase),
                                            csv_file=mypath.dices_fpath(phase))
@@ -628,6 +658,9 @@ def train():
                                     model_fpath=mypath.best_model_fpath(phase))
 
                     print('step number', idx_, 'lr for', task, 'is', K.eval(net.optimizer.lr), file=sys.stderr)
+
+    for train_gen in train_data_gen_list:
+        train_gen.stop()
 
     print('finish train: ', mypath.str_name)
 

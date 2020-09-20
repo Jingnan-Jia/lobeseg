@@ -18,7 +18,7 @@ from scipy import ndimage
 import time
 import glob
 import sys
-from futils.util import downsample, correct_shape, one_hot_encode_3D
+from futils.util import downsample, one_hot_encode_3D
 from functools import wraps
 import queue
 import threading
@@ -199,7 +199,8 @@ class ScanIterator(Iterator):
                  mtscale=None,
                  ptch_seed=None,
                  mot=False,
-                 low_msk=0):
+                 low_msk=0,
+                 low_ipt=0):
         """
         Iterate through two directories at the same time.
 
@@ -249,6 +250,7 @@ class ScanIterator(Iterator):
         self.ptch_seed = ptch_seed
         self.mot = mot
         self.aux = aux
+        self.running = True
         if self.aux:
             self.c_dir_name = 'aux_gdth'
             self.c_dir = os.path.join(directory, self.c_dir_name, sub_dir)
@@ -293,6 +295,7 @@ class ScanIterator(Iterator):
 
         self.data_argum = data_argum
         self.low_msk = low_msk
+        self.low_ipt = low_ipt
         # self.shuffle = shuffle
         super(ScanIterator, self).__init__(len(self.filenames), batch_size, shuffle, seed)
 
@@ -381,6 +384,7 @@ class ScanIterator(Iterator):
         else:
             a, a2 = a_ori, None  # if trgt_sp or trgt_sz is not assigned, it means that mtscale is False
             b, b2 = b_ori, None
+            c = None
         print('before patching, the shape of a is ', a.shape)
         print('before patching, the shape of a2 is ', a2.shape) if self.mtscale else print('')
         print('before patching, the shape of b2 is ', b2.shape) if self.mot else print('')
@@ -425,13 +429,18 @@ class ScanIterator(Iterator):
     def productor(self, i, q1, q2):
         # product ct scans for patching
         while True:
-            if self.epoch_nb % 2 == 0:  # even epoch number, q1 first
-                exit_flag = self.queue_data(q1, q2, i)
+            if self.running:
+                if self.epoch_nb % 2 == 0:  # even epoch number, q1 first
+                    exit_flag = self.queue_data(q1, q2, i)
+                else:
+                    exit_flag = self.queue_data(q2, q1, i)
+                if exit_flag:
+                    return exit_flag
             else:
-                exit_flag = self.queue_data(q2, q1, i)
-            if exit_flag:
-                return exit_flag
+                return self.running
 
+    def stop(self):
+        self.running = False
 
     def generator(self, workers=5, qsize=5):
         index_sorted = list(range(self.n))
