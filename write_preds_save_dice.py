@@ -194,69 +194,66 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 
 '''
 task='lobe'
-fissure = 1
-str_names = [
-    # '1597011428_927_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
-    #          '1597011428_590_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
-    #          '1597011428_532_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
-    '1599479049_663_lrlb0.0001lrvs1e-05mtscale0netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
-    #         '1597011627_520_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
-    #          '1597011627_353_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb18nlnb0ptsz144ptzsz96',
-    #          '1597011428_999_lr0.0001lrvs0.0001ld1mtscale1netnolpm0.5nldNoneao0ds0bn1fn16tsp1.4z2.5pps100trnb5nlnb0ptsz144ptzsz96',
-    #          '1599169291_62_lrlb0.0001lrvs1e-05mtscale0netnolpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96'
-             ]
-print(str_names)
 
-for str_name in str_names:
-    mypath = Mypath(task=task, current_time=str_name) # set task=vessel to predict the lobe masks of SSc
-    model_name =  '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
+for fissure in [0, 1]:
+    str_names = [
+                 '1599692304_30_lrlb0.0001lrvs1e-05mtscale1netnolpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
+        '1599692304_73_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
+        '1599692304_604_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
+        '1599692304_214_lrlb0.0001lrvs1e-05mtscale1netnol-nov-nnlpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96'
 
-    tr_sp, tr_z_sp = 1.4, 2.5
-    tr_sz, tr_z_sz = None, None
-    pt_sz, pt_z_sz = 144, 96
+                 ]
+    print(str_names)
 
+    for str_name in str_names:
+        mypath = Mypath(task=task, current_time=str_name) # set task=vessel to predict the lobe masks of SSc
+        model_name =  '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
 
-    print('patch_sz', pt_sz, 'patch_z_size', pt_z_sz)
+        tr_sp, tr_z_sp = 1.4, 2.5
+        tr_sz, tr_z_sz = None, None
+        pt_sz, pt_z_sz = 144, 96
 
-    for phase in ['valid']:
-        if fissure:
-            labels = [0, 1]
-            stride = 0.25
-        else:
-            if task=='lobe':
-                labels = [0, 4, 5, 6, 7, 8]
-                stride = 0.25
-            elif task=='vessel':
+        print('patch_sz', pt_sz, 'patch_z_size', pt_z_sz)
+
+        for phase in ['valid']:
+            if fissure:
                 labels = [0, 1]
                 stride = 0.25
-        if fissure:
-            Absdir = '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + str_name
-            gntFissure(Absdir, radiusValue=5)
-        else:
-            segment = v_seg.v_segmentor(batch_size=1,
-                                        model=model_name,
-                                        ptch_sz=pt_sz, ptch_z_sz=pt_z_sz,
-                                        trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
-                                        trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
-                                        # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
-                                        task=task, low_msk=True, attention=False)
+            else:
+                if task=='lobe':
+                    labels = [0, 4, 5, 6, 7, 8]
+                    stride = 0.25
+                elif task=='vessel':
+                    labels = [0, 1]
+                    stride = 0.25
+            if fissure:
+                Absdir = '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + str_name
+                gntFissure(Absdir, radiusValue=5)
+            else:
+                segment = v_seg.v_segmentor(batch_size=1,
+                                            model=model_name,
+                                            ptch_sz=pt_sz, ptch_z_sz=pt_z_sz,
+                                            trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
+                                            trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
+                                            # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
+                                            task=task, low_msk=True, attention=False)
 
-            print('stride is', stride)
-            write_preds_to_disk(segment=segment,
-                                data_dir=mypath.ori_ct_path(phase),
-                                preds_dir=mypath.pred_path(phase),
-                                number=5,
-                                stride=stride)
-        # #
-        # write_dices_to_csv (step_nb=0,
-        #                     labels=labels,
-        #                     gdth_path=mypath.gdth_path(phase),
-        #                     pred_path=mypath.pred_path(phase),
-        #                     csv_file=mypath.dices_fpath(phase))
+                print('stride is', stride)
+                write_preds_to_disk(segment=segment,
+                                    data_dir=mypath.ori_ct_path(phase),
+                                    preds_dir=mypath.pred_path(phase),
+                                    number=5,
+                                    stride=stride)
+            # #
+            # write_dices_to_csv (step_nb=0,
+            #                     labels=labels,
+            #                     gdth_path=mypath.gdth_path(phase),
+            #                     pred_path=mypath.pred_path(phase),
+            #                     csv_file=mypath.dices_fpath(phase))
 
-        write_all_metrics(labels=labels[1:], # exclude background
-                            gdth_path=mypath.gdth_path(phase),
-                            pred_path=mypath.pred_path(phase),
-                            csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
-                          fissure=fissure)
+            write_all_metrics(labels=labels[1:], # exclude background
+                                gdth_path=mypath.gdth_path(phase),
+                                pred_path=mypath.pred_path(phase),
+                                csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
+                              fissure=fissure)
 

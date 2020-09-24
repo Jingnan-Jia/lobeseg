@@ -404,7 +404,10 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
         idx = [np.arange(o_, f_) for o_, f_ in zip(origin, finish)]
         patch = next(scan) # (125, 128, 128, 64, 6)
         if type(patch) is list:
-            patch = patch[0]
+            if mot:
+                patch = patch[1]
+            else:
+                patch = patch[0]
         patch = np.rollaxis(patch, 3, 1)  # (125, 64, 128, 128, 6)
         result[np.ix_(idx[0], idx[1], idx[2])] += patch[0]
     # normalize (0-1) output
@@ -414,7 +417,7 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
     # repeat the sum along channel axis (to allow division)
     result = np.divide(result, r_sum)
 
-    if mot:
+    if 0:
         n = 0
         for z, x, y in np.ndindex(tuple(n_patches2)):
             n += 1
@@ -440,7 +443,7 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
         r_sum2 = np.repeat(r_sum2[:, :, :, np.newaxis], chn, -1)
         # repeat the sum along channel axis (to allow division)
         result2 = np.divide(result2, r_sum2)
-    if not mot:
-        return result
-    else:
-        return result, result2
+    # if not mot:
+    return result
+    # else:
+    #     return result, result2

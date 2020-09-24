@@ -103,7 +103,7 @@ class v_segmentor(object):
 
         self.mot = False
         for layer in layers:
-            match = re.match('out_.*?2$', layer)
+            match = re.match('(.*?)out_(.*?)2$', layer)
             if bool(match):
                 self.mot = True
 
@@ -134,13 +134,13 @@ class v_segmentor(object):
                 CHN = 1
             else:
                 CHN = 2
-
+ 
         pred = reconstruct_patch_gen(pre_gen, ptch_shape=patch_shape, original_shape=x.shape, stride=stride, chn=CHN,
                                      mot=self.mot, original_shape2=original_shape2)
         # pred has 5 dims, original_shape has 4 dims
 
         # one hot decoding
-        if self.mot:
+        if 0:
             masks1 = []
             for p1 in pred[0]:
                 masks1.append(one_hot_decoding(p1, self.labels))
@@ -168,6 +168,8 @@ class v_segmentor(object):
 
         else:
             masks = []
+            if type(pred) is list:
+                pred = pred[0]
             for p in pred:
                 masks.append(one_hot_decoding(p, self.labels))
             masks = np.array(masks, dtype='uint8')

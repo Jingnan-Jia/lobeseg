@@ -635,17 +635,19 @@ def train():
                                         data_dir=mypath.ori_ct_path(phase),
                                         preds_dir=mypath.pred_path(phase),
                                         number=test_nb, stride=stride)  # set stride 0.8 to save time
+                    write_all_metrics(labels=labels[1:],  # exclude background
+                                      gdth_path=mypath.gdth_path(phase),
+                                      pred_path=mypath.pred_path(phase),
+                                      csv_file=mypath.all_metrics_fpath(phase, fissure=0),
+                                      fissure=0)
 
                     if idx_ == args.step_nb - 1:
                         gntFissure(mypath.pred_path(phase), radiusValue=3)
-                        for fissure in [False, True]:  # write metrics for lobe and fissure
-                            if fissure:
-                                labels = [0, 1]
-                            write_all_metrics(labels=labels[1:],  # exclude background
-                                              gdth_path=mypath.gdth_path(phase),
-                                              pred_path=mypath.pred_path(phase),
-                                              csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
-                                              fissure=fissure)
+                        write_all_metrics(labels=labels[1:],  # exclude background
+                                          gdth_path=mypath.gdth_path(phase),
+                                          pred_path=mypath.pred_path(phase),
+                                          csv_file=mypath.all_metrics_fpath(phase, fissure=1),
+                                          fissure=1)
                     else:
                         write_dices_to_csv(step_nb=idx_,
                                            labels=labels[1:],
