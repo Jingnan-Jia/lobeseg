@@ -415,6 +415,8 @@ def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1
 
     print('size after rescale:', x.shape)  # 64, 144, 144, 1
 
+    x = correct_shape(x, trgt_sz)  # correct the shape mistakes made by sampling
+
     return x
 
 def one_hot_encode_3D( patch, labels):
