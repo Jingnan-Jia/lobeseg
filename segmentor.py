@@ -15,7 +15,8 @@ import re
 
 class v_segmentor(object):
     def __init__(self, batch_size=1, model='.hdf5', ptch_sz=128, ptch_z_sz=64, trgt_sz=None, trgt_z_sz=None,
-                 patching=True, trgt_space_list=[], task='lobe', sr=False, low_msk=False, attention=False):
+                 patching=True, trgt_space_list=[], task='lobe', sr=False, low_msk=False, attention=False,
+                 workers=0, qsize=0):
         self.sr = sr
         self.batch_size = batch_size
         self.model = model
@@ -28,6 +29,8 @@ class v_segmentor(object):
         self.task = task
         self.low_msk = low_msk
         self.attention = attention
+        self.workers = workers
+        self.qsize = qsize
         if task == 'lobe':
             self.labels = [0, 4, 5, 6, 7, 8]
         elif task == 'vessel':
@@ -55,6 +58,7 @@ class v_segmentor(object):
                         json_model = json_file.read()
                         self.v = model_from_json(json_model)
                         self.v.load_weights((self.model))
+                        print('segmentor successfully load weights from ', self.model)
 
         else:  # model is a tf.keras model directly in RAM
             self.graph1 = tf.Graph()
@@ -173,26 +177,33 @@ class v_segmentor(object):
             for p in pred:
                 masks.append(one_hot_decoding(p, self.labels))
             masks = np.array(masks, dtype='uint8')
-            if any(self.trgt_space_list) or any(self.trgt_sz_list):
-                if self.low_msk:
-                    print('rescaled to original spacing')
-                    final_pred = downsample(masks,
-                                            ori_space=self.trgt_space_list,
-                                            trgt_space=self.ori_space_list,
-                                            ori_sz=masks.shape,
-                                            trgt_sz=original_shape,
-                                            order=1,
-                                            labels=self.labels)
-                else:
-                    final_pred = masks
-            else:
-                final_pred = masks
+            final_pred = masks
 
-            if final_pred.shape!=masks.shape:  #55  226  226
-                final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
-            print('final_pred.shape: ', final_pred.shape)
-            final_pred = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
+            # if any(self.trgt_space_list) or any(self.trgt_sz_list):
+            #     if self.low_msk:
+            #         print('rescaled to original spacing')
+            #         final_pred = downsample(masks,
+            #                                 ori_space=self.trgt_space_list,
+            #                                 trgt_space=self.ori_space_list,
+            #                                 ori_sz=masks.shape,
+            #                                 trgt_sz=original_shape,
+            #                                 order=1,
+            #                                 labels=self.labels)
+            #     else:
+            #         final_pred = masks
+            # else:
+            #     final_pred = masks
+            # 
+            # if final_pred.shape!=masks.shape:  #55  226  226
+            #     final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
+            # print('final_pred.shape: ', final_pred.shape)
+            # final_pred = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
 
-            return final_pred
+
+            return final_pred, self.trgt_space_list, original_shape, self.labels, self.low_msk, self.trgt_sz_list
+
+
+
+
 
 

@@ -193,21 +193,45 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 
 
 '''
+""","""
 task='lobe'
-
+sub_dir="LOLA11"
 for fissure in [0, 1]:
-    str_names = [
-                 '1599692304_30_lrlb0.0001lrvs1e-05mtscale1netnolpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
-        '1599692304_73_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
-        '1599692304_604_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
-        '1599692304_214_lrlb0.0001lrvs1e-05mtscale1netnol-nov-nnlpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96'
+    str_names = ["1600642845_843_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1599948441_65_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1599948441_432_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1599948441_216_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600476675_493_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600476675_894_lrlb0.0001lrvs1e-05mtscale0netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600476675_636_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600642845_843_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600642845_949_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600642845_85_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600643885_62_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600643885_972_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600643885_770_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600643885_753_lrlb0.0001lrvs1e-05mtscale1netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600645190_366_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600645190_465_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600645190_458_lrlb0.0001lrvs1e-05mtscale0netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600645190_537_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600645872_556_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600645872_657_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600645872_801_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600478665_637_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600478665_204_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600478665_586_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600479252_877_lrlb0.0001lrvs1e-05mtscale1netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600479252_612_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 "1600479252_70_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
 
                  ]
     print(str_names)
 
     for str_name in str_names:
         mypath = Mypath(task=task, current_time=str_name) # set task=vessel to predict the lobe masks of SSc
-        model_name =  '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
+        model_name1 = '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
+        model_name = mypath.best_model_fpath("valid", str_name)
 
         tr_sp, tr_z_sp = 1.4, 2.5
         tr_sz, tr_z_sz = None, None
@@ -218,17 +242,18 @@ for fissure in [0, 1]:
         for phase in ['valid']:
             if fissure:
                 labels = [0, 1]
-                stride = 0.25
+                stride = 0.5
             else:
+
                 if task=='lobe':
                     labels = [0, 4, 5, 6, 7, 8]
-                    stride = 0.25
+                    stride = 0.5
                 elif task=='vessel':
                     labels = [0, 1]
-                    stride = 0.25
+                    stride = 0.5
             if fissure:
                 Absdir = '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + str_name
-                gntFissure(Absdir, radiusValue=5)
+                gntFissure(Absdir, radiusValue=3)
             else:
                 segment = v_seg.v_segmentor(batch_size=1,
                                             model=model_name,
@@ -240,20 +265,20 @@ for fissure in [0, 1]:
 
                 print('stride is', stride)
                 write_preds_to_disk(segment=segment,
-                                    data_dir=mypath.ori_ct_path(phase),
-                                    preds_dir=mypath.pred_path(phase),
-                                    number=5,
-                                    stride=stride)
+                                    data_dir=mypath.ori_ct_path(phase, sub_dir=sub_dir),
+                                    preds_dir=mypath.pred_path(phase, sub_dir=sub_dir),
+                                    number=4,
+                                    stride=stride, workers=10, qsize=10)
             # #
             # write_dices_to_csv (step_nb=0,
             #                     labels=labels,
             #                     gdth_path=mypath.gdth_path(phase),
             #                     pred_path=mypath.pred_path(phase),
             #                     csv_file=mypath.dices_fpath(phase))
-
-            write_all_metrics(labels=labels[1:], # exclude background
-                                gdth_path=mypath.gdth_path(phase),
-                                pred_path=mypath.pred_path(phase),
-                                csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
-                              fissure=fissure)
+            #
+            # write_all_metrics(labels=labels[1:], # exclude background
+            #                     gdth_path=mypath.gdth_path(phase),
+            #                     pred_path=mypath.pred_path(phase),
+            #                     csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
+            #                   fissure=fissure)
 
