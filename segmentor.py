@@ -5,7 +5,7 @@ Created on Wed Apr 12 10:20:10 2017
 """
 
 import numpy as np
-from futils.util import downsample, correct_shape
+from futils.util import downsample
 from futils.vpatch import deconstruct_patch_gen, reconstruct_patch_gen
 import tensorflow as tf
 from tensorflow.keras.models import model_from_json
@@ -164,7 +164,6 @@ class v_segmentor(object):
                                 trgt_sz=original_shape,
                                 order=1,
                                 labels=self.labels)
-            masks2 = correct_shape(masks2, original_shape)  # correct the shape mistakes made by sampling
             print('final_pred.shape: ', masks2.shape)
             masks1 = masks1[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
             masks2 = masks2[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]

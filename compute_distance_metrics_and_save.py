@@ -8,7 +8,7 @@ from find_connect_parts import largest_connected_parts
 import copy
 import PySimpleGUI as gui
 import matplotlib.pyplot as plt
-from futils.util import get_gdth_pred_names
+from futils.util import get_gdth_pred_names, downsample
 
 
 def show_itk(itk, idx):
@@ -220,8 +220,11 @@ gdth_file_name = '/data/jjia/mt/data/lobe/valid/gdth_ct/GLUCOLD/GLUCOLD_patients
 
 '''
 
+def get_lung_from_lobe(pred):
+    pred[pred>=1] = 1
+    return pred
 
-def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False):
+def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False, lung=False):
     """
 
     :param labels:  exclude background
@@ -237,6 +240,11 @@ def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False):
 
         gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_name)
         pred, pred_origin, pred_spacing = futil.load_itk(pred_name)
+        if lung:  # gdth is lung, so pred need to convert to lung from lobes, labels need to be [1],
+            # size need to be the same the the gdth size (LOLA11 mask resolutin is 1 mm, 1mm, 1mm)
+            pred = get_lung_from_lobe(pred)
+            labels = [1]
+            pred = downsample(pred, ori_space=pred_spacing, trgt_space=gdth_spacing, order=1, labels=labels)
 
         gdth = one_hot_encode_3D(gdth, labels=labels)
         pred = one_hot_encode_3D(pred, labels=labels)

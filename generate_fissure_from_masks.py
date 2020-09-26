@@ -5,7 +5,9 @@ import itk
 import SimpleITK as sitk
 import matplotlib as plt
 import copy
-
+import threading
+import queue
+import time
 
 def get_fissure(scan, radiusValue=3):
     lobe_4 = copy.deepcopy(scan)
@@ -93,16 +95,42 @@ def writeFissure(ctFpath, fissureFpath, radiusValue=3, Absdir=None):
 
 
 
-def gntFissure(Absdir, radiusValue=3):
-    files = sorted(glob.glob(Absdir + '/*' + '.nrrd'))
-    if len(files) == 0:
-        files = sorted(glob.glob(Absdir + '/*' + '.mhd'))
-    if len(files) == 0:
+def gntFissure(Absdir, radiusValue=3, workers=10, qsize=20):
+    scan_files = sorted(glob.glob(Absdir + '/*' + '.nrrd'))
+    scan_files.extend(sorted(glob.glob(Absdir + '/*' + '.mhd')))
+    if len(scan_files) == 0:
         raise Exception(' predicted files are None, Please check the directories', Absdir)
 
-    for ctFpath in files:
-        fissureFpath = Absdir + '/fissure_' + str(radiusValue) + '_' + ctFpath.split('/')[-1]
-        writeFissure(ctFpath, fissureFpath, radiusValue, Absdir)
+    def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
+        # consumer is just the upsampling only.
+        while True:
+            with threading.Lock():
+                ctFpath = None
+                if len(scan_files):  # if scan_files are empty, then threads should not wait any more
+                    print(threading.current_thread().name + " gets the lock, thread id: " + str(
+                        threading.get_ident()) + " prepare to compute fissure , waiting for the data from queue")
+                    ctFpath = scan_files.pop()  # wait up to 1 minutes
+
+            if ctFpath is not None:
+                t1 = time.time()
+                fissureFpath = Absdir + '/fissure_' + str(radiusValue) + '_' + ctFpath.split('/')[-1]
+                writeFissure(ctFpath, fissureFpath, radiusValue, Absdir)
+                t3 = time.time()
+                print("it costs tis seconds to compute the fissure of the data " + str(t3 - t1))
+            else:
+                print(threading.current_thread().name + "scan_files are empty, finish the thread")
+                return None
+
+    thd_list = []
+    for i in range(workers):
+        thd = threading.Thread(target=consumer)
+        thd.start()
+        thd_list.append(thd)
+
+    for thd in thd_list:
+        thd.join()
+
+
 
 '''
 '1599475109_302_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
@@ -113,11 +141,7 @@ def gntFissure(Absdir, radiusValue=3):
                 '1599475109_302_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96',
                 '''
 def main():
-    strnames = ['1599169291_810_lrlb0.0001lrvs1e-05mtscale1netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96']
-    for strname in strnames:
-        Absdir = '/data/jjia/new/data/lobe/valid/gdth_ct/GLUCOLD'
-        # Absdir = '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + strname
-        gntFissure(Absdir, radiusValue=5)
+    pass
 
 if __name__=="__main__":
     main()
