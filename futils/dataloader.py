@@ -419,7 +419,11 @@ class ScanIterator(Iterator):
         with self.lock:
             print(threading.current_thread().name+ " get the lock, thread id: "+str(threading.get_ident())+
                   " prepare to put data to queue")
+            t1 = time.time()
             current_q.put(ct_for_patching, timeout=60000 )  # timeout should be greater than the cost time of one epoch
+            t2 = time.time()
+            t = t2 - t1
+            print("It cost this seconds to put the data into queue" + str(t))
             print("task: "+self.task+ " state: "+self.state+"worker_"+str(i)+ " successfully put data of "+str(index)+
                   " into queue"+ current_q.name +" for patching")
             print("these index of data are waiting for loading: " +str(current_q.index_list))
@@ -437,10 +441,14 @@ class ScanIterator(Iterator):
                 if exit_flag:
                     return exit_flag
             else:
+                print('running flag is set to false, this thread is stoped')
                 return self.running
 
     def stop(self):
         self.running = False
+    def join(self):
+        for thd in self.thread_list:
+            thd.join()
 
     def generator(self, workers=5, qsize=5):
         index_sorted = list(range(self.n))
@@ -453,11 +461,13 @@ class ScanIterator(Iterator):
         self.qmaxsize = qsize
         q1 = QueueWithIndex(qsize, index_list1, name="q1")
         q2 = QueueWithIndex(qsize, index_list2, name="q2")
-        # self.thread_list = []
+        self.thread_list = []
         for i in range(workers):
             thd = threading.Thread(target=self.productor, args=(i, q1, q2,))
             thd.name = self.task + str(i)
             thd.start()
+            self.thread_list.append(thd)
+
             # self.thread_list.append(t)
         while True:
 # try:
