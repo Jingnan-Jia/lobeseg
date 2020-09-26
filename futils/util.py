@@ -18,36 +18,75 @@ import copy
 import nibabel as nib
 import glob
 import csv
+
+def get_fissure_filenames(gdth_path, pred_path):
+    gdth_files = glob.glob(gdth_path + '/fissure*' + '.nrrd')
+    gdth_files.extend(glob.glob(gdth_path + '/fissure*' + '.mhd'))
+
+    pred_files = glob.glob(pred_path + '/fissure*' + '.nrrd')
+    pred_files.extend(glob.glob(pred_path + '/fissure*' + '.mhd'))
+
+
+    gdth_files, pred_files = get_intersection_files(gdth_files, pred_files)
+
+    return gdth_files, pred_files
+
+def get_intersection_files(gdth_files, pred_files):
+    gdth_files = list(gdth_files)
+    pred_files = list(pred_files)
+    file_list_gdth = []
+    gdth_idx_list = []
+    for i, gdth_file in enumerate(gdth_files):
+        base = os.path.basename(gdth_file)
+        file, ext = os.path.splitext(base)
+        file_list_gdth.append(file)
+        gdth_idx_list.append(i)
+
+    file_list_pred = []
+    pred_idx_list = []
+    for j, pred_file in enumerate(pred_files):
+        base = os.path.basename(pred_file)
+        file, ext = os.path.splitext(base)
+        file_list_pred.append(file)
+        pred_idx_list.append(j)
+
+    intersection = set(file_list_gdth) & set(file_list_pred)
+
+    new_gdth_files = []
+    new_pred_files = []
+    for inter in intersection:
+        i = file_list_gdth.index(inter)
+        j = file_list_pred.index(inter)
+        new_gdth_files.append(gdth_files[i])
+        new_pred_files.append(pred_files[j])
+
+
+    return new_gdth_files, new_pred_files
+
+def get_ct_filenames(gdth_path, pred_path):
+    gdth_files = glob.glob(gdth_path + '/*' + '.nrrd')
+    gdth_files.extend(glob.glob(gdth_path + '/*' + '.mhd'))
+
+    pred_files = glob.glob(pred_path + '/*' + '.nrrd')
+    pred_files.extend(glob.glob(pred_path + '/*' + '.mhd'))
+
+    if len(gdth_files) == 0:
+        raise Exception('ground truth files  are None, Please check the directories', gdth_path)
+    if len(pred_files) == 0:
+        raise Exception(' predicted files are None, Please check the directories', pred_path)
+
+    fissure_gdth, fissure_pred = get_fissure_filenames(gdth_path, pred_path)
+    gdth_files = set(gdth_files) - set(fissure_gdth)
+    pred_files = set(pred_files) - set(fissure_pred)
+    gdth_files, pred_files = get_intersection_files(gdth_files, pred_files)
+
+    return gdth_files, pred_files
+
 def get_gdth_pred_names(gdth_path, pred_path, fissure=False):
     if fissure:
-        gdth_files = sorted(glob.glob(gdth_path + '/fissure*' + '.nrrd'))
-        if len(gdth_files) == 0:
-            gdth_files = sorted(glob.glob(gdth_path + '/fissure*' + '.mhd'))
-
-        pred_files = sorted(glob.glob(pred_path + '/fissure*' + '.nrrd'))
-        if len(pred_files) == 0:
-            pred_files = sorted(glob.glob(pred_path + '/fissure*' + '.mhd'))
-
-        if len(gdth_files) == 0:
-            raise Exception('ground truth files  are None, Please check the directories', gdth_path)
-        if len(pred_files) == 0:
-            raise Exception(' predicted files are None, Please check the directories', pred_path)
+        gdth_files, pred_files = get_fissure_filenames(gdth_path, pred_path)
     else:
-        gdth_files = sorted(glob.glob(gdth_path + '/*' + '.nrrd'))
-        if len(gdth_files) == 0:
-            gdth_files = sorted(glob.glob(gdth_path + '/*' + '.mhd'))
-
-        pred_files = sorted(glob.glob(pred_path + '/*' + '.nrrd'))
-        if len(pred_files) == 0:
-            pred_files = sorted(glob.glob(pred_path + '/*' + '.mhd'))
-
-        if len(gdth_files) == 0:
-            raise Exception('ground truth files  are None, Please check the directories', gdth_path)
-        if len(pred_files) == 0:
-            raise Exception(' predicted files are None, Please check the directories', pred_path)
-
-    if len(pred_files) < len(gdth_files):  # only predict several ct todo: need to get the same name !!!
-        gdth_files = gdth_files[:len(pred_files)]
+        gdth_files, pred_files = get_ct_filenames(gdth_path, pred_path)
 
     return gdth_files, pred_files
 
