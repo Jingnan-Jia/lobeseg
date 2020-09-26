@@ -196,7 +196,8 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 ""","""
 task='lobe'
 sub_dir="LOLA11"
-for fissure in [0, 1]:
+
+for lung, fissure in zip([1, 0], [0, 1]):
     str_names = ["1600642845_843_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1599948441_65_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1599948441_432_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
@@ -252,8 +253,7 @@ for fissure in [0, 1]:
                     labels = [0, 1]
                     stride = 0.5
             if fissure:
-                Absdir = '/data/jjia/new/results/lobe/valid/pred/GLUCOLD/' + str_name
-                gntFissure(Absdir, radiusValue=3)
+                gntFissure(mypath.pred_path(phase, sub_dir=sub_dir), radiusValue=3, workers=10, qsize=20)
             else:
                 segment = v_seg.v_segmentor(batch_size=1,
                                             model=model_name,
@@ -267,8 +267,8 @@ for fissure in [0, 1]:
                 write_preds_to_disk(segment=segment,
                                     data_dir=mypath.ori_ct_path(phase, sub_dir=sub_dir),
                                     preds_dir=mypath.pred_path(phase, sub_dir=sub_dir),
-                                    number=4,
-                                    stride=stride, workers=10, qsize=10)
+                                    number=40,
+                                    stride=stride, workers=10, qsize=20)
             # #
             # write_dices_to_csv (step_nb=0,
             #                     labels=labels,
@@ -276,9 +276,10 @@ for fissure in [0, 1]:
             #                     pred_path=mypath.pred_path(phase),
             #                     csv_file=mypath.dices_fpath(phase))
             #
-            # write_all_metrics(labels=labels[1:], # exclude background
-            #                     gdth_path=mypath.gdth_path(phase),
-            #                     pred_path=mypath.pred_path(phase),
-            #                     csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
-            #                   fissure=fissure)
+            write_all_metrics(labels=labels[1:], # exclude background
+                                gdth_path=mypath.gdth_path(phase),
+                                pred_path=mypath.pred_path(phase),
+                                csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
+                              fissure=fissure,
+                              lung=lung)
 
