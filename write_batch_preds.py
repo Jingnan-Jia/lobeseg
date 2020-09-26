@@ -5,7 +5,7 @@ import os
 import numpy as np
 import queue
 import threading
-from futils.util import downsample, correct_shape
+from futils.util import downsample
 
 
 class Mask():
@@ -42,8 +42,6 @@ class Mask():
         else:
             final_pred = masks
 
-        if final_pred.shape != masks.shape:  # 55  226  226
-            final_pred = correct_shape(final_pred, self.original_shape)  # correct the shape mistakes made by sampling
         print('final_pred.shape: ', final_pred.shape)
         mask = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
 
@@ -88,21 +86,31 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
     q = queue.Queue(qsize)
     running = True
 
-    def consumer():
+    def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
+        # consumer is just the upsampling only.
         while True:
-            if running or len(scan_files):
-                print(threading.current_thread().name + " , thread id: " + str(threading.get_ident()) +
-                      " prepare to upsample data")
-                t1 = time.time()
-                print("waiting for the data from queue")
-                out_mask = q.get(timeout=6000)  # wait up to 100 minutes
-                t2 = time.time()
-                print("it costs tis secons to get the data before upsample "+str(t2-t1))
-                out_mask.upsample_crop_save_ct()
-                t3 = time.time()
-                print("it costs tis secons to upsample the data " + str(t3 - t1))
+            if len(scan_files):  # if scan_files are empty, then threads should not wait any more
+                out_mask = None
+                with threading.Lock():
+                    if not q.empty():
+                        print(threading.current_thread().name + " gets the lock, thread id: " + str(threading.get_ident()) +
+                              " prepare to upsample data, waiting for the data from queue")
+                        try:
+                            out_mask = q.get(timeout=60)  # wait up to 1 minutes
+                            t2 = time.time()
+                            print(threading.current_thread().name + " gets the data before upsample at time "
+                                  + str(t2) + ", the thread releases the lock")
+                        except:
+                            out_mask = None
+                            print(threading.current_thread().name + " does not get the data in 60s, check again if "
+                                  + "the scan_files are still not empty, the thread releases the lock")
+                if out_mask is not None:
+                    t1 = time.time()
+                    out_mask.upsample_crop_save_ct()
+                    t3 = time.time()
+                    print("it costs tis secons to upsample the data " + str(t3 - t1))
             else:
-                print("running is false, finish the thread")
+                print(threading.current_thread().name + "scan_files are empty, finish the thread")
                 return None
 
     thd_list = []
@@ -132,7 +140,6 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
                     labels, low_msk, trgt_sz_list)
         q.put(mask, timeout=6000)
 
-    running = False
     for thd in thd_list:
         thd.join()
 
