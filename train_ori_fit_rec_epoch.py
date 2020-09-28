@@ -329,7 +329,7 @@ class TaskArgs:
                                           gdth_path=self.mypath.gdth_path(phase),
                                           pred_path=self.mypath.pred_path(phase),
                                           csv_file=self.mypath.all_metrics_fpath(phase, fissure=fissure),
-                                          fissure=fissure)
+                                          fissure=fissure, workers=5)
                 else:
                     write_dices_to_csv(step_nb=idx_,
                                        labels=self.labels[1:],

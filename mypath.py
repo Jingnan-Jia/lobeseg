@@ -272,13 +272,13 @@ class Mypath(object):
         return pred_path + '/dices.csv'
 
     @mkdir_dcrt
-    def all_metrics_fpath(self, phase, fissure=False):
+    def all_metrics_fpath(self, phase, fissure=False, sub_dir=sub_dir):
         """
         full path of the saved dice
         :param phase: 'train' or 'valid'
         :return: file name to save dice
         """
-        pred_path = self.pred_path(phase)
+        pred_path = self.pred_path(phase, sub_dir=sub_dir)
         if fissure:
             return pred_path + '/all_metrics_fissure.csv'
         else:

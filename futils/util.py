@@ -20,13 +20,8 @@ import glob
 import csv
 
 def get_fissure_filenames(gdth_path, pred_path):
-    gdth_files = glob.glob(gdth_path + '/fissure*' + '.nrrd')
-    gdth_files.extend(glob.glob(gdth_path + '/fissure*' + '.mhd'))
-
-    pred_files = glob.glob(pred_path + '/fissure*' + '.nrrd')
-    pred_files.extend(glob.glob(pred_path + '/fissure*' + '.mhd'))
-
-
+    gdth_files = get_all_ct_names(gdth_path, prefix="fissure")
+    pred_files = get_all_ct_names(pred_path, prefix="fissure")
     gdth_files, pred_files = get_intersection_files(gdth_files, pred_files)
 
     return gdth_files, pred_files
@@ -61,14 +56,23 @@ def get_intersection_files(gdth_files, pred_files):
         new_pred_files.append(pred_files[j])
 
 
-    return new_gdth_files, new_pred_files
+    return sorted(new_gdth_files), sorted(new_pred_files)
+
+def get_all_ct_names(path, prefix=None):
+    if prefix:
+        files = glob.glob(path + '/' + prefix + '*.nrrd')
+        files.extend(glob.glob(path + '/' + prefix + '*.mhd'))
+        files.extend(glob.glob(path + '/' + prefix + '*.mha'))
+    else:
+        files = glob.glob(path + '/*' + '.nrrd')
+        files.extend(glob.glob(path + '/*' + '.mhd'))
+        files.extend(glob.glob(path + '/*' + '.mha'))
+    return files
 
 def get_ct_filenames(gdth_path, pred_path):
-    gdth_files = glob.glob(gdth_path + '/*' + '.nrrd')
-    gdth_files.extend(glob.glob(gdth_path + '/*' + '.mhd'))
 
-    pred_files = glob.glob(pred_path + '/*' + '.nrrd')
-    pred_files.extend(glob.glob(pred_path + '/*' + '.mhd'))
+    gdth_files = get_all_ct_names(gdth_path)
+    pred_files = get_all_ct_names(pred_path)
 
     if len(gdth_files) == 0:
         raise Exception('ground truth files  are None, Please check the directories', gdth_path)
@@ -146,7 +150,7 @@ def load_itk(filename):
     # Read the spacing along each dimension
     spacing = np.array(list(reversed(itkimage.GetSpacing()))) #note: after reverseing,  spacing =(z,y,x)
     orientation = itkimage.GetDirection()
-    if (orientation[-1] == -1):
+    if orientation[-1] == -1:
         ct_scan = ct_scan[::-1]
 
     return ct_scan, origin, spacing
@@ -365,6 +369,45 @@ def one_hot_decoding(img,labels,thresh=[]):
 
     return new_img
 
+def execute_the_function_multi_thread(workers=10, file_list=[], function=None, *args, **kwargs):
+    """
+
+    :param workers:
+    :param file_list:
+    :param function:
+    :param args:
+    :return:
+    """
+    def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
+        # consumer is just the upsampling only.
+        while True:
+            with threading.Lock():
+                ctFpath = None
+                if len(file_list):  # if scan_files are empty, then threads should not wait any more
+                    print(threading.current_thread().name + " gets the lock, thread id: " + str(
+                        threading.get_ident()) + " prepare to execute the function , waiting for the data from queue")
+                    ctFpath = file_list.pop()  # wait up to 1 minutes
+
+            if ctFpath is not None:
+                t1 = time.time()
+                function(ctFpath, *args, **kwargs)
+                t3 = time.time()
+                print("it costs tis seconds to execute the function of the data " + str(t3 - t1))
+            else:
+                print(threading.current_thread().name + "scan_files are empty, finish the thread")
+                return None
+
+    thd_list = []
+    for i in range(workers):
+        thd = threading.Thread(target=consumer)
+        thd.start()
+        thd_list.append(thd)
+
+    for thd in thd_list:
+        thd.join()
+
+
+
 
 def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1, labels=[0, 1], ):
     """
@@ -378,11 +421,14 @@ def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1
     :param order:
     :return:
     """
+    trgt_sz = list(trgt_sz)
+    ori_sz = list(ori_sz)
     if len(scan.shape)==3:  # (657, 512, 512)
         scan=scan[..., np.newaxis] # (657, 512, 512, 1)
     if len(ori_sz)==3:
-        ori_sz = list(ori_sz)
         ori_sz.append(1) # (657, 512, 512, 1)
+    if len(trgt_sz)==3:
+        trgt_sz.append(1) # (657, 512, 512, 1)
     print('scan.shape, ori_space, trgt_space, ori_sz, trgt_sz',scan.shape, ori_space, trgt_space, ori_sz, trgt_sz)
     if any(trgt_space):
         print('rescaled to new spacing  ')
@@ -390,7 +436,7 @@ def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1
         zoom_seq = np.append(zoom_seq, 1)
     elif any(trgt_sz):
         print('rescaled to target size')
-        zoom_seq = np.array(trgt_sz.append(ori_sz.shape[-1]), dtype='float') / np.array(ori_sz, dtype='float')
+        zoom_seq = np.array(trgt_sz, dtype='float') / np.array(ori_sz, dtype='float')
     else:
         raise Exception('please assign how to rescale')
         print('please assign how to rescale')
@@ -398,6 +444,7 @@ def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1
     print('zoom_seq', zoom_seq)
     if len(labels) <= 2 or all(zoom_seq<=1):  # [0, 1] vesel mask or original ct scans
         x = ndimage.interpolation.zoom(scan, zoom_seq, order=order, prefilter=order)  # 143, 271, 271, 1
+        x = x[..., 0]
     else:  # [0, 1, 2, 3, 4, 5, 6]
         x_onehot = one_hot_encode_3D(scan, labels) # (657, 512, 512, 6/2)
         mask1 = []
@@ -414,8 +461,8 @@ def downsample(scan, ori_space=[], trgt_space=[], ori_sz=[], trgt_sz=[], order=1
         x = np.array(mask3, dtype='uint8')
 
     print('size after rescale:', x.shape)  # 64, 144, 144, 1
-
-    x = correct_shape(x, trgt_sz)  # correct the shape mistakes made by sampling
+    if any(zoom_seq>1):  # correct shape is not neessary during down sampling in training
+        x = correct_shape(x, trgt_sz)  # correct the shape mistakes made by sampling
 
     return x
 

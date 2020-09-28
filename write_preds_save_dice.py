@@ -193,32 +193,32 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 
 
 '''
-""","""
-task='lobe'
-sub_dir="LOLA11"
-
-for lung, fissure in zip([1, 0], [0, 1]):
-    str_names = ["1600642845_843_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+"""
+"1600642845_843_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1599948441_65_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1599948441_432_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1599948441_216_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 
                  "1600476675_493_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600476675_894_lrlb0.0001lrvs1e-05mtscale0netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600476675_636_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-                 "1600642845_843_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600642845_949_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 
                  "1600642845_85_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600643885_62_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600643885_972_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600643885_770_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 
                  "1600643885_753_lrlb0.0001lrvs1e-05mtscale1netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600645190_366_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600645190_465_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600645190_458_lrlb0.0001lrvs1e-05mtscale0netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                
                  "1600645190_537_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600645872_556_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600645872_657_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600645872_801_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+                 
                  "1600478665_637_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600478665_204_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600478665_586_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
@@ -226,7 +226,23 @@ for lung, fissure in zip([1, 0], [0, 1]):
                  "1600479252_612_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
                  "1600479252_70_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
 
-                 ]
+"""
+""","""
+task='lobe'
+sub_dir="LOLA11"
+
+for lung, fissure in zip([1, 0], [0, 1]):
+    str_names = [
+
+
+        "1600478665_637_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1600478665_204_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1600478665_586_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1600479252_877_lrlb0.0001lrvs1e-05mtscale1netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1600479252_612_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1600479252_70_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+
+    ]
     print(str_names)
 
     for str_name in str_names:
@@ -272,14 +288,19 @@ for lung, fissure in zip([1, 0], [0, 1]):
             # #
             # write_dices_to_csv (step_nb=0,
             #                     labels=labels,
-            #                     gdth_path=mypath.gdth_path(phase),
-            #                     pred_path=mypath.pred_path(phase),
+            #                     gdth_path=mypath.gdth_path(phase, sub_dir=sub_dir),
+            #                     pred_path=mypath.pred_path(phase, sub_dir=sub_dir),
             #                     csv_file=mypath.dices_fpath(phase))
-            #
+
             write_all_metrics(labels=labels[1:], # exclude background
-                                gdth_path=mypath.gdth_path(phase),
-                                pred_path=mypath.pred_path(phase),
-                                csv_file=mypath.all_metrics_fpath(phase, fissure=fissure),
+                                gdth_path=mypath.gdth_path(phase, sub_dir=sub_dir),
+                                pred_path=mypath.pred_path(phase, sub_dir=sub_dir),
+                                csv_file=mypath.all_metrics_fpath(phase, fissure=fissure, sub_dir=sub_dir),
                               fissure=fissure,
-                              lung=lung)
+                              lung=lung, workers=10)
+
+
+
+
+
 

@@ -93,13 +93,63 @@ def writeFissure(ctFpath, fissureFpath, radiusValue=3, Absdir=None):
     # scanOne [scanOne < 1] = 0 # note the order of the two lines!
     # scanOne [scanOne >= 1] = 1
 
+def execute_the_function_multi_thread(workers=10, file_list=[], function=None, *args, **kwargs):
+    """
+
+    :param workers:
+    :param file_list:
+    :param function:
+    :param args:
+    :return:
+    """
+    def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
+        # consumer is just the upsampling only.
+        while True:
+            with threading.Lock():
+                ctFpath = None
+                if len(file_list):  # if scan_files are empty, then threads should not wait any more
+                    print(threading.current_thread().name + " gets the lock, thread id: " + str(
+                        threading.get_ident()) + " prepare to execute the function , waiting for the data from queue")
+                    ctFpath = file_list.pop()  # wait up to 1 minutes
+
+            if ctFpath is not None:
+                t1 = time.time()
+                function(*args, **kwargs)
+                t3 = time.time()
+                print("it costs tis seconds to execute the function of the data " + str(t3 - t1))
+            else:
+                print(threading.current_thread().name + "scan_files are empty, finish the thread")
+                return None
+
+    thd_list = []
+    for i in range(workers):
+        thd = threading.Thread(target=consumer)
+        thd.start()
+        thd_list.append(thd)
+
+    for thd in thd_list:
+        thd.join()
+
+import numpy as np
+import threading
+import time
 
 
-def gntFissure(Absdir, radiusValue=3, workers=10, qsize=20):
+
+
+def gntFissure(Absdir, radiusValue=3, workers=10, number=None, qsize=20):
     scan_files = sorted(glob.glob(Absdir + '/*' + '.nrrd'))
     scan_files.extend(sorted(glob.glob(Absdir + '/*' + '.mhd')))
+    scan_files.extend(sorted(glob.glob(Absdir + '/*' + '.mha')))
+    scan_files = sorted(scan_files)
     if len(scan_files) == 0:
         raise Exception(' predicted files are None, Please check the directories', Absdir)
+    if number is not None:
+        if type(number) is list:
+            scan_files = scan_files[number[0], number[1]]
+        else:
+            scan_files = scan_files[:number]
+
 
     def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
         # consumer is just the upsampling only.

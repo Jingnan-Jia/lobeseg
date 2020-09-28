@@ -61,6 +61,7 @@ def get_scan_files(data_dir, number):
     print('Start write_preds_to_disk')
     scan_files = sorted(glob.glob(data_dir + '/' + '*.mhd'))
     scan_files.extend(sorted(glob.glob(data_dir + '/' + '*.nrrd')))
+    scan_files.extend(sorted(glob.glob(data_dir + '/' + '*.mha')))
     if scan_files is None:
         raise Exception('Scan files are None, please check the data directory')
     if isinstance(number, int):

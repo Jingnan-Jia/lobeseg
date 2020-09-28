@@ -201,6 +201,8 @@ def deconstruct_patch_gen(scan, patch_shape=(64, 128, 128), stride=0.25, a2=None
     """
     sh = np.array(scan.shape, dtype=int)
     p_sh = np.array(patch_shape, dtype=int)
+    if len(scan.shape)==3:
+        scan = scan[..., np.newaxis]
 
     if isinstance(stride, float) or stride == 1:
         stride = p_sh * stride
@@ -351,23 +353,12 @@ def reconstruct_patch(scan,original_shape=(128,256,256),stride = 0.25):
 
 
 
-
-
-@calculate_time
-def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stride=0.25, chn=6, mot=False,
-                          original_shape2=None):
-    """
-    reconstruct a ct from a batch of patches.
-
-    :param scan: a batch of patches array, shape(nb, z, x, y, chn), 5 dims
-    :param original_shape: shape of original ct scan, shape (z, x, y, 1), 4 dims
-    :param stride: overlap ratio on each axil
-    :return: a ct with original shape (z, x, y)
-    """
+def reconstruct_one_from_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stride=0.25, chn=6, mot=False):
     p_sh = np.array(ptch_shape)  # shape (z, x, y)
-    sh = np.array(original_shape, dtype=int)[:-1]  # shape (z, x, y)
-    sh2 = np.array(original_shape2, dtype=int)[:-1] if (mot and original_shape2 is not None) else None  # shape (z, x, y)
-
+    if len(original_shape)==4:
+        sh = np.array(original_shape, dtype=int)[:-1]  # shape (z, x, y)
+    else:
+        sh = np.array(original_shape, dtype=int)  # shape (z, x, y)
     if isinstance(stride, float) or stride == 1:
         stride = p_sh * stride
     elif isinstance(stride, list):
@@ -376,17 +367,11 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
         raise Exception('the stride is wrong', stride)
 
     stride = stride.astype(int)
-
     n_patches = (sh - p_sh + 2 * stride) // stride
-    n_patches2 = (sh2 - p_sh + 2 * stride) // stride if mot else None
-
     print('number of patches to reconstruct: ', n_patches)
-    print('number of patches to reconstruct: ', n_patches2) if mot else None
-
 
     # init result
     result = np.zeros(tuple(sh) + (chn,), dtype=float)
-    result2 = np.zeros(tuple(sh2) + (chn,), dtype=float) if mot else None
 
     n = 0
     for z, x, y in np.ndindex(tuple(n_patches)):
@@ -402,7 +387,7 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
                 origin[i] = finish[i] - p_sh[i]
 
         idx = [np.arange(o_, f_) for o_, f_ in zip(origin, finish)]
-        patch = next(scan) # (125, 128, 128, 64, 6)
+        patch = next(scan)  # (125, 128, 128, 64, 6)
         if type(patch) is list:
             if mot:
                 patch = patch[1]
@@ -417,33 +402,35 @@ def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stri
     # repeat the sum along channel axis (to allow division)
     result = np.divide(result, r_sum)
 
-    if 0:
-        n = 0
-        for z, x, y in np.ndindex(tuple(n_patches2)):
-            n += 1
-            # print('reconstruct patch number ', n)
-            it = np.array([z, x, y], dtype=int)
-            origin = it * stride
-            finish = it * stride + p_sh
-
-            for i in range(len(finish)):  # when we meet the last patch
-                if finish[i] >= sh2[i]:
-                    finish[i] = sh2[i] - 1
-                    origin[i] = finish[i] - p_sh[i]
-
-            idx = [np.arange(o_, f_) for o_, f_ in zip(origin, finish)]
-            patch = next(scan)  # (125, 128, 128, 64, 6)
-            if type(patch) is list:
-                patch = patch[1]
-            patch = np.rollaxis(patch, 3, 1)  # (125, 64, 128, 128, 6)
-            result2[np.ix_(idx[0], idx[1], idx[2])] += patch[0]
-        # normalize (0-1) output
-        r_sum2 = np.sum(result2, axis=-1)
-        r_sum2[r_sum == 0] = 1  # hmm this should not be necessary - but it is :(
-        r_sum2 = np.repeat(r_sum2[:, :, :, np.newaxis], chn, -1)
-        # repeat the sum along channel axis (to allow division)
-        result2 = np.divide(result2, r_sum2)
-    # if not mot:
     return result
-    # else:
-    #     return result, result2
+
+
+@calculate_time
+def reconstruct_patch_gen(scan, ptch_shape, original_shape=(128, 256, 256), stride=0.25, chn=6, mot=None,
+                          original_shape2=None):
+    """
+    reconstruct a ct from a batch of patches.
+
+    :param scan: a batch of patches array, shape(nb, z, x, y, chn), 5 dims
+    :param original_shape: shape of original ct scan, shape (z, x, y, 1), 4 dims
+    :param stride: overlap ratio on each axil
+    :return: a ct with original shape (z, x, y)
+    """
+
+
+
+    if mot:
+        if original_shape2 is not None:
+            if chn==2:  # not lobe, reconstruct the 2 outputs
+                result = reconstruct_one_from_patch_gen(scan, ptch_shape, original_shape, stride,chn=6)
+                result2 = reconstruct_one_from_patch_gen(scan, ptch_shape, original_shape, stride, chn=6, mot=True)
+                result = (result, result2)
+
+            elif chn==6:  # lobe, just use the second output (low resolution), because first output is bad
+                result = reconstruct_one_from_patch_gen(scan, ptch_shape, original_shape, stride, chn=6, mot=True)
+        else:
+            raise Exception("mot is given, but original_shape2 is None, please assign original_shape2")
+    else:  # not mot, use the only one output
+        result = reconstruct_one_from_patch_gen(scan, ptch_shape, original_shape, stride, chn=6)
+
+    return result

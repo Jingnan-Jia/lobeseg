@@ -31,6 +31,8 @@ class v_segmentor(object):
         self.attention = attention
         self.workers = workers
         self.qsize = qsize
+        self.mot = False  # multi output, determined by architecture of the loaded model
+        self.mtscale = False  # multi input, determined by architecture of the loaded model
         if task == 'lobe':
             self.labels = [0, 4, 5, 6, 7, 8]
         elif task == 'vessel':
@@ -105,7 +107,7 @@ class v_segmentor(object):
         else:
             self.mtscale = False
 
-        self.mot = False
+
         for layer in layers:
             match = re.match('(.*?)out_(.*?)2$', layer)
             if bool(match):
@@ -130,76 +132,27 @@ class v_segmentor(object):
 
         pre_gen = self.predict_gen(x_patch_gen)
         if self.attention:
-            CHN=6
+            chn=6
         else:
             if self.task == 'lobe':
-                CHN = 6
+                chn = 6
             elif self.task == 'no_label':
-                CHN = 1
+                chn = 1
             else:
-                CHN = 2
+                chn = 2
  
-        pred = reconstruct_patch_gen(pre_gen, ptch_shape=patch_shape, original_shape=x.shape, stride=stride, chn=CHN,
-                                     mot=self.mot, original_shape2=original_shape2)
-        # pred has 5 dims, original_shape has 4 dims
-
+        pred = reconstruct_patch_gen(pre_gen, ptch_shape=patch_shape, original_shape=x.shape, stride=stride, chn=chn,
+                                     mot=self.mot, original_shape2=original_shape2)  # todo: how to compute fissure, metrics for 2 output ct?
         # one hot decoding
-        if 0:
-            masks1 = []
-            for p1 in pred[0]:
-                masks1.append(one_hot_decoding(p1, self.labels))
-            masks1 = np.array(masks1, dtype='uint8')
+        masks = []
+        if type(pred) is list:
+            pred = pred[0]
+        for p in pred:
+            masks.append(one_hot_decoding(p, self.labels))
+        masks = np.array(masks, dtype='uint8')
+        final_pred = masks
 
-            masks2 = []
-            for p2 in pred[1]:
-                masks2.append(one_hot_decoding(p2, self.labels))
-            masks2 = np.array(masks1, dtype='uint8')
-            if sum(masks1.shape) < sum(masks2.shape):  # masks1 is of original resolution
-                masks1 = masks2  # keep masks1 high/original resolution
-                masks2 = masks1
-            masks2 = downsample(masks2,
-                                ori_space=self.trgt_space_list,
-                                trgt_space=self.ori_space_list,
-                                ori_sz=masks2.shape,
-                                trgt_sz=original_shape,
-                                order=1,
-                                labels=self.labels)
-            print('final_pred.shape: ', masks2.shape)
-            masks1 = masks1[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
-            masks2 = masks2[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
-            return masks1, masks2
-
-        else:
-            masks = []
-            if type(pred) is list:
-                pred = pred[0]
-            for p in pred:
-                masks.append(one_hot_decoding(p, self.labels))
-            masks = np.array(masks, dtype='uint8')
-            final_pred = masks
-
-            # if any(self.trgt_space_list) or any(self.trgt_sz_list):
-            #     if self.low_msk:
-            #         print('rescaled to original spacing')
-            #         final_pred = downsample(masks,
-            #                                 ori_space=self.trgt_space_list,
-            #                                 trgt_space=self.ori_space_list,
-            #                                 ori_sz=masks.shape,
-            #                                 trgt_sz=original_shape,
-            #                                 order=1,
-            #                                 labels=self.labels)
-            #     else:
-            #         final_pred = masks
-            # else:
-            #     final_pred = masks
-            # 
-            # if final_pred.shape!=masks.shape:  #55  226  226
-            #     final_pred = correct_shape(final_pred, original_shape)  # correct the shape mistakes made by sampling
-            # print('final_pred.shape: ', final_pred.shape)
-            # final_pred = final_pred[pad_nb:-pad_nb, pad_nb:-pad_nb, pad_nb:-pad_nb]
-
-
-            return final_pred, self.trgt_space_list, original_shape, self.labels, self.low_msk, self.trgt_sz_list
+        return final_pred, self.trgt_space_list, original_shape, self.labels, self.low_msk, self.trgt_sz_list
 
 
 
