@@ -85,7 +85,7 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
     scan_files = get_scan_files(data_dir, number)
     pad_nb = 48
     q = queue.Queue(qsize)
-    running = True
+    cooking_flag = False
 
     def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
         # consumer is just the upsampling only.
@@ -110,6 +110,9 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
                     out_mask.upsample_crop_save_ct()
                     t3 = time.time()
                     print("it costs tis secons to upsample the data " + str(t3 - t1))
+            elif cooking_flag:
+                print(threading.current_thread().name + "scan_files are empty, but cooking_flag is True,"
+                                                        " wait for the last cooking")
             else:
                 print(threading.current_thread().name + "scan_files are empty, finish the thread")
                 return None
@@ -125,6 +128,7 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
     for i in range(len(scan_files)):
         print('start iterate')
         scan_file = scan_files.pop()
+        cooking_flag = True
 
         # ct_scan.shape: (717,, 512, 512), spacing: 0.5, 0.741, 0.741
         ct_scan, origin, spacing = futil.load_itk(filename=scan_file)
@@ -140,6 +144,7 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
         mask = Mask(mask, scan_file, pad_nb,  preds_dir, origin, spacing, trgt_space_list, original_shape,
                     labels, low_msk, trgt_sz_list)
         q.put(mask, timeout=6000)
+        cooking_flag = False
 
     for thd in thd_list:
         thd.join()

@@ -229,17 +229,14 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 """
 ""","""
 task='lobe'
-sub_dir="LOLA11"
+sub_dir="GLUCOLD"
 
-for lung, fissure in zip([0], [1]):
+for lung, fissure in zip([0], [0]):
     str_names = [
-        "1600478665_637_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        "1600478665_204_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        "1600478665_586_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        "1600479252_877_lrlb0.0001lrvs1e-05mtscale1netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        "1600479252_612_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        "1600479252_70_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
-
+        "1599692304_30_lrlb0.0001lrvs1e-05mtscale1netnolpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1599692304_73_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1599692304_604_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1599692304_214_lrlb0.0001lrvs1e-05mtscale1netnol-nov-nnlpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
     ]
     print(str_names)
 
@@ -262,10 +259,10 @@ for lung, fissure in zip([0], [1]):
 
                 if task=='lobe':
                     labels = [0, 4, 5, 6, 7, 8]
-                    stride = 0.5
+                    stride = 0.25
                 elif task=='vessel':
                     labels = [0, 1]
-                    stride = 0.5
+                    stride = 0.25
             if fissure:
                 gntFissure(mypath.pred_path(phase, sub_dir=sub_dir), radiusValue=1, workers=10, qsize=20)
             else:
@@ -274,14 +271,13 @@ for lung, fissure in zip([0], [1]):
                                             ptch_sz=pt_sz, ptch_z_sz=pt_z_sz,
                                             trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
                                             trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
-                                            # 2.5, 1.4, 1.4 [2.5, 1.4, 1.4],[0.5, 0.6, 0.6]
                                             task=task, low_msk=True, attention=False)
 
                 print('stride is', stride)
                 write_preds_to_disk(segment=segment,
                                     data_dir=mypath.ori_ct_path(phase, sub_dir=sub_dir),
                                     preds_dir=mypath.pred_path(phase, sub_dir=sub_dir),
-                                    number=40,
+                                    number=1,
                                     stride=stride, workers=10, qsize=20)
             # #
             # write_dices_to_csv (step_nb=0,
@@ -295,7 +291,7 @@ for lung, fissure in zip([0], [1]):
                                 pred_path=mypath.pred_path(phase, sub_dir=sub_dir),
                                 csv_file=mypath.all_metrics_fpath(phase, fissure=fissure, sub_dir=sub_dir),
                               fissure=fissure,
-                              lung=lung, workers=10)
+                              lung=lung, workers=5)
 
 
 
