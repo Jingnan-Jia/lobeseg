@@ -231,10 +231,8 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 task='lobe'
 sub_dir="LOLA11"
 
-for lung, fissure in zip([1, 0], [0, 1]):
+for lung, fissure in zip([0], [1]):
     str_names = [
-
-
         "1600478665_637_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
         "1600478665_204_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
         "1600478665_586_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
@@ -269,7 +267,7 @@ for lung, fissure in zip([1, 0], [0, 1]):
                     labels = [0, 1]
                     stride = 0.5
             if fissure:
-                gntFissure(mypath.pred_path(phase, sub_dir=sub_dir), radiusValue=3, workers=10, qsize=20)
+                gntFissure(mypath.pred_path(phase, sub_dir=sub_dir), radiusValue=1, workers=10, qsize=20)
             else:
                 segment = v_seg.v_segmentor(batch_size=1,
                                             model=model_name,

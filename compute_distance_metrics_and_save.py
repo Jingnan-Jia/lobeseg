@@ -219,7 +219,7 @@ gdth_file_name = '/data/jjia/mt/data/lobe/valid/gdth_ct/GLUCOLD/GLUCOLD_patients
 '''
 
 
-def write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung):
+def write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung, fissure):
     gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_name)
     pred, pred_origin, pred_spacing = futil.load_itk(pred_name)
 
@@ -231,18 +231,38 @@ def write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung):
             pred = downsample(pred, ori_sz=pred.shape, trgt_sz=gdth.shape, order=1,
                               labels=labels)  # use shape to upsampling because the space is errors sometimes in LOLA11
 
-    if 'LOLA11' in gdth_name or "lola11" in gdth_name:  # only have slices annotations
+    elif fissure and ('LOLA11' in gdth_name or "lola11" in gdth_name):  # only have slices annotations
+        pred_cp = copy.deepcopy(pred)
         slic_nb=0
         for i in range(gdth.shape[1]):  # gdth.shape=(600, 512, 512)
             gdth_slice = gdth[:, i, :]
             if not gdth_slice.any():  # the slice is all black
-                pred[:, i, :] = 0
+                pred_cp[:, i, :] = 0
             else:
                 slic_nb+=1
+                # print("gdth slice sum"+str(np.sum(gdth_slice)))
                 for j in range(gdth.shape[2]):  # some times only one lobe is annotated in the same slice.
                     gdth_line = gdth_slice[:, j]
                     if not gdth_line.any():
-                        pred[:, i, j] = 0
+                        pred_cp[:, i, j] = 0
+        if slic_nb > 30:
+            print('slice number of valuable lobe is greater than 30: '+str(slic_nb)+", change to another axis")
+            pred_cp = copy.deepcopy(pred)
+            slic_nb = 0
+            for i in range(gdth.shape[2]):  # gdth.shape=(600, 512, 512)
+                gdth_slice = gdth[:, :, i]
+                if not gdth_slice.any():  # the slice is all black
+                    pred_cp[:, :, i] = 0
+                else:
+                    slic_nb += 1
+                    # print("gdth slice sum" + str(np.sum(gdth_slice)))
+                    for j in range(gdth.shape[1]):  # some times only one lobe is annotated in the same slice.
+                        gdth_line = gdth_slice[:, j]
+                        if not gdth_line.any():
+                            pred_cp[:, j, i] = 0
+        if slic_nb > 30:
+            raise Exception("cannot get fissure points")
+        pred = pred_cp
         futil.save_itk(pred_name.split(".mh")[0]+"_points.mha", pred, pred_origin, pred_spacing)
         print('slice number of valuable lobe: ', slic_nb)
 
@@ -310,7 +330,7 @@ def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False, lun
 
             if pred_name is not None:
                 t1 = time.time()
-                write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung)
+                write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung, fissure)
                 t3 = time.time()
                 print("it costs tis seconds to compute the the data " + str(t3 - t1))
             else:
