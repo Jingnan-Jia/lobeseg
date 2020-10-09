@@ -18,7 +18,7 @@ from scipy import ndimage
 import time
 import glob
 import sys
-from futils.util import downsample, one_hot_encode_3D
+from futils.util import downsample, one_hot_encode_3d
 from functools import wraps
 import queue
 import threading
@@ -168,13 +168,15 @@ def rp_dcrt(fun):  # decorator to repeat a function until succeessful
 
 
 class QueueWithIndex(queue.Queue):
-    def __init__(self, qsize, index_list,name):
+    def __init__(self, qsize, index_list, name):
         self.index_list = index_list
         self.name = name
         super(QueueWithIndex, self).__init__(qsize)
 
+
 class ScanIterator(Iterator):
     """Class to iterate A and B 3D scans (mhd or nrrd) at the same time."""
+
     def __init__(self,
                  directory,
                  task=None,
@@ -182,25 +184,21 @@ class ScanIterator(Iterator):
                  sub_dir=None,
                  a_extension='.mhd', c_extension='.nrrd',
                  ptch_sz=None, ptch_z_sz=None,
-                 trgt_sz=None, trgt_z_sz=None,
-                 trgt_space=None, trgt_z_space=None,
+                 tszzyx=None,
+                 tspzyx=None,
                  data_argum=True,
                  patches_per_scan=5,
                  ds=2,
-                 labels=[],
+                 labels=None,
                  batch_size=1,
                  shuffle=True,
                  seed=None,
                  n=None,
                  no_label_dir=None,
                  p_middle=None,
-                 phase='None',
                  aux=None,
-                 mtscale=None,
                  ptch_seed=None,
-                 mot=False,
-                 low_msk=0,
-                 low_ipt=0):
+                 io=False):
         """
         Iterate through two directories at the same time.
 
@@ -223,14 +221,14 @@ class ScanIterator(Iterator):
         - labels: output classes
 
         """
-        self.mtscale = mtscale
+        self.io = io
         self.task = task
         if task == 'lobe':
             self.b_extension = '.nrrd'
         else:
             self.b_extension = '.mhd'
 
-        if self.mtscale or self.task == 'vessel':  # I hope to used p_middle for mtscale
+        if "2_in" in self.io or self.task == 'vessel':  # I hope to used p_middle for mtscale
             self.p_middle = p_middle
         else:
             self.p_middle = None
@@ -239,16 +237,11 @@ class ScanIterator(Iterator):
         self.ds = ds
         self.labels = labels
         self.patches_per_scan = patches_per_scan
-        self.trgt_sz = trgt_sz
-        self.trgt_z_sz = trgt_z_sz
-        self.trgt_space = trgt_space
-        self.trgt_z_space = trgt_z_space
+        self.tszzyx = tszzyx
+        self.tspzyx = tspzyx
         self.ptch_sz = ptch_sz
         self.ptch_z_sz = ptch_z_sz
-        self.trgt_sp_list = [self.trgt_z_space, self.trgt_space, self.trgt_space]
-        self.trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz]
         self.ptch_seed = ptch_seed
-        self.mot = mot
         self.aux = aux
         self.running = True
         if self.aux:
@@ -294,8 +287,6 @@ class ScanIterator(Iterator):
         self.epoch_nb = 0
 
         self.data_argum = data_argum
-        self.low_msk = low_msk
-        self.low_ipt = low_ipt
         # self.shuffle = shuffle
         super(ScanIterator, self).__init__(len(self.filenames), batch_size, shuffle, seed)
 
@@ -305,22 +296,23 @@ class ScanIterator(Iterator):
         return scan
 
     def load_scan(self, file_name):
-        """Load mhd or nrrd 3d scan"""
+        """Load mhd or nrrd 3d scan thread safelly. Output is scan and spacing with shape (z,y,x)"""
         with self.lock:
-            print(threading.current_thread().name+" get the lock, thread id: "+str(threading.get_ident())+
+            print(threading.current_thread().name + " get the lock, thread id: " + str(threading.get_ident()) +
                   " prepare to load data")
-            scan, origin, spacing = futil.load_itk(file_name)
-            print(threading.current_thread().name + "release the lock")
+            scan, origin, spacing = futil.load_itk(file_name)  # all the output shape are (z, y, z)
+            print(threading.current_thread().name + " load data successfully, release the lock")
         return np.expand_dims(scan, axis=-1), spacing  # size=(z,x,y,1)
 
     def _load_img_pair(self, idx):
-        """Get a pair of images with index idx."""
+        """Get a pair of images after padding and normalization if possible with spacing."""
         a_fname = self.filenames[idx] + self.a_extension
         print('start load file: ', a_fname)
 
         a, spacing = self.load_scan(file_name=os.path.join(self.a_dir, a_fname))  # (200, 512, 512, 1)
         pad_nb = 48
-        a = np.pad(a, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant', constant_values=-3000)
+        a = np.pad(a, ((pad_nb, pad_nb), (pad_nb, pad_nb), (pad_nb, pad_nb), (0, 0)), mode='constant',
+                   constant_values=-3000)
 
         # a = np.array(a)
         a = futil.normalize(a)  # threshold to [-1000,400], then rescale to [0,1]
@@ -346,57 +338,68 @@ class ScanIterator(Iterator):
     @rp_dcrt
     def next(self):
         return None
-    def get_ct_for_patching(self, j):
+
+    def get_ct_for_patching(self, idx):
+        """
+        a_hgh and b_hgh must exist. but:
+        if trgt_sz and trgt_sp are None and not self.mtscale, a_low, b_low, c_low would be None
+        if not self.aux, c_low, c_hgh would be None
+        :param idx: index of ct scan
+        :return: a_low, a_hgh, b_low, b_hgh, c_low, c_hgh
+        """
+
         if self.aux:
-            a_ori, b_ori, c_ori, spacing = self._load_img_pair(j)
+            # with padding, shape of a,b,c_ori is (z,y,x,1), spacing (z,y,x)
+            a_ori, b_ori, c_ori, spacing = self._load_img_pair(idx)
         else:
-            a_ori, b_ori, spacing = self._load_img_pair(j)
-        if self.task != 'no_label':
-            b_ori = one_hot_encode_3D(b_ori, self.labels)
-            c_ori = one_hot_encode_3D(c_ori, [0, 1]) if self.aux else None
+            # with padding, shape of a,b_ori is (z,y,x,1), spacing is (z,y,x)
+            a_ori, b_ori, spacing = self._load_img_pair(idx)
+        if self.task != 'no_label':  # encode first, downsample next. Otherwise we need to encode down and ori ct.
+            b_ori = one_hot_encode_3d(b_ori, self.labels)  # shape: (z,y,x,chn)
+            c_ori = one_hot_encode_3d(c_ori, [0, 1]) if self.aux else None  # shape: (z,y,x,2)
 
         if self.data_argum:
             if self.aux:
-                a_ori, b_ori, c_ori = random_transform(a_ori, b_ori, c_ori)
+                a_ori, b_ori, c_ori = random_transform(a_ori, b_ori, c_ori)  # shape: (z,y,x,chn)
             else:
-                a_ori, b_ori = random_transform(a_ori, b_ori)
+                a_ori, b_ori = random_transform(a_ori, b_ori)  # shape: (z,y,x,chn)
 
-        if any(self.trgt_sp_list) or any(self.trgt_sz_list):
-            a = downsample(a_ori,
-                           ori_space=spacing, trgt_space=self.trgt_sp_list,
-                           ori_sz=a_ori.shape, trgt_sz=self.trgt_sz_list,
-                           order=1)
-            a2 = a_ori if self.mtscale else None
+        if self.io!="1_in_hgh_1_out_hgh" and not (any(self.tspzyx) or any(self.tszzyx)):
+            raise Exception("io is: "+str(self.io)+" but did not set trgt_space_list or trgt_sz_list")
 
-            b = downsample(b_ori,
-                           ori_space=spacing, trgt_space=self.trgt_sp_list,
-                           ori_sz=b_ori.shape, trgt_sz=self.trgt_sz_list,
-                           order=0) if self.low_msk else b_ori
-            b2 = b_ori if self.mot else None
-
+        a_low, a_hgh, b_low, b_hgh, c_low, c_hgh = None, None, None, None, None, None
+        if "in_low" in self.io or "2_in" in self.io:
+            a_low = downsample(a_ori, is_mask=False,
+                               ori_space=spacing, trgt_space=self.tspzyx,
+                               ori_sz=a_ori.shape, trgt_sz=self.tszzyx,
+                               order=1, labels=self.labels)  # shape: (z,y,x,chn)
+        if "out_low" in self.io or "2_out" in self.io:
+            b_low = downsample(b_ori,is_mask=True,
+                               ori_space=spacing, trgt_space=self.tspzyx,
+                               ori_sz=b_ori.shape, trgt_sz=self.tszzyx,
+                               order=0, labels=self.labels)  # shape: (z,y,x,chn)
             if self.aux:
-                c = downsample(c_ori,
-                               ori_space=spacing, trgt_space=self.trgt_sp_list,
-                               ori_sz=c_ori.shape, trgt_sz=self.trgt_sz_list,
-                               order=0) if self.low_msk else c_ori
-            else:
-                c = None
-        else:
-            a, a2 = a_ori, None  # if trgt_sp or trgt_sz is not assigned, it means that mtscale is False
-            b, b2 = b_ori, None
-            c = None
-        print('before patching, the shape of a is ', a.shape)
-        print('before patching, the shape of a2 is ', a2.shape) if self.mtscale else print('')
-        print('before patching, the shape of b2 is ', b2.shape) if self.mot else print('')
-        return (a, a2, b, b2, c)
+                c_low = downsample(c_ori,is_mask=True,
+                                   ori_space=spacing, trgt_space=self.tspzyx,
+                                   ori_sz=c_ori.shape, trgt_sz=self.tszzyx,
+                                   order=0, labels=self.labels)  # shape: (z,y,x,2)
+
+        if "in_hgh" in self.io or "2_in" in self.io:
+            a_hgh = a_ori  # shape: (z,y,x,chn)
+        if "out_hgh" in self.io or "2_out" in self.io:
+            b_hgh = b_ori  # shape: (z,y,x,chn)
+            if self.aux:
+                c_hgh = c_ori
+
+        return a_low, a_hgh, b_low, b_hgh, c_low, c_hgh  # shape (z,y,x,chn)
 
     def queue_data(self, q1, q2, i):
         with self.lock:
-            print(threading.current_thread().name + " get the lock, thread id: " + str(threading.get_ident())+
+            print(threading.current_thread().name + " get the lock, thread id: " + str(threading.get_ident()) +
                   " prepare to get the index of data and load data latter")
-            if self.state=="monitor" and not len(q1.index_list):
-                print("task: "+ self.task + " state: " + self.state + "worker_" + str(i) + " prepare put data but ")
-                print("index_list 1 is empty! the monitor thread has finished its job! kill this thread by return True as the exit flag")
+            if self.state == "monitor" and not len(q1.index_list):
+                print("task: " + self.task + " state: " + self.state + "worker_" + str(i) + " prepare put data but ")
+                print( "index_list 1 is empty! the monitor thread has finished its job! stop this thread.")
                 return True
             else:
                 if not len(q1.index_list) and not len(q2.index_list):
@@ -408,25 +411,26 @@ class ScanIterator(Iterator):
                     elif len(q2.index_list):
                         index = q2.index_list.pop()
                         current_q = q2
-                    print("task: "+ self.task + " state: " + self.state + "worker_" + str(i) +
-                          " start to put data of " + str(index)+" into queue" + current_q.name +" for patching")
-                    print("size of the queue: " + str(self.qmaxsize)+"occupied size: "+str(current_q.qsize())+
-                          "remaining index: "+str(current_q.index_list))
+                    print("task: " + self.task + " state: " + self.state + "worker_" + str(i) +
+                          " start to put data of " + str(index) + " into queue" + current_q.name + " for patching")
+                    print("size of the queue: " + str(self.qmaxsize) + "occupied size: " + str(current_q.qsize()) +
+                          "remaining index: " + str(current_q.index_list))
             print(threading.current_thread().name + "release the lock")
 
         ct_for_patching = self.get_ct_for_patching(index)
 
         with self.lock:
-            print(threading.current_thread().name+ " get the lock, thread id: "+str(threading.get_ident())+
+            print(threading.current_thread().name + " get the lock, thread id: " + str(threading.get_ident()) +
                   " prepare to put data to queue")
             t1 = time.time()
-            current_q.put(ct_for_patching, timeout=60000 )  # timeout should be greater than the cost time of one epoch
+            current_q.put(ct_for_patching, timeout=600000)  # 160 hours  greater than the cost time of one epoch
             t2 = time.time()
             t = t2 - t1
             print("It cost this seconds to put the data into queue" + str(t))
-            print("task: "+self.task+ " state: "+self.state+"worker_"+str(i)+ " successfully put data of "+str(index)+
-                  " into queue"+ current_q.name +" for patching")
-            print("these index of data are waiting for loading: " +str(current_q.index_list))
+            print("task: " + self.task + " state: " + self.state + "worker_" + str(
+                i) + " successfully put data of " + str(index) +
+                  " into queue" + current_q.name + " for patching")
+            print("these index of data are waiting for loading: " + str(current_q.index_list))
             print("size of the queue: ", self.qmaxsize, "occupied size: ", current_q.qsize())
             print(threading.current_thread().name + "release the lock")
 
@@ -446,9 +450,23 @@ class ScanIterator(Iterator):
 
     def stop(self):
         self.running = False
+
     def join(self):
         for thd in self.thread_list:
             thd.join()
+
+    def tune_axis(self, img):
+        if type(img) is list:  # io is "2_out"
+            img1, img2 = img[0], img[1]
+            img1, img2 = np.rollaxis(img1, 0, 3), np.rollaxis(img2, 0, 3)
+            img1, img2 = img1[np.newaxis, ...], img2 [np.newaxis, ...]
+            return [img1, img2]
+        else:
+            img = np.rollaxis(img, 0, 3)  # (96, 144, 144, 1) -> (144, 144, 96, 1)
+            img = img[np.newaxis, ...]  # (144, 144, 96, 1) -> (1, 144, 144, 96, 1)
+            return img
+
+
 
     def generator(self, workers=5, qsize=5):
         index_sorted = list(range(self.n))
@@ -470,98 +488,62 @@ class ScanIterator(Iterator):
 
             # self.thread_list.append(t)
         while True:
-# try:
+            # try:
             for _step in range(self.n):
                 # try:
                 q = q1 if self.epoch_nb % 2 == 0 else q2
                 print("before q.get, qsize:", q.qsize(), q.index_list)
                 time1 = time.time()
 
-                print(threading.current_thread().name+" prepare to get data from queue")
-                a, a2, b, b2, c = q.get(timeout=6000)  # wait for several minitues for loading data
+                print(threading.current_thread().name + " prepare to get data from queue")
+                a_low, a_hgh, b_low, b_hgh, c_low, c_hgh  = q.get(timeout=6000)  # wait for several minitues for loading data
+                # a/a2.shape (z,y,x,1) b/b2.shape (z,y,x,chn), c2.shape(z,y,x,2)
                 time2 = time.time()
-                print("it costs me this seconds to get the data: " + str(time2-time1))
-                print("after q.get, qsize:"+ str(q.qsize())+str(q.index_list))
+                print("it costs me this seconds to get the data: " + str(time2 - time1))
+                print("after q.get, qsize:" + str(q.qsize()) + str(q.index_list))
 
                 for _ in range(self.patches_per_scan):
                     if self.ptch_seed:
-                        ptch_seed = self.ptch_seed + _
+                        self.ptch_seed += 1
                     else:
-                        ptch_seed = None
+                        self.ptch_seed = None
 
-                    if self.aux:
-                        if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
-                            a_img, b_img, c_img = random_patch(a, b, c,
+                    if self.ptch_sz is not None:
+                        if self.aux:
+                            # a/a2.shape (z,y,x,1) b/b2.shape (z,y,x,chn), c2.shape(z,y,x,2)
+                            a_img, b_img, c_img = random_patch(a_low, a_hgh, b_low, b_hgh, c_low, c_hgh,
                                                                patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
-                                                               p_middle=self.p_middle, a2=a2, b2=b2, ptch_seed=ptch_seed)
+                                                               p_middle=self.p_middle, task=self.task, io=self.io, ptch_seed=self.ptch_seed)
                         else:
-                            a_img, b_img, c_img = a, b, c
+                            a_img, b_img = random_patch(a_low, a_hgh, b_low, b_hgh, c_low, c_hgh,
+                                                        patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
+                                                        p_middle=self.p_middle, task=self.task, io=self.io, ptch_seed=self.ptch_seed)
                     else:
-                        if self.mtscale or ((self.ptch_sz is not None) and (self.ptch_sz != self.trgt_sz)):
-                            a_img, b_img = random_patch(a, b, patch_shape=(self.ptch_z_sz, self.ptch_sz, self.ptch_sz),
-                                                        p_middle=self.p_middle, a2=a2, b2=b2, ptch_seed=ptch_seed)
+                        raise Exception("self.ptch_sz is None or self.ptch_sz == self.trgt_sz")
+
+                    a_img = self.tune_axis(a_img)
+                    b_img = self.tune_axis(b_img)
+                    if self.aux:  # only for one output, b_img is an array
+                        c_img = self.tune_axis(c_img)
+                        if self.ds==2:
+                            yield a_img, [b_img, c_img, b_img, b_img]
                         else:
-                            a_img, b_img = a, b
-
-                    if self.mot:
-                        b1_ = b_img[0]
-                        b2_ = b_img[1]
-                        b1_ = np.rollaxis(b1_, 0, 3)
-                        b1_ = b1_[np.newaxis, ...]
-                        b2_ = np.rollaxis(b2_, 0, 3)
-                        b2_ = b2_[np.newaxis, ...]
-
+                            yield a_img, [b_img, c_img]
                     else:
-                        b_img = np.rollaxis(b_img, 0, 3)
-                        b_img = b_img[np.newaxis, ...]
-                    a_img = np.rollaxis(a_img, 0, 3)
-                    c_img = np.rollaxis(c_img, 0, 3) if self.aux else None
-                    a_img = a_img[np.newaxis, ...]
-                    c_img = c_img[np.newaxis, ...] if self.aux else None
+                        if self.ds == 2:  # only for one output, b_img is an array
+                            yield a_img, [b_img, b_img, b_img]
 
-                    if self.aux:
-                        if self.mtscale:
-                            x1, x2 = a_img[..., 0], a_img[..., 1]
-                            x1, x2 = x1[..., np.newaxis], x2[..., np.newaxis]
-                            if self.ds == 2:
-                                yield [x1, x2], [b_img, c_img, b_img, b_img]
-
-                            else:
-                                yield [x1, x2], [b_img, c_img]
                         else:
-
-                            if self.ds == 2:
-                                yield a_img, [b_img, c_img, b_img, b_img]
-
-                            else:
-                                yield a_img, [b_img, c_img]
-                    else:
-                        if self.mtscale:
-                            x1, x2 = a_img[..., 0], a_img[..., 1]
-                            x1, x2 = x1[..., np.newaxis], x2[..., np.newaxis]
-
-                            if self.ds == 2:
-                                yield [x1, x2], [b_img, b_img, b_img]
-
-                            else:
-                                if self.mot:
-                                    yield [x1, x2], [b1_, b2_]
-                                else:
-                                    yield [x1, x2], [b_img]
-                        else:
-
-                            if self.ds == 2:
-                                yield a_img, [b_img, b_img, b_img]
-
-                            else:
-                                yield a_img, [b_img]
+                            yield a_img, b_img
 
             self.epoch_nb += 1
             if self.shuffle:
                 if not len(q1.index_list):
-                    q1.index_list = random.sample(list(range(self.n)), len(list(range(self.n))))   # regenerate the nex shuffle index
+                    q1.index_list = random.sample(list(range(self.n)),
+                                                  len(list(range(self.n))))  # regenerate the nex shuffle index
                 elif not len(q2.index_list):
-                    q2.index_list = random.sample(list(range(self.n)), len(list(range(self.n))))   # regenerate the nex shuffle index
+                    q2.index_list = random.sample(list(range(self.n)),
+                                                  len(list(range(self.n))))  # regenerate the nex shuffle index
                 # else:
                 #     raise Exception("two queues are all not empty at the end of the epoch")
             else:
@@ -569,56 +551,7 @@ class ScanIterator(Iterator):
                     q1.index_list = list(range(self.n))
                 elif not len(q2.index_list):
                     q2.index_list = list(range(self.n))
-                # else:
-                #     raise Exception("two queues are all not empty at the end of the epoch")
-            # except:
-            #     print("This ct is weird, fail to patch it, pass it")
 
-            # if self.aux:
-            #     x, y, y_aux = self.next()
-            #     x_b = np.rollaxis(x, 1, 4)
-            #     y_b = np.rollaxis(y, 1, 4)
-            #     y_aux_b = np.rollaxis(y_aux, 1, 4)
-            #     print('prepare feed the data to model, x, y, y_aux', x_b.shape, y_b.shape, y_aux_b.shape)
-            #     for x, y, y_aux in zip(x_b, y_b, y_aux_b):
-            #         x = x[np.newaxis, ...]
-            #         y = y[np.newaxis, ...]
-            #         y_aux = y_aux[np.newaxis, ...]
-            #         if self.mtscale:
-            #             x1 = x[..., 0]
-            #             x1 = x1[..., np.newaxis]
-            #             x2 = x[..., 1]
-            #             x2 = x2[..., np.newaxis]
-            #             if self.ds == 2:
-            #                 yield [x1, x2], [y, y_aux, y, y]
-            #
-            #             else:
-            #                 yield [x1, x2], [y, y_aux]
-            #         else:
-            #
-            #             if self.ds == 2:
-            #                 yield x, [y, y_aux, y, y]
-            #
-            #             else:
-            #                 yield x, [y, y_aux]
-            # else:
-            #
-            #     x, y = self.next()
-            #     if self.task=='no_label':
-            #         y = x
-            #     x_b = np.rollaxis(x, 1, 4)
-            #     y_b = np.rollaxis(y, 1, 4)
-            #     print('prepare feed the data to model, x, y', x_b.shape, y_b.shape)
-            #
-            #     for x, y in zip(x_b, y_b):
-            #         x = x[np.newaxis, ...]
-            #         y = y[np.newaxis, ...]
-            #         if self.mtscale:
-            #             x1 = x[..., 0]
-            #             x1 = x1[..., np.newaxis]
-            #             x2 = x[..., 1]
-            #             x2 = x2[..., np.newaxis]
-            #
             #             # import matplotlib.pyplot as plt
             #             # plt.figure()
             #             # plt.imshow(x1[0,72,:,:,0])
@@ -628,16 +561,4 @@ class ScanIterator(Iterator):
             #             # plt.imshow(x2[0,72, :, :, 0])
             #             # plt.savefig('x2_y.png')
             #             # plt.close()
-            #
-            #             if self.ds == 2:
-            #                 yield [x1, x2], [y, y, y]
-            #
-            #             else:
-            #                 yield [x1, x2], y
-            #         else:
-            #
-            #             if self.ds == 2:
-            #                 yield x, [y, y, y]
-            #
-            #             else:
-            #                 yield x, y
+

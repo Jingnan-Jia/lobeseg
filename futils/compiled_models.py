@@ -360,10 +360,10 @@ def up_trans(input1, nf, nconvs, bn, dr, ty='v', input2=None, name='block'):
         raise Exception("please assign the model net_type: 'v' or 'u'.")
     return d
 
-def get_loss_weights_optim(ao, ds, lr, mot, task=None):
+def get_loss_weights_optim(ao, ds, lr, io, task=None):
     loss = [dice_coef_loss_weight_p]
     loss_weights = [1]
-    if mot:
+    if "2_out" in io:
         if task == "no_label":
             loss = ['mse']
         else:
@@ -400,14 +400,13 @@ def load_cp_models(model_names, args):
     bn = args.batch_norm
     dr = args.dropout
     net_type = args.u_v
-    mtscale = args.mtscale
     attention = args.attention
 
     ## start model
     input_data = Input((None, None, None, nch), name='input')  # input data
     in_tr = intro(input_data, nf, bn)
 
-    if mtscale:
+    if "2_in" in args.lb_io:
         input_data2 = Input((None, None, None, nch), name='input_2')  # input data 2 with a different scale
         in_tr2 = intro(input_data2, nf, bn, name='2')
 
@@ -434,7 +433,7 @@ def load_cp_models(model_names, args):
     out_lobe = Activation('softmax', name='lobe_out_segmentation')(res_lobe)
 
     out_lobe = [out_lobe]  # convert to list to append other outputs
-    if args.mot_lb:
+    if "2_out" in args.lb_io:
         res_lobe2 = Conv3D(lobe_out_chn, 1, padding='same', name='lobe_Conv3D_last2')(up_tr1_lobe)
         out_lobe2 = Activation('softmax', name='lobe_out_segmentation2')(res_lobe2)
         out_lobe.append(out_lobe2)
@@ -475,7 +474,7 @@ def load_cp_models(model_names, args):
         out_lung = Activation('softmax', name='lung_out_segmentation')(res_lung)
 
     out_lung = [out_lung]  # convert to list to append other outputs
-    if args.mot_lu:
+    if "2_out" in args.lu_io:
         res_lung2 = Conv3D(lung_out_chn, 1, padding='same', name='lung_Conv3D_last2')(up_tr1_lung)
         out_lung2 = Activation('softmax', name='lung_out_segmentation2')(res_lung2)
         out_lung.append(out_lung2)
@@ -517,7 +516,7 @@ def load_cp_models(model_names, args):
 
     out_vessel = [out_vessel]  # convert to list to append other outputs
     # vessel_aux=0
-    if args.mot_vs:
+    if "2_out" in args.vs_io:
         res_vessel2 = Conv3D(vessel_out_chn, 1, padding='same', name='vessel_Conv3D_last2')(up_tr1_vessel)
         out_vessel2 = Activation('softmax', name='vessel_out_segmentation2')(res_vessel2)
         out_vessel.append(out_vessel2)
@@ -558,7 +557,7 @@ def load_cp_models(model_names, args):
 
 
     out_airway = [out_airway]  # convert to list to append other outputs
-    if args.mot_aw:
+    if "2_out" in args.aw_io:
         res_airway2 = Conv3D(airway_out_chn, 1, padding='same', name='airway_Conv3D_last2')(up_tr1_airway)
         out_airway2 = Activation('softmax', name='airway_out_segmentation2')(res_airway2)
         out_airway.append(out_airway2)
@@ -594,7 +593,7 @@ def load_cp_models(model_names, args):
     else:
         out_recon = Conv3D(rec_out_chn, 1, padding='same', name='out_recon')(up_tr1_rec)
 
-    if args.mot_rc:
+    if "2_out" in args.rc_io:
         out_recon2 = Conv3D(rec_out_chn, 1, padding='same', name='out_recon2')(up_tr1_rec)
         out_recon = [out_recon, out_recon2]
 
@@ -611,7 +610,7 @@ def load_cp_models(model_names, args):
     ###################----------------------------------#########################################
     # compile lobe models
     metrics_lobe = {'lobe_out_segmentation': metrics_seg_6_classes}
-    if args.mot_lb:
+    if "2_out" in args.lb_io:
         metrics_lobe['lobe_out_segmentation2'] = metrics_seg_6_classes
     if args.ao_lb:
         metrics_lobe['lobe_aux'] = metrics_seg_2_classes
@@ -620,8 +619,7 @@ def load_cp_models(model_names, args):
         metrics_lobe['lobe_d2'] = metrics_seg_6_classes
 
     loss, loss_weights, loss_itgt_recon, loss_itgt_recon_weights, optim = get_loss_weights_optim(args.ao_lb, args.ds_lb,
-                                                                                                 args.lr_lb,
-                                                                                                 args.mot_lb)
+                                                                                                 args.lr_lb, args.lb_io)
     net_only_lobe = Model(input_data, out_lobe, name='net_only_lobe')
     net_only_lobe.compile(optimizer=optim,
                           loss=loss,
@@ -629,10 +627,10 @@ def load_cp_models(model_names, args):
                           metrics=metrics_lobe)
 
     net_itgt_lobe_recon = Model(input_data, out_itgt_lobe_recon, name='net_itgt_lobe_recon')
-    net_itgt_lobe_recon.compile(optimizer=optim,
-                                loss=loss_itgt_recon,
-                                loss_weights=loss_itgt_recon_weights,
-                                metrics=metrics_lobe.update({'out_recon': 'mse'}))
+    # net_itgt_lobe_recon.compile(optimizer=optim,
+    #                             loss=loss_itgt_recon,
+    #                             loss_weights=loss_itgt_recon_weights,
+    #                             metrics=metrics_lobe.update({'out_recon': 'mse'}))
 
     ###################----------------------------------#########################################
     # compile vessel models
@@ -640,7 +638,7 @@ def load_cp_models(model_names, args):
         metrics_vessel = {'vessel_out_segmentation': metrics_seg_6_classes}
     else:
         metrics_vessel = {'vessel_out_segmentation': metrics_seg_2_classes}
-    if args.mot_vs:
+    if "2_out" in args.vs_io:
         metrics_vessel['vessel_out_segmentation2'] = metrics_seg_2_classes
     if args.ao_vs:
         metrics_vessel['vessel_aux'] = metrics_seg_2_classes
@@ -649,8 +647,7 @@ def load_cp_models(model_names, args):
         metrics_vessel['vessel_d2'] = metrics_seg_2_classes
 
     loss, loss_weights, loss_itgt_recon, loss_itgt_recon_weights, optim = get_loss_weights_optim(args.ao_vs, args.ds_vs,
-                                                                                                 args.lr_vs,
-                                                                                                 args.mot_vs)
+                                                                                                 args.lr_vs, args.vs_io)
     net_only_vessel = Model(input_data, out_vessel, name='net_only_vessel')
     net_only_vessel.compile(optimizer=optim,
                             loss=loss,
@@ -658,10 +655,10 @@ def load_cp_models(model_names, args):
                             metrics=metrics_vessel)
 
     net_itgt_vessel_recon = Model(input_data, out_itgt_vessel_recon, name='net_itgt_vessel_recon')
-    net_itgt_vessel_recon.compile(optimizer=optim,
-                                  loss=loss_itgt_recon,
-                                  loss_weights=loss_itgt_recon_weights,
-                                  metrics=metrics_vessel.update({'out_recon': 'mse'}))
+    # net_itgt_vessel_recon.compile(optimizer=optim,
+    #                               loss=loss_itgt_recon,
+    #                               loss_weights=loss_itgt_recon_weights,
+    #                               metrics=metrics_vessel.update({'out_recon': 'mse'}))
 
     ###################----------------------------------#########################################
     # compile airway models
@@ -670,7 +667,7 @@ def load_cp_models(model_names, args):
     else:
         metrics_airway = {'airway_out_segmentation': metrics_seg_2_classes}
 
-    if args.mot_aw:
+    if "2_out" in args.aw_io:
         metrics_airway['airway_out_segmentation2'] = metrics_seg_2_classes
     if args.ao_aw:
         metrics_airway['airway_aux'] = metrics_seg_2_classes
@@ -679,8 +676,7 @@ def load_cp_models(model_names, args):
         metrics_airway['airway_d2'] = metrics_seg_2_classes
 
     loss, loss_weights, loss_itgt_recon, loss_itgt_recon_weights, optim = get_loss_weights_optim(args.ao_aw, args.ds_aw,
-                                                                                                 args.lr_aw,
-                                                                                                 args.mot_aw)
+                                                                                                 args.lr_aw, args.aw_io)
     net_only_airway = Model(input_data, out_airway, name='net_only_airway')
     net_only_airway.compile(optimizer=optim,
                             loss=loss,
@@ -688,17 +684,17 @@ def load_cp_models(model_names, args):
                             metrics=metrics_airway)
 
     net_itgt_airway_recon = Model(input_data, out_itgt_airway_recon, name='net_itgt_airway_recon')
-    net_itgt_airway_recon.compile(optimizer=optim,
-                                  loss=loss_itgt_recon,
-                                  loss_weights=loss_itgt_recon_weights,
-                                  metrics=metrics_airway.update({'out_recon': 'mse'}))
+    # net_itgt_airway_recon.compile(optimizer=optim,
+    #                               loss=loss_itgt_recon,
+    #                               loss_weights=loss_itgt_recon_weights,
+    #                               metrics=metrics_airway.update({'out_recon': 'mse'}))
     ###################----------------------------------#########################################
     # compile lung models
     if attention:
         metrics_lung = {'lung_out_segmentation': metrics_seg_6_classes}
     else:
         metrics_lung = {'lung_out_segmentation': metrics_seg_2_classes}
-    if args.mot_lu:
+    if "2_out" in args.lu_io:
         metrics_lung['lung_out_segmentation2'] = metrics_seg_2_classes
     if args.ao_lu:
         metrics_lung['lung_aux'] = metrics_seg_2_classes
@@ -707,8 +703,7 @@ def load_cp_models(model_names, args):
         metrics_lung['lung_d2'] = metrics_seg_2_classes
 
     loss, loss_weights, loss_itgt_recon, loss_itgt_recon_weights, optim = get_loss_weights_optim(args.ao_lu, args.ds_lu,
-                                                                                                 args.lr_lu,
-                                                                                                 args.mot_lu)
+                                                                                                 args.lr_lu, args.lu_io)
     net_only_lung = Model(input_data, out_lung, name='net_only_lung')
     net_only_lung.compile(optimizer=optim,
                           loss=loss,
@@ -716,13 +711,13 @@ def load_cp_models(model_names, args):
                           metrics=metrics_lung)
 
     net_itgt_lung_recon = Model(input_data, out_itgt_lung_recon, name='net_itgt_lung_recon')
-    net_itgt_lung_recon.compile(optimizer=optim,
-                                loss=loss_itgt_recon,
-                                loss_weights=loss_itgt_recon_weights,
-                                metrics=metrics_lung.update({'out_recon': 'mse'}))
+    # net_itgt_lung_recon.compile(optimizer=optim,
+    #                             loss=loss_itgt_recon,
+    #                             loss_weights=loss_itgt_recon_weights,
+    #                             metrics=metrics_lung.update({'out_recon': 'mse'}))
 
     # configeration and compilization for network in recon task
-    optim, loss_weights, _, __, optim = get_loss_weights_optim(args.ao_rc, args.ds_rc, args.lr_rc, args.mot_rc,
+    optim, loss_weights, _, __, optim = get_loss_weights_optim(args.ao_rc, args.ds_rc, args.lr_rc, args.rc_io,
                                                                task='no_label')
     net_no_label = Model(input_data, out_recon, name='net_no_label')
     net_no_label.compile(optimizer=optim, loss='mse', loss_weights=loss_weights, metrics=['mse'])

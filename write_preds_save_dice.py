@@ -4,19 +4,14 @@ Created on Wed Apr 12 10:20:10 2020
 @author: jjia
 """
 
-from write_batch_preds import write_preds_to_disk
-from write_dice import write_dices_to_csv
-import segmentor as v_seg
-import os
-import re
-from mypath import Mypath
-import futils.util as futil
-from compute_distance_metrics_and_save import write_all_metrics
-import sys
-import nvidia_smi
 import tensorflow as tf
 from tensorflow.keras import backend as K
+
+import segmentor as v_seg
+from compute_distance_metrics_and_save import write_all_metrics
 from generate_fissure_from_masks import gntFissure
+from mypath import Mypath
+from write_batch_preds import write_preds_to_disk
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -228,73 +223,91 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 
 """
 ""","""
-task='lobe'
-sub_dir="GLUCOLD"
+task = 'lobe'
 
-for lung, fissure in zip([0], [0]):
+for sub_dir in ["LOLA11"]:
     str_names = [
-        "1599692304_30_lrlb0.0001lrvs1e-05mtscale1netnolpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        "1599692304_73_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        "1599692304_604_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        "1599692304_214_lrlb0.0001lrvs1e-05mtscale1netnol-nov-nnlpm0.5nldLUNA16ao0ds0tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        "1600908421_801_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # ""1599169291_679_lrlb0.0001lrvs1e-05mtscale0netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # '1600645190_366_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96'
+        # "1600908421_13_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1600908421_412_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1600908421_801_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1600913687_652_lrlb0.0001lrvs1e-05mtscale1netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1599948441_65_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+
+        # "1600642845_843_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1599948441_65_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1599948441_432_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1599948441_216_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1601463858_789_lrlb0.0001lrvs1e-05mtscale1netnolpm0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+
     ]
     print(str_names)
 
     for str_name in str_names:
-        mypath = Mypath(task=task, current_time=str_name) # set task=vessel to predict the lobe masks of SSc
-        model_name1 = '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
-        model_name = mypath.best_model_fpath("valid", str_name)
-
+        mypath = Mypath(task=task, current_time=str_name)  # set task=vessel to predict the lobe masks of SSc
+        # model_name = '/data/jjia/new/models/' + task + '/' + str_name + '_valid.hdf5'
+        model_name = mypath.model_fpath_best_whole("valid", str_name)
         tr_sp, tr_z_sp = 1.4, 2.5
         tr_sz, tr_z_sz = None, None
         pt_sz, pt_z_sz = 144, 96
 
         print('patch_sz', pt_sz, 'patch_z_size', pt_z_sz)
 
-        for phase in ['valid']:
-            if fissure:
-                labels = [0, 1]
-                stride = 0.5
-            else:
+        if sub_dir is "GLUCOLD":  # write metrics for lobe and fissure (GLUCOLD), for lung and fissure (LOLA11)
+            goals = ['lobe', 'fissure']
+        elif sub_dir is "LOLA11":
+            goals = ['lung', 'fissure']
+        else:
+            raise Exception("sub_dir is not correct")
 
-                if task=='lobe':
-                    labels = [0, 4, 5, 6, 7, 8]
-                    stride = 0.25
-                elif task=='vessel':
-                    labels = [0, 1]
-                    stride = 0.25
+        for goal in goals:
+            if goal is "lobe":
+                labels = [4, 5, 6, 7, 8]
+                fissure = False
+                lung = False
+                stride = 0.25
+                radiusValue = 3
+            elif goal is "fissure":
+                fissure = True
+                lung = False
+                labels = [1]
+                stride = 0.25
+                radiusValue = 3
+            else:
+                labels = [1]
+                fissure = False
+                lung = True
+                stride = 0.8
+                radiusValue = 1
+
             if fissure:
-                gntFissure(mypath.pred_path(phase, sub_dir=sub_dir), radiusValue=1, workers=10, qsize=20)
+                gntFissure(mypath.pred_path("valid", sub_dir=sub_dir), radiusValue=radiusValue, workers=10)
             else:
                 segment = v_seg.v_segmentor(batch_size=1,
                                             model=model_name,
                                             ptch_sz=pt_sz, ptch_z_sz=pt_z_sz,
                                             trgt_sz=tr_sz, trgt_z_sz=tr_z_sz,
                                             trgt_space_list=[tr_z_sp, tr_sp, tr_sp],
-                                            task=task, low_msk=True, attention=False)
+                                            task=task,  attention=False)
 
                 print('stride is', stride)
                 write_preds_to_disk(segment=segment,
-                                    data_dir=mypath.ori_ct_path(phase, sub_dir=sub_dir),
-                                    preds_dir=mypath.pred_path(phase, sub_dir=sub_dir),
-                                    number=1,
+                                    data_dir=mypath.ori_ct_path("valid", sub_dir=sub_dir),
+                                    preds_dir=mypath.pred_path("valid", sub_dir=sub_dir),
+                                    number=100,
                                     stride=stride, workers=10, qsize=20)
-            # #
+            #
             # write_dices_to_csv (step_nb=0,
             #                     labels=labels,
-            #                     gdth_path=mypath.gdth_path(phase, sub_dir=sub_dir),
-            #                     pred_path=mypath.pred_path(phase, sub_dir=sub_dir),
-            #                     csv_file=mypath.dices_fpath(phase))
+            #                     gdth_path=mypath.gdth_path("valid", sub_dir=sub_dir),
+            #                     pred_path=mypath.pred_path("valid", sub_dir=sub_dir),
+            #                     csv_file=mypath.dices_fpath("valid"))
 
-            write_all_metrics(labels=labels[1:], # exclude background
-                                gdth_path=mypath.gdth_path(phase, sub_dir=sub_dir),
-                                pred_path=mypath.pred_path(phase, sub_dir=sub_dir),
-                                csv_file=mypath.all_metrics_fpath(phase, fissure=fissure, sub_dir=sub_dir),
-                              fissure=fissure,
-                              lung=lung, workers=5)
-
-
-
-
-
-
+            write_all_metrics(labels=labels,  # exclude background
+                              gdth_path=mypath.gdth_path("valid", sub_dir=sub_dir),
+                              pred_path=mypath.pred_path("valid", sub_dir=sub_dir),
+                              csv_file=mypath.all_metrics_fpath("valid", fissure=fissure, sub_dir=sub_dir),
+                              fissure=fissure, fissureradius=radiusValue,
+                              lung=lung, workers=10)

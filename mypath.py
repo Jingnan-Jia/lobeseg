@@ -82,20 +82,16 @@ class Mypath(object):
         short_names = get_short_names(long_names)
         short_names = '-'.join(short_names)
 
-        if args.trgt_sz:
-            tr_sz_name = 'tsz' + str(args.trgt_sz) + 'z' + str(args.trgt_z_sz)
-        else:
-            tr_sz_name = ''
+
 
         self.setting = '_lrlb' + str (args.lr_lb) \
                        + 'lrvs' + str (args.lr_vs) \
-                       + 'mtscale' + str (args.mtscale) \
+                       + 'lbio' + str (args.lb_io) \
                        + 'net' + str(short_names) \
                        + 'pm' + str(args.p_middle) \
                        + 'nld' + str(args.no_label_dir) \
                        + 'ao' + str (args.ao_lb) \
                        + 'ds' + str (args.ds_lb) \
-                       + tr_sz_name \
                        + 'pps' + str(args.patches_per_scan) \
                        + 'lbnb' + str(args.lb_tr_nb) \
                        + 'vsnb' + str(args.vs_tr_nb) \
@@ -201,7 +197,7 @@ class Mypath(object):
             return task_model_path + '/' + str_name + '_patch_' + phase + '.hdf5'
 
     @mkdir_dcrt
-    def best_model_fpath(self, phase='train', str_name=None):
+    def model_fpath_best_whole(self, phase='train', str_name=None):
         """
         full path to save best model according to training loss.
         :return: full path

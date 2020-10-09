@@ -15,9 +15,7 @@ import re
 
 class v_segmentor(object):
     def __init__(self, batch_size=1, model='.hdf5', ptch_sz=128, ptch_z_sz=64, trgt_sz=None, trgt_z_sz=None,
-                 patching=True, trgt_space_list=[], task='lobe', sr=False, low_msk=False, attention=False,
-                 workers=0, qsize=0):
-        self.sr = sr
+                 patching=True, trgt_size_list=None, trgt_space_list=None, task='lobe',  attention=False):
         self.batch_size = batch_size
         self.model = model
         self.ptch_sz = ptch_sz
@@ -25,12 +23,9 @@ class v_segmentor(object):
         self.trgt_sz = trgt_sz
         self.trgt_z_sz = trgt_z_sz
         self.trgt_space_list = trgt_space_list  # 2.5, 1.4, 1.4
-        self.trgt_sz_list = [self.trgt_z_sz, self.trgt_sz, self.trgt_sz]
+        self.trgt_sz_list = trgt_size_list
         self.task = task
-        self.low_msk = low_msk
         self.attention = attention
-        self.workers = workers
-        self.qsize = qsize
         self.mot = False  # multi output, determined by architecture of the loaded model
         self.mtscale = False  # multi input, determined by architecture of the loaded model
         if task == 'lobe':
@@ -40,7 +35,7 @@ class v_segmentor(object):
         else:
             print('please assign the task name for prediction')
 
-        if (self.trgt_sz != self.ptch_sz) and patching and (self.ptch_sz != None and self.ptch_sz != 0):
+        if (self.trgt_sz != self.ptch_sz) and patching and (self.ptch_sz is not None and self.ptch_sz != 0):
             self.patching = True
         else:
             self.patching = False
@@ -59,7 +54,7 @@ class v_segmentor(object):
                     with open(model_path, "r") as json_file:
                         json_model = json_file.read()
                         self.v = model_from_json(json_model)
-                        self.v.load_weights((self.model))
+                        self.v.load_weights(self.model)
                         print('segmentor successfully load weights from ', self.model)
 
         else:  # model is a tf.keras model directly in RAM
@@ -86,7 +81,7 @@ class v_segmentor(object):
                     pred = self.v.predict(x_patch, verbose=0)
                     yield pred
 
-    def predict(self, x, ori_space_list=None, stride=0.25, pad_nb=0):
+    def predict(self, x, ori_space_list=None, stride=0.25):
         """
 
         :param x:  shape (z, x, y, 1)
@@ -94,6 +89,7 @@ class v_segmentor(object):
         :param stride:
         :return:
         """
+
         self.ori_space_list = ori_space_list  # ori_space_list: 0.5, 0.741, 0.741
         # save shape for further upsample
         original_shape = x.shape  # ct_scan.shape: (717,, 512, 512, 1),
@@ -101,7 +97,7 @@ class v_segmentor(object):
         x_ori = self._normalize(x)  # ct_scan.shape: (717,, 512, 512, 1)
         print('self.trgt_space_list', self.trgt_space_list)
 
-        layers = [l.name for l in self.v.layers]
+        layers = [layer.name for layer in self.v.layers]
         if 'input_2' in layers:
             self.mtscale = True
         else:
@@ -114,7 +110,7 @@ class v_segmentor(object):
                 self.mot = True
 
         if any(self.trgt_space_list) or any(self.trgt_sz_list):
-            x = downsample(x_ori,
+            x = downsample(x_ori, is_mask=False,
                            ori_space=self.ori_space_list, trgt_space=self.trgt_space_list,
                            ori_sz=x_ori.shape, trgt_sz=self.trgt_sz_list,
                            order=1)
@@ -128,7 +124,11 @@ class v_segmentor(object):
             raise Exception('patching is not valid! ')
 
         patch_shape = (self.z_sz, self.ptch_sz, self.ptch_sz)
-        x_patch_gen = deconstruct_patch_gen(x, patch_shape=patch_shape, stride=stride, a2=a2)
+        if self.task=="lobe":  # deconstruct low resolution ct, high resolution ct as aux input
+            x_patch_gen = deconstruct_patch_gen(x, patch_shape=patch_shape, stride=stride, a2=a2)
+        else:  # deconstruct high resolution ct, low resolution ct as aux input
+            x_patch_gen = deconstruct_patch_gen(a2, patch_shape=patch_shape, stride=stride, a2=x)
+
 
         pre_gen = self.predict_gen(x_patch_gen)
         if self.attention:
@@ -152,7 +152,8 @@ class v_segmentor(object):
         masks = np.array(masks, dtype='uint8')
         final_pred = masks
 
-        return final_pred, self.trgt_space_list, original_shape, self.labels, self.low_msk, self.trgt_sz_list
+        self.io = None  # not sure how to get it ye.
+        return final_pred, self.trgt_space_list, original_shape, self.labels,  self.trgt_sz_list, self.io, self.task
 
 
 

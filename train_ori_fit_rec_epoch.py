@@ -35,6 +35,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras import callbacks
 from tensorflow.keras.utils import plot_model
+import matplotlib.pyplot as plt
 
 from futils import compiled_models as cpmodels
 from futils.util import save_model_best
@@ -62,6 +63,23 @@ print(sys.argv[1:])  # print all arguments passed to script
 class GetList:
     def __init__(self, model_names):
         self.model_names = model_names
+
+    def get_io_list(self, myargs):
+        """Get io list according to io parameters. """
+        io_dict = {
+            "net_itgt_lb_rc": myargs.lb_io,
+            "net_itgt_vs_rc": myargs.vs_io,
+            "net_itgt_lu_rc": myargs.lu_io,
+            "net_itgt_aw_rc": myargs.aw_io,
+
+            "net_no_label": myargs.rc_io,
+
+            "net_only_lobe": myargs.lb_io,
+            "net_only_vessel": myargs.vs_io,
+            "net_only_lung": myargs.lu_io,
+            "net_only_airway": myargs.aw_io,
+        }
+        return list(map(io_dict.get, self.model_names))
 
     def get_task_list(self):
         """
@@ -109,22 +127,6 @@ class GetList:
     def get_path_list(self):
         task_list = self.get_task_list()
         return [Mypath(x) for x in task_list]  # a list of Mypath objectives, each Mypath corresponds to a task
-
-    def get_low_ipt_list(self, myargs):
-        low_ipt_dict = {
-            "net_itgt_lb_rc": myargs.low_ipt_lb,
-            "net_itgt_vs_rc": myargs.low_ipt_vs,
-            "net_itgt_lu_rc": myargs.low_ipt_lu,
-            "net_itgt_aw_rc": myargs.low_ipt_aw,
-
-            "net_no_label": myargs.low_ipt_rc,
-
-            "net_only_lobe": myargs.low_ipt_lb,
-            "net_only_vessel": myargs.low_ipt_vs,
-            "net_only_lung": myargs.low_ipt_lu,
-            "net_only_airway": myargs.low_ipt_aw
-        }
-        return list(map(low_ipt_dict.get, self.model_names))
 
     def get_tr_nb_list(self, myargs):
         tr_nb_dict = {
@@ -190,37 +192,21 @@ class GetList:
         }
         return list(map(tsp_dict.get, self.model_names))
 
-    def get_low_msk_list(self, myargs):
-        low_msk_dict = {
-            "net_itgt_lb_rc": myargs.low_msk_lb,
-            "net_itgt_vs_rc": myargs.low_msk_vs,
-            "net_itgt_lu_rc": myargs.low_msk_lu,
-            "net_itgt_aw_rc": myargs.low_msk_aw,
+    def get_tsz_list(self, myargs):
+        tsz_dict = {  # lstrip() is necessary because the pycharm always reformat my code.
+            "net_itgt_lb_rc": [float(i.lstrip()) for i in myargs.tsz_lb.split('_')],
+            "net_itgt_vs_rc": [float(i.lstrip()) for i in myargs.tsz_vs.split('_')],
+            "net_itgt_lu_rc": [float(i.lstrip()) for i in myargs.tsz_lu.split('_')],
+            "net_itgt_aw_rc": [float(i.lstrip()) for i in myargs.tsz_aw.split('_')],
 
-            "net_no_label": myargs.low_msk_rc,
+            "net_no_label": [float(i.lstrip()) for i in myargs.tsz_rc.split('_')],
 
-            "net_only_lobe": myargs.low_msk_lb,
-            "net_only_vessel": myargs.low_msk_vs,
-            "net_only_lung": myargs.low_msk_lu,
-            "net_only_airway": myargs.low_msk_aw
+            "net_only_lobe": [float(i.lstrip()) for i in myargs.tsz_lb.split('_')],
+            "net_only_vessel": [float(i.lstrip()) for i in myargs.tsz_vs.split('_')],
+            "net_only_lung": [float(i.lstrip()) for i in myargs.tsz_lu.split('_')],
+            "net_only_airway": [float(i.lstrip()) for i in myargs.tsz_aw.split('_')]
         }
-        return list(map(low_msk_dict.get, self.model_names))
-
-    def get_mot_list(self, myargs):
-        mot_dict = {
-            "net_itgt_lb_rc": myargs.mot_lb,
-            "net_itgt_vs_rc": myargs.mot_vs,
-            "net_itgt_lu_rc": myargs.mot_lu,
-            "net_itgt_aw_rc": myargs.mot_aw,
-
-            "net_no_label": myargs.mot_rc,
-
-            "net_only_lobe": myargs.mot_lb,
-            "net_only_vessel": myargs.mot_vs,
-            "net_only_lung": myargs.mot_lu,
-            "net_only_airway": myargs.mot_aw
-        }
-        return list(map(mot_dict.get, self.model_names))
+        return list(map(tsz_dict.get, self.model_names))
 
     def get_load_name_list(self, myargs):
         load_name_dict = {
@@ -251,11 +237,13 @@ class TaskArgs:
         self.tr_nb = None
         self.ao = None
         self.ds = None
-        self.mot = None
+        self.io = None
         self.tsp = None
-        self.low_msk = None
-        self.low_ipt = None
+        self.tsz = None
+        self.tszzyx = [],
+        self.tspzyx = [],
 
+        self.train_it = None
         self.train_data_gen = None
         self.valid_array = None
 
@@ -263,8 +251,6 @@ class TaskArgs:
         self.best_vd_loss = 10000
         self.current_tr_loss = 10000
         self.lr = 0.0001
-
-        self.train_it = None
 
     def plot_model(self):
         model_figure_fpath = self.mypath.model_figure_path() + '/' + self.model_name + '.png'
@@ -274,15 +260,14 @@ class TaskArgs:
     def load_weights_if_need(self):
         if self.ld_name is not 'None':  # 'None' is from arg parse as string
             try:
-                saved_model = self.mypath.best_model_fpath(phase='valid', str_name=self.ld_name)
+                saved_model = self.mypath.model_fpath_best_whole(phase='valid', str_name=self.ld_name)
                 self.net.load_weights(saved_model)
             except OSError:
-                try:
-                    saved_model = self.mypath.model_fpath_best_patch(phase='valid', str_name=self.ld_name)  # for vessel
+                try:  # for vessel who does not have model_fpath_best_whole
+                    saved_model = self.mypath.model_fpath_best_patch(phase='valid', str_name=self.ld_name)
                     self.net.load_weights(saved_model)
-                except OSError:
-                    saved_model = self.mypath.model_fpath_best_patch(phase='train',
-                                                                     str_name=self.ld_name)  # for no_label
+                except OSError:  # for no_label who does not have model_fpath_best_whole and model_fpath_best_patch
+                    saved_model = self.mypath.model_fpath_best_patch(phase='train', str_name=self.ld_name)
                     self.net.load_weights(saved_model)
             print('loaded lobe weights successfully from: ', saved_model)
 
@@ -293,62 +278,98 @@ class TaskArgs:
             json_file.write(model_json)
             print('successfully write new json file of task ', self.task, self.mypath.json_fpath())
 
-    def do_vilidation(self, idx_, period_valid):
-        if (idx_ % period_valid == 0) and (self.task == 'lobe'):
+    def write_metrics(self, sub_dir, fissureradius=1, workers=10):
+        if sub_dir is "GLUCOLD":  # write metrics for lobe and fissure (GLUCOLD), for lung and fissure (LOLA11)
+            goals = ['lobe', 'fissure']
+        elif sub_dir is "LOLA11":
+            goals = ['lung', 'fissure']
+        else:
+            raise Exception("sub_dir is not correct")
+
+        for goal in goals:
+            if goal is "lobe":
+                labels = [4, 5, 6, 7, 8]
+                fissure = False
+                lung = False
+            elif goal is "fissure":
+                labels = [1]
+                fissure = True
+                lung = False
+            else:
+                labels = [1]
+                fissure = False
+                lung = True
+
+            write_all_metrics(labels=labels,  # exclude background
+                              gdth_path=self.mypath.gdth_path("valid", sub_dir=sub_dir),
+                              pred_path=self.mypath.pred_path("valid", sub_dir=sub_dir),
+                              csv_file=self.mypath.all_metrics_fpath("valid", fissure=fissure, sub_dir=sub_dir),
+                              fissure=fissure, fissureradius=fissureradius, lung=lung, workers=workers)
+
+    def do_vilidation_if_need(self, idx_, valid_period):
+        if (idx_ % valid_period == 0) and (self.task == 'lobe'):  # only valid lobe
             # In my multi-task model (co-training, or alternative training), I can not use validation_data and
             # validation_freq in net.fit() function. Because there are only one step (patch) at each fit().
             # So in order to assess the valid metrics, I use an independent function to predict the validation
             # and training dataset. And I can also set the period_valid as the validation_freq.
             # save predicted results and compute the dices
             for phase in ['valid']:
-                if idx_ == args.step_nb - 1:  # last step, fully validation
-                    test_nb = 5
-                    stride = 0.25
-                    model_path = self.mypath.best_model_fpath(phase)
-                else:
-                    test_nb = 1
-                    stride = 0.8
-                    model_path = self.mypath.model_fpath_best_patch(phase)
-
                 segment = v_seg.v_segmentor(batch_size=args.batch_size,
-                                            model=model_path,
+                                            model=self.mypath.model_fpath_best_patch(phase),
                                             ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-                                            trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
-                                            trgt_space_list=[self.tsp[1], self.tsp[0], self.tsp[0]],
-                                            task=self.task, low_msk=self.low_msk, attention=args.attention)
+                                            trgt_size_list=self.tszzyx,
+                                            trgt_space_list=self.tspzyx,
+                                            task=self.task, attention=args.attention)
 
                 write_preds_to_disk(segment=segment,
                                     data_dir=self.mypath.ori_ct_path(phase),
                                     preds_dir=self.mypath.pred_path(phase),
-                                    number=test_nb, stride=stride, workers=1, qsize=1)  # set stride 0.8 to save time
+                                    number=1, stride=0.8, workers=1, qsize=1)  # set stride 0.8 to save time
 
-                if idx_ == args.step_nb - 1:
-                    gntFissure(self.mypath.pred_path(phase), radiusValue=3)
-                    for fissure, lab in zip([False, True], [self.labels[1:], [1]]):
-                        write_all_metrics(labels=lab,  # binary masks, exclude background
-                                          gdth_path=self.mypath.gdth_path(phase),
-                                          pred_path=self.mypath.pred_path(phase),
-                                          csv_file=self.mypath.all_metrics_fpath(phase, fissure=fissure),
-                                          fissure=fissure, workers=5)
-                else:
-                    write_dices_to_csv(step_nb=idx_,
-                                       labels=self.labels[1:],
-                                       gdth_path=self.mypath.gdth_path(phase),
-                                       pred_path=self.mypath.pred_path(phase),
-                                       csv_file=self.mypath.dices_fpath(phase))
+                write_dices_to_csv(step_nb=idx_,
+                                   labels=self.labels[1:],
+                                   gdth_path=self.mypath.gdth_path(phase),
+                                   pred_path=self.mypath.pred_path(phase),
+                                   csv_file=self.mypath.dices_fpath(phase))
 
                 save_model_best(dice_file=self.mypath.dices_fpath(phase),
                                 segment=segment,
-                                model_fpath=self.mypath.best_model_fpath(phase))
-
+                                model_fpath=self.mypath.model_fpath_best_whole(phase))
                 print('step number', idx_, 'lr for', self.task, 'is', K.eval(self.net.optimizer.lr), file=sys.stderr)
+
+        if (idx_ == args.step_nb - 1) and (self.task == 'lobe'):  # last step, fully validation
+            for sub_dir in ["GLUCOLD", "LOLA11"]:  # valid in two dataset
+
+                if sub_dir is "GLUCOLD":
+                    test_nb = 5
+                    stride = 0.25
+                    fissureradius = 3
+                else:
+                    test_nb = 40
+                    stride = 0.5
+                    fissureradius = 1
+
+                segment = v_seg.v_segmentor(batch_size=args.batch_size,
+                                            model=self.mypath.model_fpath_best_whole("valid"),
+                                            ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
+                                            trgt_size_list=self.tszzyx,
+                                            trgt_space_list=self.tspzyx,
+                                            task=self.task, attention=args.attention)
+
+                write_preds_to_disk(segment=segment,
+                                    data_dir=self.mypath.ori_ct_path("valid", sub_dir=sub_dir),
+                                    preds_dir=self.mypath.pred_path("valid", sub_dir=sub_dir),
+                                    number=test_nb, stride=stride, workers=5, qsize=5)  # set stride 0.8 to save time
+
+                gntFissure(self.mypath.pred_path("valid", sub_dir=sub_dir), radiusValue=fissureradius, workers=10)
+                self.write_metrics(sub_dir, fissureradius, workers=5)
 
     def set_data_iterator(self):
         train_it = ScanIterator(self.mypath.data_dir('train'), task=self.task,
                                 sub_dir=self.mypath.sub_dir(),
                                 ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-                                trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
-                                trgt_space=self.tsp[0], trgt_z_space=self.tsp[1],
+                                tszzyx=self.tszzyx,
+                                tspzyx=self.tspzyx,
                                 data_argum=True,
                                 patches_per_scan=args.patches_per_scan,
                                 ds=self.ds,
@@ -359,17 +380,14 @@ class TaskArgs:
                                 no_label_dir=args.no_label_dir,
                                 p_middle=args.p_middle,
                                 aux=self.ao,
-                                mtscale=args.mtscale,
                                 ptch_seed=None,
-                                mot=self.mot,
-                                low_msk=self.low_msk,
-                                low_ipt=self.low_ipt)
+                                io=self.io)
 
         valid_it = ScanIterator(self.mypath.data_dir('monitor'), task=self.task,
                                 sub_dir=self.mypath.sub_dir(),
                                 ptch_sz=args.ptch_sz, ptch_z_sz=args.ptch_z_sz,
-                                trgt_sz=args.trgt_sz, trgt_z_sz=args.trgt_z_sz,
-                                trgt_space=self.tsp[0], trgt_z_space=self.tsp[1],
+                                tszzyx=self.tszzyx,
+                                tspzyx=self.tspzyx,
                                 data_argum=False,
                                 patches_per_scan=args.patches_per_scan,
                                 ds=self.ds,
@@ -380,25 +398,21 @@ class TaskArgs:
                                 no_label_dir=args.no_label_dir,
                                 p_middle=args.p_middle,
                                 aux=self.ao,
-                                mtscale=args.mtscale,
                                 ptch_seed=1,
-                                mot=self.mot,
-                                low_msk=self.low_msk,
-                                low_ipt=self.low_ipt)
+                                io=self.io)
 
         train_datas = train_it.generator(workers=2, qsize=1)
         valid_datas = valid_it.generator(workers=1, qsize=1)
 
         self.train_it = train_it
         self.train_data_gen = train_datas
-        self.valid_array = get_monitor_data(monitor_nb=10, mot=self.mot, valid_datas=valid_datas, task=self.task,
-                                            ao=self.ao,
-                                            ds=self.ds)
+        self.valid_array = get_monitor_data(monitor_nb=10, io=self.io, valid_datas=valid_datas, task=self.task,
+                                            ao=self.ao, ds=self.ds)
 
     def update_valid_array_if_attention(self, net_trained_lobe, graph1, session1):
         if args.attention and self.task != 'lobe':
             if net_trained_lobe is None:
-                if args.mtscale:
+                if "2_in" in self.io:
                     trained_lobe_name = "1599479049_59_lrlb0.0001lrvs1e-05mtscale1netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
                 else:
                     trained_lobe_name = "1599479049_663_lrlb0.0001lrvs1e-05mtscale0netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
@@ -421,7 +435,6 @@ class TaskArgs:
             self.valid_array[1] = get_attentioned_y(self.valid_array[1], lobe_pred)
 
         return net_trained_lobe, graph1, session1
-
 
     def reset_lr_if_need(self, idx_, current_lb_loss):
         if self.task != "lobe":
@@ -449,18 +462,23 @@ class TaskArgs:
                 if best_init is not None:
                     self.best = best_init
 
+        if "2_out" in self.io:
+            monitor_tr = self.task + "_out_segmentation2_loss"
+            monitor_vd = "val_" + monitor_tr
+        else:
+            monitor_tr, monitor_vd = "loss", "val_loss"
         saver_train = ModelCheckpointWrapper(best_init=self.best_tr_loss,
                                              filepath=self.mypath.model_fpath_best_patch('train'),
                                              verbose=1,
                                              save_best_only=True,
-                                             monitor='loss',  # do not add valid_data here, save time!
+                                             monitor=monitor_tr,  # do not add valid_data here, save time!
                                              save_weights_only=True)
 
         saver_valid = ModelCheckpointWrapper(best_init=self.best_vd_loss,
                                              filepath=self.mypath.model_fpath_best_patch('valid'),
                                              verbose=1,
                                              save_best_only=True,
-                                             monitor='val_loss',  # do not add valid_data here, save time!
+                                             monitor=monitor_vd,  # do not add valid_data here, save time!
                                              save_weights_only=True)
 
         if args.attention and self.task != 'lobe':
@@ -499,16 +517,15 @@ def get_ta_list(model_names, myargs):
     tr_nb_list = gl.get_tr_nb_list(myargs)
     ao_list = gl.get_ao_list(myargs)
     ds_list = gl.get_ds_list(myargs)
-    mot_list = gl.get_mot_list(myargs)
     tsp_list = gl.get_tsp_list(myargs)
-    low_msk_list = gl.get_low_msk_list(myargs)
-    low_ipt_list = gl.get_low_ipt_list(myargs)
+    tsz_list = gl.get_tsz_list(myargs)
+    io_list = gl.get_io_list(myargs)
     net_list = cpmodels.load_cp_models(model_names, myargs)
 
     ta_list = []
-    for net, mypath, task, labels, model_name, ld_name, tr_nb, ao, ds, mot, tsp, low_msk, low_ipt in zip(
+    for net, mypath, task, labels, model_name, ld_name, tr_nb, ao, ds, tsp, tsz, io in zip(
             net_list, path_list, task_list, labels_list, model_names, load_name_list,
-            tr_nb_list, ao_list, ds_list, mot_list, tsp_list, low_msk_list, low_ipt_list):
+            tr_nb_list, ao_list, ds_list, tsp_list, tsz_list, io_list):
         ta = TaskArgs()
         ta.net = net
         ta.mypath = mypath
@@ -519,29 +536,75 @@ def get_ta_list(model_names, myargs):
         ta.tr_nb = tr_nb
         ta.ao = ao
         ta.ds = ds
-        ta.mot = mot
         ta.tsp = tsp
-        ta.low_msk = low_msk
-        ta.low_ipt = low_ipt
+        ta.tsz = tsz
+        ta.tszzyx = [ta.tsz[1], ta.tsz[0], ta.tsz[0]],
+        ta.tspzyx = [ta.tsp[1], ta.tsp[0], ta.tsp[0]],
+        ta.io = io
 
         ta_list.append(ta)
 
     return ta_list
 
 
-def get_monitor_data(mot, valid_datas, task, ao, ds, monitor_nb=10):
-    if mot:
-        valid_data_y_numpy1, valid_data_y_numpy2 = [], []
-        valid_data_x_numpy1, valid_data_x_numpy2 = [], []
-        for i in range(monitor_nb):  # use 10 valid patches to save best valid model
-            one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
-            one_valid_data_x, one_valid_data_y = one_valid_data  # output :(1,144,144,80,1) or a list with two arrays
-            valid_data_x_numpy1.append(one_valid_data_x[0][0])
-            valid_data_x_numpy2.append(one_valid_data_x[1][0])
-            valid_data_y_numpy1.append(one_valid_data_y[0][0])
-            valid_data_y_numpy2.append(one_valid_data_y[1][0])
-        valid_data_numpy = [[np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)],
-                            [np.array(valid_data_y_numpy1), np.array(valid_data_y_numpy2)]]
+def myplot(x1, y1): # (144,144,96,1)
+
+    x1_ = x1[:,:,40,0]
+    plt.figure()
+    plt.imshow(x1_)
+    plt.savefig('x1_20101002.png')
+    plt.close()
+
+    if y1.shape[-1]>1:
+        for i in range(y1.shape[-1]):
+            y1_ = y1[:, :, 40, i]
+            plt.figure()
+            plt.imshow(y1_)
+            plt.savefig('y1_20101002_'+str(i)+'.png')
+            plt.close()
+    else:
+        plt.figure()
+        plt.imshow(y1[:,:,40,0])
+        plt.savefig('y1_20101002.png')
+        plt.close()
+
+def get_monitor_data(io, valid_datas, task, ao, ds, monitor_nb=10):
+    if not ds and not ao:  #
+        if "2_in_1_out" in io:
+            valid_data_x_numpy1, valid_data_x_numpy2 = [], []
+            valid_data_y_numpy = []
+            for i in range(monitor_nb):  # use 10 valid patches to save best valid model
+                one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
+                one_valid_data_x, one_valid_data_y = one_valid_data  # output :(1,144,144,80,1) or a list with two arrays
+                print(np.max(one_valid_data_x[0][0]), np.min(one_valid_data_x[0][0]))
+                valid_data_x_numpy1.append(one_valid_data_x[0][0])
+                valid_data_x_numpy2.append(one_valid_data_x[1][0])
+                valid_data_y_numpy.append(one_valid_data_y[0])
+                # myplot(one_valid_data_x[0][0], one_valid_data_y[0]) # (144,144,96,1)
+            valid_data_numpy = [[np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)], np.array(valid_data_y_numpy)]
+
+        elif io=="2_in_2_out":
+            valid_data_y_numpy1, valid_data_y_numpy2 = [], []
+            valid_data_x_numpy1, valid_data_x_numpy2 = [], []
+            for i in range(monitor_nb):  # use 10 valid patches to save best valid model
+                one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
+                one_valid_data_x, one_valid_data_y = one_valid_data  # output :(1,144,144,80,1) or a list with two arrays
+                valid_data_x_numpy1.append(one_valid_data_x[0][0])
+                valid_data_x_numpy2.append(one_valid_data_x[1][0])
+                valid_data_y_numpy1.append(one_valid_data_y[0][0])
+                valid_data_y_numpy2.append(one_valid_data_y[1][0])
+            valid_data_numpy = [[np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)],
+                                [np.array(valid_data_y_numpy1), np.array(valid_data_y_numpy2)]]
+        elif "1_in" in io:
+            valid_data_x_numpy, valid_data_y_numpy = [], []
+            for i in range(monitor_nb):  # use 10 valid patches to save best valid model
+                one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
+                one_valid_data_x, one_valid_data_y = one_valid_data  # output :(1,144,144,80,1) or a list with two arrays
+                valid_data_x_numpy.append(one_valid_data_x[0])
+                valid_data_y_numpy.append(one_valid_data_y[0])
+            valid_data_numpy = [np.array(valid_data_x_numpy), np.array(valid_data_y_numpy)]
+        else:
+            raise Exception("please give correct io. now the io is : "+str(io))
     else:
         if task == 'no_label':
             valid_data_x_numpy = []
@@ -631,10 +694,7 @@ def get_model_names(myargs):
 def train():
     """
     Main function to train the model.
-    model architecture:
-    one input, one output, (low_ipt, low_msk)
-    two inputs, one output, (low_ipt, low_msk)
-    two inputs, two outputs,
+
     :return: None
     """
     model_names = get_model_names(args)
@@ -668,13 +728,12 @@ def train():
                     continue
 
             ta.fit(current_lb_loss, net_lobe, idx_, monitor_period)
-            ta.do_vilidation(idx_, period_valid=5000)  # every 5000 step, predict a whole ct scan for valid dataset
+            if idx_ == args.step_nb-1:
+                ta.train_it.stop()  # stop training iterator
+            ta.do_vilidation_if_need(idx_, valid_period=3400)  # every 5000 step, predict a whole ct from valid dataset
 
-    for ta in ta_list:
-        ta.train_it.stop()
     for ta in ta_list:
         ta.train_it.join()
-
 
 if __name__ == '__main__':
     train()

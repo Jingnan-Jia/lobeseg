@@ -1,15 +1,15 @@
-import numpy as np
-import os
-import SimpleITK as sitk
-# import nibabel as nib
-import pandas as pd
-import futils.util as futil
-from find_connect_parts import largest_connected_parts
 import copy
-import PySimpleGUI as gui
+import os
+import threading
+import time
+
+import SimpleITK as sitk
 import matplotlib.pyplot as plt
-from futils.util import get_gdth_pred_names, downsample, execute_the_function_multi_thread
-import threading, time
+import numpy as np
+import pandas as pd
+
+import futils.util as futil
+from futils.util import get_gdth_pred_names, downsample
 
 
 def show_itk(itk, idx):
@@ -230,6 +230,11 @@ def write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung, f
         if not gdth.shape == pred.shape:  # sometimes the gdth size is different with preds.
             pred = downsample(pred, ori_sz=pred.shape, trgt_sz=gdth.shape, order=1,
                               labels=labels)  # use shape to upsampling because the space is errors sometimes in LOLA11
+        suffex_len = len(os.path.basename(pred_name).split(".")[-1])
+        lung_file_fpath = os.path.dirname(pred_name) + "/lung/" + os.path.basename(pred_name)[:-suffex_len-1] + '.mhd'
+
+
+        futil.save_itk(lung_file_fpath,  pred, pred_origin, pred_spacing)
 
     elif fissure and ('LOLA11' in gdth_name or "lola11" in gdth_name):  # only have slices annotations
         pred_cp = copy.deepcopy(pred)
@@ -282,9 +287,13 @@ def get_lung_from_lobe(pred):
     return pred
 
 
-def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False, lung=False, workers=1):
+def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False, fissureradius=1, lung=False, workers=1):
     """
 
+    :param workers:
+    :param lung:
+    :param fissureradius:
+    :param fissure:
     :param labels:  exclude background
     :param gdth_path:
     :param pred_path:
@@ -292,8 +301,7 @@ def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False, lun
     :return:
     """
     print('start calculate all metrics (volume and distance) and write them to csv')
-    gdth_names, pred_names = get_gdth_pred_names(gdth_path, pred_path, fissure=fissure)
-
+    gdth_names, pred_names = get_gdth_pred_names(gdth_path, pred_path, fissure=fissure, fissureradius=fissureradius)
 
     # gdth_names = get_all_ct_names(gdth_path)
     # import csv
