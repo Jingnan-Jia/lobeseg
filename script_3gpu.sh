@@ -3,7 +3,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-gpu=8
 #SBATCH -t 7-00:00:00
-#SBATCH --mem-per-gpu=150G
+#SBATCH --mem-per-gpu=120G
 #SBATCH --mail-type=end
 #SBATCH --mail-user=jiajingnan2222@gmail.com
 
@@ -13,9 +13,9 @@ conda activate py37
 current_time=$(date +%y_%m_%d_%H_%M_%S)  # there must not be any space before and after =
 
 export CUDA_VISIBLE_DEVICES=0
-stdbuf -oL python -u train_ori_fit_rec_epoch.py 2>logs/slurm-${current_time}_0.err 1>logs/slurm-${current_time}_0.out --p_middle=0.5 --step_nb=100001 --adaptive_lr=0 --fat=0 --model_names='net_only_lobe-net_no_label-net_only_vessel' --lb_io="1_in_low_1_out_low" --rc_io="1_in_hgh_1_out_hgh" --vs_io="1_in_hgh_1_out_hgh" &
+stdbuf -oL python -u train_ori_fit_rec_epoch.py 2>logs/slurm-${current_time}_0.err 1>logs/slurm-${current_time}_0.out --p_middle=0.5 --step_nb=100001 --adaptive_lr=1 --fat=1 --model_names='net_only_lobe-net_no_label-net_only_vessel' --lb_io="2_in_1_out_low" --rc_io="2_in_1_out_low" --vs_io="2_in_1_out_low" &
 export CUDA_VISIBLE_DEVICES=1
-stdbuf -oL python -u train_ori_fit_rec_epoch.py 2>logs/slurm-${current_time}_1.err 1>logs/slurm-${current_time}_1.out --p_middle=0.5 --step_nb=100001 --adaptive_lr=1 --fat=0 --model_names='net_only_lobe-net_no_label-net_only_vessel' --lb_io="1_in_low_1_out_low" --rc_io="1_in_hgh_1_out_hgh" --vs_io="1_in_hgh_1_out_hgh" &
+stdbuf -oL python -u train_ori_fit_rec_epoch.py 2>logs/slurm-${current_time}_1.err 1>logs/slurm-${current_time}_1.out --p_middle=0.5 --step_nb=100001 --adaptive_lr=1 --fat=1 --model_names='net_only_lobe-net_no_label-net_only_vessel' --lb_io="2_in_1_out_low" --rc_io="2_in_1_out_hgh" --vs_io="2_in_1_out_hgh" &
 
 wait
 

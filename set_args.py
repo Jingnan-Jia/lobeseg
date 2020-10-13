@@ -28,13 +28,13 @@ parser.add_argument('-lr_lu', '--lr_lu', help='learning rate for lung segmentati
 parser.add_argument('-lr_aw', '--lr_aw', help='learning rate for airway segmentation', type=float, default=0.00001)
 parser.add_argument('-lr_rc', '--lr_rc', help='learning rate for reconstruction', type=float, default=0.00001)
 
-parser.add_argument('-ds_lb', '--ds_lb', help='Number of Deep Supervisers', type=int, default=0)
+parser.add_argument('-ds_lb', '--ds_lb', help='Number of Deep Supervisers', type=int, default=1)
 parser.add_argument('-ds_vs', '--ds_vs', help='Number of Deep Supervisers', type=int, default=0)
 parser.add_argument('-ds_aw', '--ds_aw', help='Number of Deep Supervisers', type=int, default=0)
 parser.add_argument('-ds_lu', '--ds_lu', help='Number of Deep Supervisers', type=int, default=0)
 parser.add_argument('-ds_rc', '--ds_rc', help='Number of Deep Supervisers', type=int, default=0)
 
-parser.add_argument('-ao_lb', '--ao_lb', help='Value of Auxiliary Output', type=int, default=0)
+parser.add_argument('-ao_lb', '--ao_lb', help='Value of Auxiliary Output', type=int, default=2)
 parser.add_argument('-ao_vs', '--ao_vs', help='Value of Auxiliary Output', type=int, default=0)
 parser.add_argument('-ao_aw', '--ao_aw', help='Value of Auxiliary Output', type=int, default=0)
 parser.add_argument('-ao_lu', '--ao_lu', help='Value of Auxiliary Output', type=int, default=0)
