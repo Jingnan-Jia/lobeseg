@@ -94,10 +94,10 @@ def writeFissure(ctFpath, fissureFpath, radiusValue=3, Absdir=None):
 
 def gntFissure(Absdir, radiusValue=3, workers=10, number=None):
     scan_files = get_all_ct_names(Absdir)
-    def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
+    def consumer(mylock):  # neural network inference needs GPU which can not be computed by multi threads, so the
         # consumer is just the upsampling only.
         while True:
-            with threading.Lock():
+            with mylock:
                 ct_fpath = None
                 if len(scan_files):  # if scan_files are empty, then threads should not wait any more
                     print(threading.current_thread().name + " gets the lock, thread id: " + str(

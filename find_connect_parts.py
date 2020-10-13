@@ -148,10 +148,10 @@ def largest_connected_parts(bw_img, nb_need_saved=1):
 def write_connected_lobes(pred_file_dir, workers=10, target_dir=None):
     scan_files = get_all_ct_names(pred_file_dir)
 
-    def write_connected_lobe():  # neural network inference needs GPU which can not be computed by multi threads, so the
+    def write_connected_lobe(mylock):  # neural network inference needs GPU which can not be computed by multi threads, so the
         # consumer is just the upsampling only.
         while True:
-            with threading.Lock():
+            with mylock:
                 ct_fpath = None
                 if len(scan_files):  # if scan_files are empty, then threads should not wait any more
                     print(threading.current_thread().name + " gets the lock, thread id: " + str(

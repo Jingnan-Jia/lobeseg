@@ -416,14 +416,14 @@ def correct_shape(final_pred, original_shape):
 
 def execute_the_function_multi_thread(consumer, workers=10):
     """
-    :consumer: function to be multi-thread executed
+    :param consumer: function to be multi-thread executed
     :param workers:
     :return:
     """
-    target_fun = consumer
     thd_list = []
+    mylock = threading.Lock()
     for i in range(workers):
-        thd = threading.Thread(target=target_fun)
+        thd = threading.Thread(target=consumer, args=(mylock, ))
         thd.start()
         thd_list.append(thd)
 

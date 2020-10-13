@@ -73,12 +73,12 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
     q = queue.Queue(qsize)
     cooking_flag = False
 
-    def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
+    def consumer(mylock):  # neural network inference needs GPU which can not be computed by multi threads, so the
         # consumer is just the upsampling only.
         while True:
             if len(
                     scan_files) or cooking_flag or not q.empty():  # if scan_files and q are empty, then threads should not wait any more
-                with threading.Lock():
+                with mylock:
                     print(threading.current_thread().name + " gets the lock, thread id: " + str(threading.get_ident()) +
                           " prepare to upsample data, waiting for the data from queue")
                     try:
@@ -101,8 +101,9 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
                 return None
 
     thd_list = []
+    mylock = threading.Lock()
     for i in range(workers):
-        thd = threading.Thread(target=consumer)
+        thd = threading.Thread(target=consumer, args=(mylock, ))
         thd.start()
         thd_list.append(thd)
 

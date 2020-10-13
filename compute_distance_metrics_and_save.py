@@ -219,7 +219,7 @@ gdth_file_name = '/data/jjia/mt/data/lobe/valid/gdth_ct/GLUCOLD/GLUCOLD_patients
 '''
 
 
-def write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung, fissure):
+def write_all_metrics_for_one_ct(mylock, labels, gdth_name, pred_name, csv_file, lung, fissure):
     gdth, gdth_origin, gdth_spacing = futil.load_itk(gdth_name)
     pred, pred_origin, pred_spacing = futil.load_itk(pred_name)
 
@@ -279,7 +279,7 @@ def write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung, f
     metrics_dict_all_labels = get_metrics_dict_all_labels(labels, gdth, pred, spacing=pred_spacing[::-1])
     metrics_dict_all_labels['filename'] = pred_name  # add a new key to the metrics
     data_frame = pd.DataFrame(metrics_dict_all_labels)
-    with threading.Lock():
+    with mylock:
         data_frame.to_csv(csv_file, mode='a', header=not os.path.exists(csv_file), index=False)
         print(threading.current_thread().name + "successfully write metrics to csv " + csv_file)
 
@@ -305,32 +305,10 @@ def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False, fis
     print('start calculate all metrics (volume and distance) and write them to csv')
     gdth_names, pred_names = get_gdth_pred_names(gdth_path, pred_path, fissure=fissure, fissureradius=fissureradius)
 
-    # gdth_names = get_all_ct_names(gdth_path)
-    # import csv
-    # for gname in gdth_names:
-    #     g = sitk.ReadImage(gname)
-    #     orientationg = g.GetDirection()
-    #     with open("lola11.csv", "a+") as f:
-    #         writer = csv.writer(f)
-    #         row = [ "gname", gname, "orientation_g", orientationg]
-    #         writer.writerow(row)
-            
-    # for pname, gname in zip(pred_names, gdth_names):
-    #     p = sitk.ReadImage(pname)
-    #     g = sitk.ReadImage(gname)
-    #     orientationp = p.GetDirection()
-    #     orientationg = g.GetDirection()
-    #     with open("lola11.csv", "a+") as f:
-    #         writer = csv.writer(f)
-    #         row = ["pname", pname, "gname", gname, "orientation_p", orientationp, "orientation_g", orientationg]
-    #         writer.writerow(row)
-
-
-
-    def consumer():  # neural network inference needs GPU which can not be computed by multi threads, so the
+    def consumer(mylock):  # neural network inference needs GPU which can not be computed by multi threads, so the
         # consumer is just the upsampling only.
         while True:
-            with threading.Lock():
+            with mylock:
                 pred_name = None
                 if len(pred_names):  # if scan_files are empty, then threads should not wait any more
                     pred_name = pred_names.pop()  # wait up to 1 minutes
@@ -340,7 +318,7 @@ def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False, fis
 
             if pred_name is not None:
                 t1 = time.time()
-                write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung, fissure)
+                write_all_metrics_for_one_ct(mylock, labels, gdth_name, pred_name, csv_file, lung, fissure)
                 t3 = time.time()
                 print("it costs tis seconds to compute the the data " + str(t3 - t1))
             else:
@@ -348,8 +326,9 @@ def write_all_metrics(labels, gdth_path, pred_path, csv_file, fissure=False, fis
                 return None
 
     thd_list = []
+    mylock = threading.Lock()
     for i in range(workers):
-        thd = threading.Thread(target=consumer)
+        thd = threading.Thread(target=consumer, args=(mylock, ))
         thd.start()
         thd_list.append(thd)
 
