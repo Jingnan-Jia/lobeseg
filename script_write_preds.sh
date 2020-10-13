@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=write_preds_save_dice
-#SBATCH --cpus-per-gpu=10
-##SBATCH --mem=60G
+#SBATCH --cpus-per-gpu=12
+#SBATCH --mem=120G
 #SBATCH --partition=gpu-long
 #SBATCH --gres=gpu:1
 #SBATCH --time=160:00:00

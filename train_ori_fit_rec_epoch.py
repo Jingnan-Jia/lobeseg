@@ -30,6 +30,8 @@ import numpy as np
 import os
 import gc
 import sys
+
+from find_connect_parts import write_connected_lobes
 from mypath import Mypath
 import tensorflow as tf
 from tensorflow.keras import backend as K
@@ -226,6 +228,35 @@ class GetList:
         return list(map(load_name_dict.get, self.model_names))
 
 
+def write_metrics(sub_dir, fissureradius, workers=10, mypath=None):
+    if sub_dir is "GLUCOLD":  # write metrics for lobe and fissure (GLUCOLD), for lung and fissure (LOLA11)
+        goals = ['lobe', 'fissure']
+    elif sub_dir is "LOLA11":
+        goals = ['lung', 'fissure']
+    else:
+        raise Exception("sub_dir is not correct")
+
+    for goal in goals:
+        if goal is "lobe":
+            labels = [4, 5, 6, 7, 8]
+            fissure = False
+            lung = False
+        elif goal is "fissure":
+            labels = [1]
+            fissure = True
+            lung = False
+        else:
+            labels = [1]
+            fissure = False
+            lung = True
+        workers = 3 if sub_dir is "GLUCOLD" else workers
+        write_all_metrics(labels=labels,  # exclude background
+                          gdth_path=mypath.gdth_path("valid", sub_dir=sub_dir),
+                          pred_path=mypath.pred_path("valid", sub_dir=sub_dir, biggest_5_lobe=True),
+                          csv_file=mypath.all_metrics_fpath("valid", fissure=fissure, sub_dir=sub_dir),
+                          fissure=fissure, fissureradius=fissureradius, lung=lung, workers=workers)
+
+
 class TaskArgs:
     def __init__(self):
         self.net = None
@@ -278,34 +309,6 @@ class TaskArgs:
             json_file.write(model_json)
             print('successfully write new json file of task ', self.task, self.mypath.json_fpath())
 
-    def write_metrics(self, sub_dir, fissureradius=1, workers=10):
-        if sub_dir is "GLUCOLD":  # write metrics for lobe and fissure (GLUCOLD), for lung and fissure (LOLA11)
-            goals = ['lobe', 'fissure']
-        elif sub_dir is "LOLA11":
-            goals = ['lung', 'fissure']
-        else:
-            raise Exception("sub_dir is not correct")
-
-        for goal in goals:
-            if goal is "lobe":
-                labels = [4, 5, 6, 7, 8]
-                fissure = False
-                lung = False
-            elif goal is "fissure":
-                labels = [1]
-                fissure = True
-                lung = False
-            else:
-                labels = [1]
-                fissure = False
-                lung = True
-
-            write_all_metrics(labels=labels,  # exclude background
-                              gdth_path=self.mypath.gdth_path("valid", sub_dir=sub_dir),
-                              pred_path=self.mypath.pred_path("valid", sub_dir=sub_dir),
-                              csv_file=self.mypath.all_metrics_fpath("valid", fissure=fissure, sub_dir=sub_dir),
-                              fissure=fissure, fissureradius=fissureradius, lung=lung, workers=workers)
-
     def do_vilidation_if_need(self, idx_, valid_period):
         if (idx_ % valid_period == 0) and (self.task == 'lobe'):  # only valid lobe
             # In my multi-task model (co-training, or alternative training), I can not use validation_data and
@@ -345,8 +348,8 @@ class TaskArgs:
                     stride = 0.25
                     fissureradius = 3
                 else:
-                    test_nb = 40
-                    stride = 0.5
+                    test_nb = 100
+                    stride = 0.25
                     fissureradius = 1
 
                 segment = v_seg.v_segmentor(batch_size=args.batch_size,
@@ -360,9 +363,12 @@ class TaskArgs:
                                     data_dir=self.mypath.ori_ct_path("valid", sub_dir=sub_dir),
                                     preds_dir=self.mypath.pred_path("valid", sub_dir=sub_dir),
                                     number=test_nb, stride=stride, workers=5, qsize=5)  # set stride 0.8 to save time
+                write_connected_lobes(self.mypath.pred_path("valid", sub_dir=sub_dir), workers=5,
+                                      target_dir=self.mypath.pred_path("valid", sub_dir=sub_dir, biggest_5_lobe=True))
 
-                gntFissure(self.mypath.pred_path("valid", sub_dir=sub_dir), radiusValue=fissureradius, workers=10)
-                self.write_metrics(sub_dir, fissureradius, workers=5)
+                gntFissure(self.mypath.pred_path("valid", sub_dir=sub_dir, biggest_5_lobe=True), radiusValue=fissureradius, workers=10)
+
+                write_metrics(sub_dir, fissureradius, workers=5, mypath=self.mypath)
 
     def set_data_iterator(self):
         train_it = ScanIterator(self.mypath.data_dir('train'), task=self.task,
@@ -547,26 +553,27 @@ def get_ta_list(model_names, myargs):
     return ta_list
 
 
-def myplot(x1, y1): # (144,144,96,1)
+def myplot(x1, y1):  # (144,144,96,1)
 
-    x1_ = x1[:,:,40,0]
+    x1_ = x1[:, :, 40, 0]
     plt.figure()
     plt.imshow(x1_)
     plt.savefig('x1_20101002.png')
     plt.close()
 
-    if y1.shape[-1]>1:
+    if y1.shape[-1] > 1:
         for i in range(y1.shape[-1]):
             y1_ = y1[:, :, 40, i]
             plt.figure()
             plt.imshow(y1_)
-            plt.savefig('y1_20101002_'+str(i)+'.png')
+            plt.savefig('y1_20101002_' + str(i) + '.png')
             plt.close()
     else:
         plt.figure()
-        plt.imshow(y1[:,:,40,0])
+        plt.imshow(y1[:, :, 40, 0])
         plt.savefig('y1_20101002.png')
         plt.close()
+
 
 def get_monitor_data(io, valid_datas, task, ao, ds, monitor_nb=10):
     if not ds and not ao:  #
@@ -575,20 +582,21 @@ def get_monitor_data(io, valid_datas, task, ao, ds, monitor_nb=10):
             valid_data_y_numpy = []
             for i in range(monitor_nb):  # use 10 valid patches to save best valid model
                 one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
-                one_valid_data_x, one_valid_data_y = one_valid_data  # output :(1,144,144,80,1) or a list with two arrays
+                one_valid_data_x, one_valid_data_y = one_valid_data  # output:(1,144,144,80,1) or a list with two arrays
                 print(np.max(one_valid_data_x[0][0]), np.min(one_valid_data_x[0][0]))
                 valid_data_x_numpy1.append(one_valid_data_x[0][0])
                 valid_data_x_numpy2.append(one_valid_data_x[1][0])
                 valid_data_y_numpy.append(one_valid_data_y[0])
                 # myplot(one_valid_data_x[0][0], one_valid_data_y[0]) # (144,144,96,1)
-            valid_data_numpy = [[np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)], np.array(valid_data_y_numpy)]
+            valid_data_numpy = [[np.array(valid_data_x_numpy1), np.array(valid_data_x_numpy2)],
+                                np.array(valid_data_y_numpy)]
 
-        elif io=="2_in_2_out":
+        elif io == "2_in_2_out":
             valid_data_y_numpy1, valid_data_y_numpy2 = [], []
             valid_data_x_numpy1, valid_data_x_numpy2 = [], []
             for i in range(monitor_nb):  # use 10 valid patches to save best valid model
                 one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
-                one_valid_data_x, one_valid_data_y = one_valid_data  # output :(1,144,144,80,1) or a list with two arrays
+                one_valid_data_x, one_valid_data_y = one_valid_data  # output:(1,144,144,80,1) or a list with two arrays
                 valid_data_x_numpy1.append(one_valid_data_x[0][0])
                 valid_data_x_numpy2.append(one_valid_data_x[1][0])
                 valid_data_y_numpy1.append(one_valid_data_y[0][0])
@@ -599,12 +607,12 @@ def get_monitor_data(io, valid_datas, task, ao, ds, monitor_nb=10):
             valid_data_x_numpy, valid_data_y_numpy = [], []
             for i in range(monitor_nb):  # use 10 valid patches to save best valid model
                 one_valid_data = next(valid_datas)  # cost 7 seconds per image patch using val_it.generator()
-                one_valid_data_x, one_valid_data_y = one_valid_data  # output :(1,144,144,80,1) or a list with two arrays
+                one_valid_data_x, one_valid_data_y = one_valid_data  # output:(1,144,144,80,1) or a list with two arrays
                 valid_data_x_numpy.append(one_valid_data_x[0])
                 valid_data_y_numpy.append(one_valid_data_y[0])
             valid_data_numpy = [np.array(valid_data_x_numpy), np.array(valid_data_y_numpy)]
         else:
-            raise Exception("please give correct io. now the io is : "+str(io))
+            raise Exception("please give correct io. now the io is : " + str(io))
     else:
         if task == 'no_label':
             valid_data_x_numpy = []
@@ -722,18 +730,20 @@ def train():
                 net_lobe = ta.net
                 current_lb_loss = ta.current_tr_loss
             if len(model_names) == 3 and (idx_ % monitor_period) != 0:
-                if (idx_ % 2 == 0) and ta.task == "no_label":
-                    continue
-                elif (idx_ % 2 == 1) and ta.task == "vessel":
-                    continue
+                if args.fat:
+                    if (idx_ % 2 == 0) and ta.task == "no_label":
+                        continue
+                    elif (idx_ % 2 == 1) and ta.task == "vessel":
+                        continue
 
             ta.fit(current_lb_loss, net_lobe, idx_, monitor_period)
-            if idx_ == args.step_nb-1:
+            if idx_ == args.step_nb - 1:
                 ta.train_it.stop()  # stop training iterator
             ta.do_vilidation_if_need(idx_, valid_period=3400)  # every 5000 step, predict a whole ct from valid dataset
 
     for ta in ta_list:
         ta.train_it.join()
+
 
 if __name__ == '__main__':
     train()

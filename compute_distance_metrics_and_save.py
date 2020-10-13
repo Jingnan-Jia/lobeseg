@@ -231,8 +231,10 @@ def write_all_metrics_for_one_ct(labels, gdth_name, pred_name, csv_file, lung, f
             pred = downsample(pred, ori_sz=pred.shape, trgt_sz=gdth.shape, order=1,
                               labels=labels)  # use shape to upsampling because the space is errors sometimes in LOLA11
         suffex_len = len(os.path.basename(pred_name).split(".")[-1])
-        lung_file_fpath = os.path.dirname(pred_name) + "/lung/" + os.path.basename(pred_name)[:-suffex_len-1] + '.mhd'
-
+        lung_file_dir = os.path.dirname(pred_name) + "/lung"
+        lung_file_fpath = lung_file_dir + "/" + os.path.basename(pred_name)[:-suffex_len-1] + '.mhd'
+        if not os.path.exists(lung_file_dir):
+            os.makedirs(lung_file_dir)
 
         futil.save_itk(lung_file_fpath,  pred, pred_origin, pred_spacing)
 

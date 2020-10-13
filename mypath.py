@@ -6,13 +6,14 @@ import numpy as np
 from functools import wraps
 
 
-def mkdir_dcrt(fun): # decorator to create directory if not exist
+def mkdir_dcrt(fun):  # decorator to create directory if not exist
     """
     A decorator to make directory output from function if not exist.
 
     :param fun: a function which outputs a directory
     :return: decorated function
     """
+
     @wraps(fun)
     def decorated(*args, **kwargs):
         output = fun(*args, **kwargs)
@@ -22,13 +23,14 @@ def mkdir_dcrt(fun): # decorator to create directory if not exist
                 os.makedirs(output)
                 print('successfully create directory:', output)
         else:
-            if not os.path.exists (output):
-                os.makedirs (output)
+            if not os.path.exists(output):
+                os.makedirs(output)
                 print('successfully create directory:', output)
 
         return fun(*args, **kwargs)
 
     return decorated
+
 
 def get_short_names(long_names):
     """
@@ -46,10 +48,10 @@ def get_short_names(long_names):
 
         "net_only_lobe": "nol",
         "net_only_vessel": "nov",
-        "net_only_lung": "no", # avoid repeating nol
+        "net_only_lung": "no",  # avoid repeating nol
         "net_only_airway": "noa"
     }
-    return list (map (net_task_dict.get, long_names))
+    return list(map(net_task_dict.get, long_names))
 
 
 class Mypath(object):
@@ -57,6 +59,7 @@ class Mypath(object):
     Here, I use 'fpath' to indicatate full file path and name, 'path' to respresent the directory,
     'file_name' to respresent the file name in the parent directory.
     """
+
     def __init__(self, task, current_time=None):
 
         """
@@ -67,37 +70,36 @@ class Mypath(object):
         """
 
         self.task = task
-        self.dir_path = os.path.dirname (os.path.realpath (__file__)) # abosolute path of the current script
-        self.model_path = os.path.join (self.dir_path, 'models')
-        self.log_path = os.path.join (self.dir_path, 'logs')
-        self.data_path = os.path.join (self.dir_path, 'data')
-        self.results_path = os.path.join (self.dir_path, 'results')
+        self.dir_path = os.path.dirname(os.path.realpath(__file__))  # abosolute path of the current script
+        self.model_path = os.path.join(self.dir_path, 'models')
+        self.log_path = os.path.join(self.dir_path, 'logs')
+        self.data_path = os.path.join(self.dir_path, 'data')
+        self.results_path = os.path.join(self.dir_path, 'results')
 
         if current_time:
             self.current_time = current_time
         else:
-            self.current_time = str (int(time.time ())) + '_' + str(np.random.randint(1000))
+            self.current_time = str(int(time.time())) + '_' + str(np.random.randint(1000))
         long_names = args.model_names.split('-')
-        long_names = [i.lstrip() for i in long_names] # remove backspace before each model name
+        long_names = [i.lstrip() for i in long_names]  # remove backspace before each model name
         short_names = get_short_names(long_names)
         short_names = '-'.join(short_names)
 
-
-
-        self.setting = '_lrlb' + str (args.lr_lb) \
-                       + 'lrvs' + str (args.lr_vs) \
-                       + 'lbio' + str (args.lb_io) \
+        self.setting = '_lrlb' + str(args.lr_lb) \
+                       + 'lrvs' + str(args.lr_vs) \
+                       + 'lbio' + str(args.lb_io) \
                        + 'net' + str(short_names) \
                        + 'pm' + str(args.p_middle) \
                        + 'nld' + str(args.no_label_dir) \
-                       + 'ao' + str (args.ao_lb) \
-                       + 'ds' + str (args.ds_lb) \
+                       + 'ao' + str(args.ao_lb) \
+                       + 'ds' + str(args.ds_lb) \
                        + 'pps' + str(args.patches_per_scan) \
                        + 'lbnb' + str(args.lb_tr_nb) \
                        + 'vsnb' + str(args.vs_tr_nb) \
                        + 'nlnb' + str(args.rc_tr_nb) \
-                       + 'ptsz' + str (args.ptch_sz) \
-                       + 'ptzsz' + str (args.ptch_z_sz)
+                       + 'ptsz' + str(args.ptch_sz) \
+                       + 'fat' + str(args.fat) \
+                       + 'ptzsz' + str(args.ptch_z_sz)
 
         self.str_name = self.current_time + self.setting
         a = len(self.str_name)  # name longer than 256 would be invalid to write and read
@@ -109,10 +111,10 @@ class Mypath(object):
         :return: sub directory name
         """
 
-        if self.task=='lobe':
+        if self.task == 'lobe':
             sub_dir = 'GLUCOLD'
-        elif self.task=='vessel':
-            sub_dir = 'SSc' # todo: set different vessel dataset apart form SSc, to verify the effect of spacing
+        elif self.task == 'vessel':
+            sub_dir = 'SSc'  # todo: set different vessel dataset apart form SSc, to verify the effect of spacing
         elif self.task == 'no_label':
             sub_dir = args.no_label_dir
         return sub_dir
@@ -204,7 +206,7 @@ class Mypath(object):
         """
         task_model_path = self.task_model_dir()
 
-        if self.task=="no_label":
+        if self.task == "no_label":
             if str_name is None:
                 return task_model_path + '/' + self.str_name + '_patch_' + phase + '.hdf5'
             else:
@@ -214,8 +216,6 @@ class Mypath(object):
                 return task_model_path + '/' + self.str_name + '_' + phase + '.hdf5'
             else:
                 return task_model_path + '/' + str_name + '_' + phase + '.hdf5'
-
-
 
     @mkdir_dcrt
     def ori_ct_path(self, phase, sub_dir=None):
@@ -244,7 +244,7 @@ class Mypath(object):
         return gdth_path
 
     @mkdir_dcrt
-    def pred_path(self, phase, sub_dir=None, fissure=False):
+    def pred_path(self, phase, sub_dir=None, fissure=False, biggest_5_lobe=False):
         """
         absolute directory of the prediction results of ct for training dataset
         :param phase: 'train' or 'valid'
@@ -254,6 +254,8 @@ class Mypath(object):
             pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + self.sub_dir() + '/' + self.current_time
         else:
             pred_path = self.results_path + '/' + self.task + '/' + phase + '/pred/' + sub_dir + '/' + self.current_time
+        if biggest_5_lobe:
+            pred_path += "/biggest_5_lobe"
 
         return pred_path
 
@@ -279,6 +281,3 @@ class Mypath(object):
             return pred_path + '/all_metrics_fissure.csv'
         else:
             return pred_path + '/all_metrics.csv'
-
-
-

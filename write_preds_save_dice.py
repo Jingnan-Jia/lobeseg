@@ -9,6 +9,7 @@ from tensorflow.keras import backend as K
 
 import segmentor as v_seg
 from compute_distance_metrics_and_save import write_all_metrics
+from find_connect_parts import write_connected_lobes
 from generate_fissure_from_masks import gntFissure
 from mypath import Mypath
 from write_batch_preds import write_preds_to_disk
@@ -224,24 +225,32 @@ K.set_session(sess)  # set this TensorFlow session as the default session for Ke
 """
 ""","""
 task = 'lobe'
-
+biggest_5_lobe = True
 for sub_dir in ["LOLA11"]:
     str_names = [
-        "1600908421_801_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
-        # ""1599169291_679_lrlb0.0001lrvs1e-05mtscale0netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
-        # '1600645190_366_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96'
-        # "1600908421_13_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        # "1600908421_412_lrlb0.0001lrvs1e-05mtscale0netnol-nnlpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        # "1600908421_801_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        # "1600913687_652_lrlb0.0001lrvs1e-05mtscale1netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        # "1599948441_65_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-
-        # "1600642845_843_lrlb0.0001lrvs1e-05mtscale0netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        # "1599948441_65_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        # "1599948441_432_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        # "1599948441_216_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
-        # "1601463858_789_lrlb0.0001lrvs1e-05mtscale1netnolpm0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
-
+        "1602431109_114_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144fat0ptzsz96"
+        # "1602431109_639_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144fat0ptzsz96"
+        # "1599948441_216_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1599948441_432_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1599948441_65_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602429191_780_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144fat1ptzsz96"
+        # "1602427814_828_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144fat1ptzsz96"
+        # "1600643885_972_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1599169291_810_lrlb0.0001lrvs1e-05mtscale1netnolpm0.5nldLUNA16ao1ds2tsp1.4z2.5pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1600913687_652_lrlb0.0001lrvs1e-05mtscale1netnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1599948441_216_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1600479252_70_lrlb0.0001lrvs1e-05mtscale1netnolpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030143_266_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnlpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030143_575_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030143_123_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnolpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030666_560_lrlb0.0001lrvs1e-05lbio1_in_low_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030219_49_lrlb0.0001lrvs1e-05lbio1_in_low_1_out_lownetnolpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030143_123_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnolpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030666_6_lrlb0.0001lrvs1e-05lbio1_in_low_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030219_49_lrlb0.0001lrvs1e-05lbio1_in_low_1_out_lownetnolpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030143_123_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnolpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1602030454_701_lrlb0.0001lrvs1e-05lbio1_in_low_1_out_lownetnol-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
+        # "1602030454_568_lrlb0.0001lrvs1e-05lbio1_in_low_1_out_lownetnol-nnlpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
     ]
     print(str_names)
 
@@ -253,38 +262,32 @@ for sub_dir in ["LOLA11"]:
         tr_sz, tr_z_sz = None, None
         pt_sz, pt_z_sz = 144, 96
 
-        print('patch_sz', pt_sz, 'patch_z_size', pt_z_sz)
-
         if sub_dir is "GLUCOLD":  # write metrics for lobe and fissure (GLUCOLD), for lung and fissure (LOLA11)
             goals = ['lobe', 'fissure']
+            stride = 0.25
+            radiusValue = 3
         elif sub_dir is "LOLA11":
             goals = ['lung', 'fissure']
+            stride = 0.25
+            radiusValue = 1
         else:
             raise Exception("sub_dir is not correct")
 
         for goal in goals:
             if goal is "lobe":
                 labels = [4, 5, 6, 7, 8]
-                fissure = False
-                lung = False
-                stride = 0.25
-                radiusValue = 3
+                fissure, lung = False, False
             elif goal is "fissure":
-                fissure = True
-                lung = False
+                fissure, lung = True, False
                 labels = [1]
-                stride = 0.25
-                radiusValue = 3
             else:
                 labels = [1]
-                fissure = False
-                lung = True
-                stride = 0.8
-                radiusValue = 1
+                fissure, lung = False, True
 
             if fissure:
-                gntFissure(mypath.pred_path("valid", sub_dir=sub_dir), radiusValue=radiusValue, workers=10)
+                gntFissure(mypath.pred_path("valid", sub_dir=sub_dir, biggest_5_lobe=biggest_5_lobe), radiusValue=radiusValue, workers=10)
             else:
+
                 segment = v_seg.v_segmentor(batch_size=1,
                                             model=model_name,
                                             ptch_sz=pt_sz, ptch_z_sz=pt_z_sz,
@@ -293,21 +296,20 @@ for sub_dir in ["LOLA11"]:
                                             task=task,  attention=False)
 
                 print('stride is', stride)
+
+                workers = 5 if sub_dir == "GLUCOLD" else 5
                 write_preds_to_disk(segment=segment,
                                     data_dir=mypath.ori_ct_path("valid", sub_dir=sub_dir),
                                     preds_dir=mypath.pred_path("valid", sub_dir=sub_dir),
                                     number=100,
-                                    stride=stride, workers=10, qsize=20)
-            #
-            # write_dices_to_csv (step_nb=0,
-            #                     labels=labels,
-            #                     gdth_path=mypath.gdth_path("valid", sub_dir=sub_dir),
-            #                     pred_path=mypath.pred_path("valid", sub_dir=sub_dir),
-            #                     csv_file=mypath.dices_fpath("valid"))
+                                    stride=stride, workers=workers, qsize=20)
+                write_connected_lobes(mypath.pred_path("valid", sub_dir=sub_dir), workers=5,
+                                      target_dir=mypath.pred_path("valid", sub_dir=sub_dir, biggest_5_lobe=biggest_5_lobe))
 
+            workers = 3 if sub_dir == "GLUCOLD" else 5  # save memory for GLUCOLD metrics
             write_all_metrics(labels=labels,  # exclude background
                               gdth_path=mypath.gdth_path("valid", sub_dir=sub_dir),
-                              pred_path=mypath.pred_path("valid", sub_dir=sub_dir),
+                              pred_path=mypath.pred_path("valid", sub_dir=sub_dir, biggest_5_lobe=biggest_5_lobe),
                               csv_file=mypath.all_metrics_fpath("valid", fissure=fissure, sub_dir=sub_dir),
                               fissure=fissure, fissureradius=radiusValue,
-                              lung=lung, workers=10)
+                              lung=lung, workers=workers)

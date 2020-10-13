@@ -19,6 +19,8 @@ parser.add_argument('-no_label_dir', '--no_label_dir', help='dir no_label data',
 parser.add_argument('-p_middle', '--p_middle', help='sample in the middle parts', type=float, default=0.5)
 parser.add_argument('-step_nb', '--step_nb', help='training step', type=int, default=100001)
 parser.add_argument('-u_v', '--u_v', help='u_v', type=str, default='v')
+parser.add_argument('-fat', '--fat', help='focus_alt_train', type=int, default=0)
+
 
 parser.add_argument('-lr_lb', '--lr_lb', help='learning rate for lobe segmentation', type=float, default=0.0001)
 parser.add_argument('-lr_vs', '--lr_vs', help='learning rate for vessel segmentation', type=float, default=0.00001)

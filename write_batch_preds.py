@@ -57,7 +57,7 @@ class Mask():
 
 
 def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, workers=1, qsize=1):
-    '''
+    """
     write predes to disk. Divided into 2 parts: predict (require segmentor.py, using GPU, can not use multi threads),
     and upsampling (require upsample_crop_save_ct, using cpu, multi threads).
     :param segment: an object or an instance
@@ -66,8 +66,9 @@ def write_preds_to_disk(segment, data_dir, preds_dir, number=None, stride=0.25, 
     :param number: number of predicted ct
     :param stride: stride or overlap ratio during patching
     :return: None
-    '''
-    scan_files = get_all_ct_names(data_dir, number)
+    """
+    scan_files = get_all_ct_names(data_dir, number=number)
+    print("files are: ", scan_files)
     pad_nb = 48
     q = queue.Queue(qsize)
     cooking_flag = False

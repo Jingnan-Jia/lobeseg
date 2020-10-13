@@ -62,7 +62,7 @@ def get_intersection_files(gdth_files, pred_files):
     return sorted(new_gdth_files), sorted(new_pred_files)
 
 
-def get_all_ct_names(path, prefix=None, number=None):
+def get_all_ct_names(path, number=None, prefix=None):
     if prefix:
         files = glob.glob(path + '/' + prefix + '*.nrrd')
         files.extend(glob.glob(path + '/' + prefix + '*.mhd'))
