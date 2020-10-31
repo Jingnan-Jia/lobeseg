@@ -8,19 +8,16 @@ Created on Tue Aug  4 09:35:14 2017
 import tensorflow as tf
 from futils.compiled_models import sr_model
 from futils.dataloader import Sr_data_itr
-from tensorflow.keras.utils import GeneratorEnqueuer
 from futils.util import save_model_best
 
-from tensorflow.keras import Input, Model
-from mypath import Mypath
+from futils.mypath import Mypath
 import os
 from tensorflow.keras import callbacks
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras import backend as K
-import numpy as np
-import segmentor as v_seg
+from futils import segmentor as v_seg
 from write_dice import write_dices_to_csv
-from write_batch_preds import write_preds_to_disk
+from futils.write_batch_preds import write_preds_to_disk
 import sys
 
 tf.keras.mixed_precision.experimental.set_policy('infer') # mix precision training

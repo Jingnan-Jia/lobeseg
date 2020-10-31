@@ -7,12 +7,12 @@ Created on Wed Apr 12 10:20:10 2020
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-import segmentor as v_seg
-from compute_distance_metrics_and_save import write_all_metrics
-from find_connect_parts import write_connected_lobes
-from generate_fissure_from_masks import gntFissure
-from mypath import Mypath
-from write_batch_preds import write_preds_to_disk
+from futils import segmentor as v_seg
+from futils.compute_distance_metrics_and_save import write_all_metrics
+from futils.find_connect_parts import write_connected_lobes
+from futils.generate_fissure_from_masks import gntFissure
+from futils.mypath import Mypath
+from futils.write_batch_preds import write_preds_to_disk
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -228,7 +228,9 @@ task = 'lobe'
 biggest_5_lobe = True
 for sub_dir in ["LOLA11"]:
     str_names = [
-        "1602431109_114_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144fat0ptzsz96"
+        "1600645190_537_lrlb0.0001lrvs1e-05mtscale0netnol-nnl-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96",
+        # "1602632551_850_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao1ds2pps100lbnb17vsnb50nlnb400ptsz144fat1ptzsz96"
+        # "1602431109_114_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144fat0ptzsz96"
         # "1602431109_639_lrlb0.0001lrvs1e-05lbio2_in_1_out_lownetnol-nnl-novpm0.5nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144fat0ptzsz96"
         # "1599948441_216_lrlb0.0001lrvs1e-05mtscale1netnol-nnlpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"
         # "1599948441_432_lrlb0.0001lrvs1e-05mtscale1netnol-novpm0.0nldLUNA16ao0ds0pps100lbnb17vsnb50nlnb400ptsz144ptzsz96"

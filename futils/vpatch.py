@@ -163,7 +163,7 @@ def random_patch(a_low, a_hgh, b_low, b_hgh, c_low, c_hgh, patch_shape=(64, 128,
             return [a_hgh_patch, [b_hgh_patch, c_hgh_patch]]
         else:
             return [a_hgh_patch, b_hgh_patch]
-    else:
+    else:  # 2_in_...
         if task == "lobe":  # get idx_low at first
             a_low_patch, idx_low, origin = random_patch_(a_low, patch_shape, p_middle, needorigin=True,
                                                          ptch_seed=ptch_seed)
@@ -174,14 +174,27 @@ def random_patch(a_low, a_hgh, b_low, b_hgh, c_low, c_hgh, patch_shape=(64, 128,
             a_low_patch, idx_low = get_a2_patch(a_low, patch_shape, ref=a_hgh, ref_origin=origin)
         if io == "2_in_1_out_low":  # get idx_hgh at first
             b_low_patch = b_low[np.ix_(idx_low[0], idx_low[1], idx_low[2])]
-            return [[a_low_patch, a_hgh_patch], b_low_patch]
+            if c_low is None:
+                return [[a_low_patch, a_hgh_patch], b_low_patch]
+            else:
+                c_low_patch = c_low[np.ix_(idx_low[0], idx_low[1], idx_low[2])]
+                return [[a_low_patch, a_hgh_patch], b_low_patch, c_low_patch]
         elif io == "2_in_1_out_hgh":
             b_hgh_patch = b_hgh[np.ix_(idx_hgh[0], idx_hgh[1], idx_hgh[2])]
-            return [[a_low_patch, a_hgh_patch], b_hgh_patch]
+            if c_low is None:
+                return [[a_low_patch, a_hgh_patch], b_hgh_patch]
+            else:
+                c_hgh_patch = c_hgh[np.ix_(idx_hgh[0], idx_hgh[1], idx_hgh[2])]
+                return [[a_low_patch, a_hgh_patch], b_hgh_patch, c_hgh_patch]
         else:
             b_low_patch = b_low[np.ix_(idx_low[0], idx_low[1], idx_low[2])]
             b_hgh_patch = b_hgh[np.ix_(idx_hgh[0], idx_hgh[1], idx_hgh[2])]
-            return [[a_low_patch, a_hgh_patch], [b_low_patch, b_hgh_patch]]
+            if c_low is None:
+                return [[a_low_patch, a_hgh_patch], [b_low_patch, b_hgh_patch]]
+            else:
+                c_low_patch = c_low[np.ix_(idx_low[0], idx_low[1], idx_low[2])]
+                c_hgh_patch = c_hgh[np.ix_(idx_hgh[0], idx_hgh[1], idx_hgh[2])]
+                return [[a_low_patch, a_hgh_patch], [b_low_patch, b_hgh_patch], [c_low_patch, c_hgh_patch]]
 
 
 def get_n_patches(scan, patch_shape=(64, 128, 128), stride=0.25):

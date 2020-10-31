@@ -71,10 +71,10 @@ class Mypath(object):
 
         self.task = task
         self.dir_path = os.path.dirname(os.path.realpath(__file__))  # abosolute path of the current script
-        self.model_path = os.path.join(self.dir_path, 'models')
-        self.log_path = os.path.join(self.dir_path, 'logs')
-        self.data_path = os.path.join(self.dir_path, 'data')
-        self.results_path = os.path.join(self.dir_path, 'results')
+        self.model_path = os.path.join(self.dir_path, '../models')
+        self.log_path = os.path.join(self.dir_path, '../logs')
+        self.data_path = os.path.join(self.dir_path, '../data')
+        self.results_path = os.path.join(self.dir_path, '../results')
 
         if current_time:
             self.current_time = current_time

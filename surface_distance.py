@@ -1,10 +1,17 @@
 import numpy as np
 from scipy.ndimage import morphology
-import futils.util as futil
+
 import time
 import copy
 import matplotlib.pyplot as plt
+import seg_utils
 
+try:
+    import seg_utils.myutil as futil
+except:
+    import pip
+    pip.main(['install', '--user', 'seg-utils'])
+    import seg_utils.myutil as futil
 
 
 def metrics_per_chn(gdth, pred):

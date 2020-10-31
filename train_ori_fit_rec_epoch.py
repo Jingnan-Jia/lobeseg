@@ -25,28 +25,26 @@ Created on Tue Apr  4 09:35:14 2020
 
 """
 
-import time
 import numpy as np
 import os
 import gc
 import sys
 
-from find_connect_parts import write_connected_lobes
-from mypath import Mypath
+from futils.find_connect_parts import write_connected_lobes
+from futils.mypath import Mypath
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras import callbacks
 from tensorflow.keras.utils import plot_model
 import matplotlib.pyplot as plt
 
-from futils import compiled_models as cpmodels
+from futils import compiled_models as cpmodels, segmentor as v_seg
 from futils.util import save_model_best
 from set_args import args
 from write_dice import write_dices_to_csv
-from write_batch_preds import write_preds_to_disk
-import segmentor as v_seg
-from compute_distance_metrics_and_save import write_all_metrics
-from generate_fissure_from_masks import gntFissure
+from futils.write_batch_preds import write_preds_to_disk
+from futils.compute_distance_metrics_and_save import write_all_metrics
+from futils.generate_fissure_from_masks import gntFissure
 from futils.dataloader import ScanIterator
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = "0" # use the first GPU

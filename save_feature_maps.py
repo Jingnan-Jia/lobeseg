@@ -4,17 +4,12 @@ Created on Wed Apr 12 10:20:10 2020
 @author: jjia
 """
 
-import tensorflow as tf
-import tensorflow.keras
-import os
-from tensorflow.keras.models import load_model # load model architecture and weights
 from tensorflow.keras.utils import plot_model
 
-import time
 import futils.util as futil
-import segmentor as v_seg
+from futils import segmentor as v_seg
 import tensorflow.keras.backend as K
-from tensorflow.keras import Model, Input
+from tensorflow.keras import Model
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import ndimage

@@ -137,7 +137,7 @@ def main():
     import tensorflow as tf
     from tensorflow.keras import backend as K
 
-    import segmentor as v_seg
+    from futils import segmentor as v_seg
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU

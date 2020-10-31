@@ -9,20 +9,17 @@ Created on Tue Apr  4 09:35:14 2017
 import os
 import random
 import numpy as np
-from image import Iterator
-from image import apply_transform
-from image import transform_matrix_offset_center
+from futils.image import Iterator
+from futils.image import apply_transform
+from futils.image import transform_matrix_offset_center
 from futils.vpatch import random_patch
 import futils.util as futil
-from scipy import ndimage
 import time
 import glob
-import sys
 from futils.util import downsample, one_hot_encode_3d
 from functools import wraps
 import queue
 import threading
-import copy
 
 
 def random_transform(a, b, c=None, is_batch=True,

@@ -83,7 +83,7 @@ def get_all_ct_names(path, number=None, prefix=None):
     return scan_files
 
 
-def get_ct_filenames(gdth_path, pred_path):
+def get_ct_pair_filenames(gdth_path, pred_path):
     gdth_files = get_all_ct_names(gdth_path)
     pred_files = get_all_ct_names(pred_path)
 
@@ -104,7 +104,7 @@ def get_gdth_pred_names(gdth_path, pred_path, fissure=False, fissureradius=1):
     if fissure:
         gdth_files, pred_files = get_fissure_filenames(gdth_path, pred_path, fissureradius=fissureradius)
     else:
-        gdth_files, pred_files = get_ct_filenames(gdth_path, pred_path)
+        gdth_files, pred_files = get_ct_pair_filenames(gdth_path, pred_path)
 
     return gdth_files, pred_files
 
@@ -122,8 +122,7 @@ def load_itk(filename):
         itkimage = sitk.ReadImage(filename)
 
     else:
-        print('nonfound:', filename)
-        return [], [], []
+        raise FileNotFoundError("image" + filename+ " was not found")
 
     # Convert the image to a  numpy array first ands then shuffle the dimensions to get axis in the order z,y,x
     ct_scan = sitk.GetArrayFromImage(itkimage)
@@ -156,8 +155,8 @@ def save_itk(filename, scan, origin, spacing, dtype='int16'):
     stk = sitk.GetImageFromArray(scan.astype(dtype))
     # origin and spacing 's coordinate are (z,y,x). but for image class,
     # the order shuld be (x,y,z), that's why we reverse the order here.
-    stk.SetOrigin(
-        origin[::-1])  # numpy array is reversed after convertion from image, but origin and spacing keep unchanged
+    stk.SetOrigin(origin[::-1])
+    # numpy array is reversed after convertion from image, but origin and spacing keep unchanged
     stk.SetSpacing(spacing[::-1])
 
     writer = sitk.ImageFileWriter()
