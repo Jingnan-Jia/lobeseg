@@ -2,14 +2,14 @@
 # Multi-task Semi-supervised Learning for Lobe Segmentation
 There are several directories for their specific functions:
 
-- data  
-- futils  
-- logs
-- models
-- results
+- data  (training datasets are saved here)
+- futils  (common used functions and models including building models, compute metrics)
+- logs  (save monitor metrics during training)
+- models  (save trained models)
+- results  (save the training/validation/testing results including Dice, MSD, Hausdorff distance, false positive, etfc.)
 
-Use `python train_ori_fit_rec_epoch.py` to train model.
-Use `write_preds_save_dice.py` to evaluate the trained model.
-Modify `set_parameters.py` to set custom parameters. 
+Use `python train_ori_fit_rec_epoch.py` to train model.  
+Use `write_preds_save_dice.py` to evaluate the trained model.  
+Modify `set_parameters.py` to set custom parameters.   
 
   
